@@ -1,17 +1,50 @@
 @echo off
 REM ==========================================================================
 REM  Payments Tracker - one-click start (Windows)
-REM  Double-click this file. It starts Docker Desktop if needed, builds and
-REM  starts the app + PostgreSQL, waits until it is ready, then opens your browser.
+REM  Double-click this file. It:
+REM    1. gets the latest code from GitHub (git pull)
+REM    2. starts Docker Desktop if needed
+REM    3. builds and starts the app + PostgreSQL
+REM    4. applies database migrations
+REM    5. opens your browser
 REM ==========================================================================
 setlocal EnableExtensions
+
+REM "git pull" may update this very file while it runs, which confuses Windows.
+REM So we run from a temporary copy and pass the project folder along.
+if /i not "%~1"=="--run" (
+  copy /y "%~f0" "%TEMP%\payments_tracker_start.bat" >nul
+  "%TEMP%\payments_tracker_start.bat" --run "%~dp0."
+)
 title Payments Tracker - Start
-cd /d "%~dp0"
+cd /d "%~2"
 
 echo.
 echo  ==============================================
 echo    Payments Tracker - starting up
 echo  ==============================================
+echo.
+
+REM --- 0. Get the latest version of the code --------------------------------------
+where git >nul 2>&1
+if errorlevel 1 (
+  echo  [!] Git is not installed - skipping the update check.
+  goto :after_pull
+)
+if not exist ".git" (
+  echo  [!] This folder was not cloned with Git - skipping the update check.
+  goto :after_pull
+)
+echo  [..] Checking GitHub for updates...
+git pull --ff-only
+if errorlevel 1 (
+  echo  [!] Could not update from GitHub - no internet, or files were changed locally.
+  echo      Continuing with the version already on this computer.
+) else (
+  echo  [OK] Code is up to date.
+)
+for /f "delims=" %%V in ('git log -1 "--date=short" "--format=%%h  %%ad  %%s" 2^>nul') do echo       Version: %%V
+:after_pull
 echo.
 
 REM --- 1. Is Docker installed? -------------------------------------------------
@@ -124,6 +157,17 @@ goto :wait_app
 
 :app_ready
 echo  [OK] App is running.
+
+REM --- 6. Apply database migrations ----------------------------------------------
+REM (The container also migrates on start-up; this makes sure and shows the result.)
+echo  [..] Applying database migrations...
+docker compose exec -T web python manage.py migrate --noinput
+if errorlevel 1 (
+  echo  [X] Database migration failed. Showing the last log lines:
+  docker compose logs --tail 40 web
+  goto :fail
+)
+echo  [OK] Database is up to date.
 start "" "http://localhost:%PORT%/"
 
 echo.

@@ -39,8 +39,9 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 
 1. Open the `payments_tracker` folder.
 2. **Double-click `start_app.bat`**.
-   - It starts Docker Desktop if needed, creates `.env` on first run, builds and starts the app and PostgreSQL,
-     waits until the app is healthy, then opens **http://localhost:8010** in your browser.
+   - It **downloads the latest code from GitHub (`git pull`)**, starts Docker Desktop if needed, creates `.env`
+     on first run, builds and starts the app and PostgreSQL, waits until the app is healthy,
+     **applies database migrations**, then opens **http://localhost:8010** in your browser.
    - If another program already uses port 8010, it picks the next free port automatically and saves it in `.env`.
    - The first run downloads images and can take 3 to 5 minutes. After that it takes a few seconds.
 3. When finished, double-click **`stop_app.bat`**. Your data is kept.
@@ -49,7 +50,7 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 
 | File | Purpose |
 |---|---|
-| `start_app.bat` | Start everything and open the browser |
+| `start_app.bat` | Update the code (git pull), start everything, apply migrations and open the browser |
 | `stop_app.bat` | Stop the containers (data is kept) |
 | `view_logs.bat` | Watch live application logs (useful if something fails) |
 | `reset_demo_data.bat` | **Delete all local data** and restart with fresh demo data (asks you to type `YES`) |
@@ -65,13 +66,9 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 
 ### Getting code updates
 
-```cmd
-cd payments_tracker
-git pull
-start_app.bat
-```
-
-`start_app.bat` always rebuilds, so new code is picked up automatically.
+Nothing to do: every time you double-click `start_app.bat` it runs `git pull`, rebuilds the app and applies any new
+database migrations. If the update cannot be downloaded (no internet, or files edited locally), it says so and
+starts the version already on your computer.
 
 ---
 
