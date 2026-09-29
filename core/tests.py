@@ -18,7 +18,7 @@ class CoreTests(TestCase):
         sw = self.client.get(reverse("service_worker"))
         self.assertEqual(sw["Content-Type"], "application/javascript")
         self.assertEqual(sw["Service-Worker-Allowed"], "/")
-        self.assertEqual(self.client.get(reverse("health")).content, b"ok")
+        self.assertEqual(self.client.get(reverse("health")).content, b"payments-tracker ok")
 
     def test_settings_admin_only(self):
         self.client.force_login(make_doctor().user)

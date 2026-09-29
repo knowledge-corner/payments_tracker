@@ -40,7 +40,8 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 1. Open the `payments_tracker` folder.
 2. **Double-click `start_app.bat`**.
    - It starts Docker Desktop if needed, creates `.env` on first run, builds and starts the app and PostgreSQL,
-     waits until the app is healthy, then opens **http://localhost:8000** in your browser.
+     waits until the app is healthy, then opens **http://localhost:8010** in your browser.
+   - If another program already uses port 8010, it picks the next free port automatically and saves it in `.env`.
    - The first run downloads images and can take 3 to 5 minutes. After that it takes a few seconds.
 3. When finished, double-click **`stop_app.bat`**. Your data is kept.
 
@@ -52,6 +53,15 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 | `stop_app.bat` | Stop the containers (data is kept) |
 | `view_logs.bat` | Watch live application logs (useful if something fails) |
 | `reset_demo_data.bat` | **Delete all local data** and restart with fresh demo data (asks you to type `YES`) |
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| The browser shows a **different app** (another project that uses the same port) | Run `git pull`, then `start_app.bat`. The launcher now uses port **8010**, detects ports taken by other programs, and moves to a free one. If you have an older `.env` with `APP_PORT=8000`, change it to `APP_PORT=8010` (or delete `.env` so it is recreated). |
+| The browser still shows the other app's page | That app's cached page was opened. Use the address `start_app.bat` prints (e.g. `http://localhost:8010`) and press **Ctrl+F5**. |
+| "docker compose failed" | Open Docker Desktop and wait for *Engine running*, then run `start_app.bat` again. `view_logs.bat` shows details. |
+| Login says "CSRF verification failed" | You opened the app via an address not listed in `.env`. Add it to `DJANGO_CSRF_TRUSTED_ORIGINS` (see section 3). |
 
 ### Getting code updates
 
@@ -87,8 +97,8 @@ The Django admin panel is at `/admin/` (admin users only).
 
 1. Find your PC's IP address: run `ipconfig` in Command Prompt and look for *IPv4 Address*, e.g. `192.168.1.25`.
 2. Add it to `.env` so logins from the phone are accepted, then run `start_app.bat` again:
-   `DJANGO_CSRF_TRUSTED_ORIGINS=http://localhost:8000,http://192.168.1.25:8000`
-3. On the phone, open `http://192.168.1.25:8000`.
+   `DJANGO_CSRF_TRUSTED_ORIGINS=http://192.168.1.25:8010`
+3. On the phone, open `http://192.168.1.25:8010`.
 4. If Windows Firewall asks, allow Docker Desktop on **private networks**.
 
 ### Installing as an app (PWA)

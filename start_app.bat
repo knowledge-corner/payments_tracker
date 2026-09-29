@@ -60,10 +60,44 @@ if not exist ".env" (
   echo  [OK] Created .env from .env.example
 )
 
-set "PORT=8000"
+set "PORT=8010"
 for /f "usebackq eol=# tokens=1,* delims==" %%A in (".env") do (
   if /i "%%A"=="APP_PORT" if not "%%B"=="" set "PORT=%%B"
 )
+
+REM --- 3b. Make sure no other program (e.g. another web app) owns the port --------
+REM If our own container is already running, the port is ours - nothing to do.
+set "OURS="
+for /f %%I in ('docker compose ps -q --status running web 2^>nul') do set "OURS=1"
+if defined OURS goto :port_ok
+
+call :port_in_use %PORT%
+if errorlevel 1 goto :port_ok
+
+echo  [!] Port %PORT% is already used by another program on this computer.
+set /a CANDIDATE=8010
+:find_port
+call :port_in_use %CANDIDATE%
+if errorlevel 1 goto :found_port
+set /a CANDIDATE+=1
+if %CANDIDATE% GTR 8099 (
+  echo  [X] Could not find a free port between 8010 and 8099.
+  echo      Close the other program or set APP_PORT in .env, then try again.
+  goto :fail
+)
+goto :find_port
+
+:found_port
+set "PORT=%CANDIDATE%"
+findstr /b /c:"APP_PORT=" ".env" >nul 2>&1
+if errorlevel 1 (
+  >>".env" echo APP_PORT=%PORT%
+) else (
+  powershell -NoProfile -Command "(Get-Content '.env') -replace '^APP_PORT=.*','APP_PORT=%PORT%' | Set-Content '.env'"
+)
+echo  [OK] Using free port %PORT% instead (saved in .env).
+
+:port_ok
 
 REM --- 4. Build and start containers --------------------------------------------
 echo  [..] Building and starting containers (first run can take a few minutes)...
@@ -79,7 +113,7 @@ set /a WAITED=0
 :wait_app
 timeout /t 3 /nobreak >nul
 set /a WAITED+=3
-curl -s -f -o nul "http://localhost:%PORT%/health/" >nul 2>&1
+curl -s "http://127.0.0.1:%PORT%/health/" 2>nul | findstr /c:"payments-tracker" >nul
 if not errorlevel 1 goto :app_ready
 if %WAITED% GEQ 180 (
   echo  [X] The app did not become ready. Showing the last log lines:
@@ -114,3 +148,9 @@ exit /b 0
 echo.
 pause
 exit /b 1
+
+REM ---------------------------------------------------------------------------
+REM :port_in_use <port>  -> errorlevel 0 if something is LISTENING on the port
+:port_in_use
+netstat -ano -p tcp | findstr /r /c:":%~1 .*LISTENING" >nul
+exit /b %errorlevel%

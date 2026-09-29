@@ -24,8 +24,15 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-secret-key-c
 DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0")
 CSRF_TRUSTED_ORIGINS = env_list(
-    "DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:8000,http://127.0.0.1:8000"
+    "DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:8010,http://127.0.0.1:8010"
 )
+# Also trust localhost on whichever port Docker publishes the app (APP_PORT),
+# so logins keep working if the launcher moves the app to a free port.
+if os.environ.get("APP_PORT"):
+    for host in ("localhost", "127.0.0.1"):
+        origin = f"http://{host}:{os.environ['APP_PORT']}"
+        if origin not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(origin)
 
 INSTALLED_APPS = [
     "django.contrib.admin",

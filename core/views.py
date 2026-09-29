@@ -67,7 +67,8 @@ def offline(request):
 def health(request):
     with connection.cursor() as cursor:
         cursor.execute("SELECT 1")
-    return HttpResponse("ok", content_type="text/plain")
+    # The Windows launcher looks for this exact text to confirm it reached *this* app.
+    return HttpResponse("payments-tracker ok", content_type="text/plain")
 
 
 @admin_required
