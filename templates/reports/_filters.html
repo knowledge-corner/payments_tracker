@@ -1,0 +1,12 @@
+{% include "partials/doctor_filter.html" %}
+<form method="get" class="card p-2 mb-3">
+  {% if selected_doctor and user.is_app_admin %}<input type="hidden" name="doctor" value="{{ selected_doctor.pk }}">{% endif %}
+  <div class="row g-2 align-items-end">
+    <div class="col-6"><label class="form-label small mb-1">From</label><input type="month" name="from" value="{{ from_value }}" class="form-control form-control-sm"></div>
+    <div class="col-6"><label class="form-label small mb-1">To</label><input type="month" name="to" value="{{ to_value }}" class="form-control form-control-sm"></div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary btn-sm flex-fill">Apply</button>
+      <a href="{% querystring_with export='csv' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> CSV</a>
+    </div>
+  </div>
+</form>

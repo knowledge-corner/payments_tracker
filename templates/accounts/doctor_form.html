@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{% if doctor %}Edit doctor{% else %}Add doctor{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{% url 'accounts:doctor_list' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">{% if doctor %}Edit {{ doctor }}{% else %}Add doctor{% endif %}</h1>
+</div>
+<form method="post" novalidate style="max-width: 640px;">{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  <div class="card p-3">
+    {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+  </div>
+  <div class="form-actions"><button class="btn btn-primary btn-lg-touch w-100">Save doctor</button></div>
+</form>
+{% endblock %}

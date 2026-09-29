@@ -1,0 +1,9 @@
+.git
+.env
+**/__pycache__
+*.pyc
+staticfiles/
+*.bat
+docs/
+.venv/
+venv/

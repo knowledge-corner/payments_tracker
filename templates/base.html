@@ -1,0 +1,98 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Payments">
+  <title>{% block title %}Payments Tracker{% endblock %}</title>
+  <link rel="manifest" href="{% url 'manifest' %}">
+  <link rel="icon" type="image/png" href="{% static 'icons/favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+</head>
+<body class="{% if user.is_authenticated %}has-bottom-nav{% endif %}">
+{% if user.is_authenticated %}
+  {% with url_name=request.resolver_match.url_name ns=request.resolver_match.namespace %}
+  <header class="app-header sticky-top">
+    <nav class="navbar navbar-expand-lg navbar-dark">
+      <div class="container-lg">
+        <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="{% url 'dashboard:home' %}">
+          <img src="{% static 'icons/icon-192.png' %}" alt="" width="28" height="28" class="rounded">
+          <span>{{ app_settings.practice_name|default:"Payments Tracker" }}</span>
+        </a>
+        <div class="d-none d-lg-flex navbar-nav me-auto ms-3">
+          <a class="nav-link {% if ns == 'dashboard' %}active{% endif %}" href="{% url 'dashboard:home' %}">Dashboard</a>
+          <a class="nav-link {% if ns == 'cases' and url_name != 'add' %}active{% endif %}" href="{% url 'cases:list' %}">Cases</a>
+          <a class="nav-link {% if ns == 'receivables' %}active{% endif %}" href="{% url 'receivables:list' %}">Receivables</a>
+          <a class="nav-link {% if ns == 'hospitals' %}active{% endif %}" href="{% url 'hospitals:list' %}">Hospitals</a>
+          <a class="nav-link {% if ns == 'reports' %}active{% endif %}" href="{% url 'reports:index' %}">Reports</a>
+        </div>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+          <a href="{% url 'cases:add' %}" class="btn btn-light btn-sm fw-semibold d-none d-lg-inline-flex align-items-center gap-1"><i class="bi bi-plus-lg"></i> Add Case</a>
+          <div class="dropdown">
+            <button class="btn btn-link text-white p-1" data-bs-toggle="dropdown" aria-label="Account menu">
+              <i class="bi bi-person-circle fs-4"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow">
+              <li><span class="dropdown-item-text small text-muted">Signed in as<br><strong class="text-body">{{ user.doctor_profile|default:user.username }}</strong>{% if user.is_app_admin %} <span class="badge text-bg-warning">Admin</span>{% endif %}</span></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'payments:record' %}"><i class="bi bi-cash-coin me-2"></i>Record payment</a></li>
+              {% if user.is_app_admin %}
+              <li><a class="dropdown-item" href="{% url 'accounts:doctor_list' %}"><i class="bi bi-people me-2"></i>Doctors</a></li>
+              <li><a class="dropdown-item" href="{% url 'app_settings' %}"><i class="bi bi-gear me-2"></i>Settings</a></li>
+              <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-database me-2"></i>Admin panel</a></li>
+              {% endif %}
+              <li><a class="dropdown-item d-none" id="install-app" href="#"><i class="bi bi-download me-2"></i>Install app</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li>
+                <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+                  <button class="dropdown-item text-danger"><i class="bi bi-box-arrow-right me-2"></i>Sign out</button>
+                </form>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </header>
+  {% endwith %}
+{% endif %}
+
+<main class="container-lg py-3 app-main">
+  {% if messages %}
+    <div class="toast-stack">
+      {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show shadow-sm py-2" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close py-2" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+
+{% if user.is_authenticated %}
+  {% with url_name=request.resolver_match.url_name ns=request.resolver_match.namespace %}
+  <nav class="bottom-nav d-lg-none" aria-label="Main">
+    <a href="{% url 'dashboard:home' %}" class="{% if ns == 'dashboard' %}active{% endif %}"><i class="bi bi-house-door{% if ns == 'dashboard' %}-fill{% endif %}"></i><span>Dashboard</span></a>
+    <a href="{% url 'cases:add' %}" class="add-case {% if ns == 'cases' and url_name == 'add' %}active{% endif %}"><span class="add-circle"><i class="bi bi-plus-lg"></i></span><span>Add Case</span></a>
+    <a href="{% url 'cases:list' %}" class="{% if ns == 'cases' and url_name != 'add' %}active{% endif %}"><i class="bi bi-journal-medical"></i><span>Cases</span></a>
+    <a href="{% url 'receivables:list' %}" class="{% if ns == 'receivables' %}active{% endif %}"><i class="bi bi-hourglass-split"></i><span>Receivables</span></a>
+    <a href="{% url 'hospitals:list' %}" class="{% if ns == 'hospitals' %}active{% endif %}"><i class="bi bi-hospital"></i><span>Hospitals</span></a>
+    <a href="{% url 'reports:index' %}" class="{% if ns == 'reports' %}active{% endif %}"><i class="bi bi-bar-chart-line"></i><span>Reports</span></a>
+  </nav>
+  {% endwith %}
+{% endif %}
+
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/app.js' %}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

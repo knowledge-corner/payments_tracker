@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Payment history{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{% url 'reports:index' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">Payment history</h1>
+</div>
+{% include "partials/doctor_filter.html" %}
+<form method="get" class="card p-2 mb-3">
+  {% if selected_doctor and user.is_app_admin %}<input type="hidden" name="doctor" value="{{ selected_doctor.pk }}">{% endif %}
+  <div class="row g-2 align-items-end">
+    <div class="col-6"><label class="form-label small mb-1">From</label><input type="month" name="from" value="{{ from_value }}" class="form-control form-control-sm"></div>
+    <div class="col-6"><label class="form-label small mb-1">To</label><input type="month" name="to" value="{{ to_value }}" class="form-control form-control-sm"></div>
+    <div class="col-7"><select name="hospital" class="form-select form-select-sm"><option value="">All hospitals</option>{% for h in hospitals %}<option value="{{ h.pk }}" {% if hospital == h.pk|stringformat:'s' %}selected{% endif %}>{{ h.name }}</option>{% endfor %}</select></div>
+    <div class="col-5"><select name="mode" class="form-select form-select-sm"><option value="">All modes</option>{% for k, label in modes %}<option value="{{ k }}" {% if mode == k %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
+    <div class="col-12 d-flex gap-2">
+      <button class="btn btn-primary btn-sm flex-fill">Apply</button>
+      <a href="{% querystring_with export='csv' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> CSV</a>
+    </div>
+  </div>
+</form>
+<div class="card stat-card mb-2">
+  <div class="d-flex justify-content-between align-items-end">
+    <div><div class="label">Total received</div><div class="value text-success">{{ summary.total|inr }}</div><div class="sub">{{ summary.n }} payment{{ summary.n|pluralize }}</div></div>
+  </div>
+  {% if by_mode %}<div class="d-flex flex-wrap gap-2 mt-2">{% for m in by_mode %}<span class="age-pill">{{ m.label }}: {{ m.total|inr }}</span>{% endfor %}</div>{% endif %}
+</div>
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for p in payments %}
+    <a class="list-group-item list-group-item-action d-flex justify-content-between gap-2" href="{{ p.case.get_absolute_url }}">
+      <div class="min-w-0">
+        <div class="text-truncate">{{ p.case.hospital.name }}</div>
+        <div class="small text-muted text-truncate">{{ p.payment_date|date:"d M Y" }} · {{ p.get_mode_display }}{% if p.reference_no %} · {{ p.reference_no }}{% endif %}</div>
+        <div class="small text-muted">For case of {{ p.case.case_date|date:"d M Y" }}{% if user.is_app_admin %} · {{ p.case.doctor }}{% endif %}</div>
+      </div>
+      <div class="fw-semibold text-success amount">{{ p.amount|inr }}</div>
+    </a>
+    {% empty %}<div class="p-4 text-center text-muted">No payments in this period.</div>{% endfor %}
+  </div>
+</div>
+{% if summary.n > 300 %}<p class="small text-muted mt-2">Showing the latest 300 payments. Download CSV for the full list.</p>{% endif %}
+{% endblock %}

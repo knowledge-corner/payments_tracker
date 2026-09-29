@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Offline · Payments Tracker{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <i class="bi bi-wifi-off display-3 text-muted"></i>
+  <h1 class="h4 mt-3">You are offline</h1>
+  <p class="text-muted">Payment figures are always loaded live, so please reconnect to continue.</p>
+  <button class="btn btn-primary" onclick="location.reload()">Try again</button>
+</div>
+{% endblock %}

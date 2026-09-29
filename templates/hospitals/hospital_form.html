@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{% if hospital %}Edit hospital{% else %}Add hospital{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{% if hospital %}{% url 'hospitals:detail' hospital.pk %}{% else %}{% url 'hospitals:list' %}{% endif %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">{% if hospital %}Edit {{ hospital.name }}{% else %}Add hospital{% endif %}</h1>
+</div>
+<form method="post" novalidate style="max-width: 640px;">{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  <div class="card p-3">
+    {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+  </div>
+  <div class="form-actions"><button class="btn btn-primary btn-lg-touch w-100"><i class="bi bi-check2"></i> Save hospital</button></div>
+</form>
+{% endblock %}

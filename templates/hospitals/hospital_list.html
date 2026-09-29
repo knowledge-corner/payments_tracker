@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Hospitals{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="h5 mb-0">Hospitals</h1>
+  <a href="{% url 'hospitals:add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add hospital</a>
+</div>
+<form method="get" class="mb-2">
+  <div class="input-group">
+    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search name, city, contact">
+    <input type="hidden" name="show" value="{{ show }}">
+  </div>
+</form>
+<div class="chips mb-2">
+  <a class="chip {% if show == 'active' %}active{% endif %}" href="{% querystring_with show='active' %}">Active</a>
+  <a class="chip {% if show == 'all' %}active{% endif %}" href="{% querystring_with show='all' %}">All</a>
+</div>
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for h in hospitals %}
+    <a href="{% url 'hospitals:detail' h.pk %}" class="list-group-item list-group-item-action py-3">
+      <div class="d-flex justify-content-between gap-2">
+        <div class="min-w-0">
+          <div class="fw-semibold text-truncate">{{ h.name }} {% if not h.is_active %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</div>
+          <div class="small text-muted text-truncate">{% if h.city %}{{ h.city }} · {% endif %}Default fee {{ h.default_fee|inr }}</div>
+          {% if h.contact_person %}<div class="small text-muted text-truncate"><i class="bi bi-person"></i> {{ h.contact_person }}</div>{% endif %}
+        </div>
+        <div class="text-end flex-shrink-0">
+          {% if h.open_cases %}<div class="fw-semibold text-danger amount">{{ h.outstanding_total|inr }}</div><div class="small text-muted">{{ h.open_cases }} unpaid</div>
+          {% else %}<span class="small text-success"><i class="bi bi-check2"></i> Clear</span>{% endif %}
+        </div>
+      </div>
+    </a>
+    {% empty %}<div class="p-4 text-center text-muted">No hospitals yet.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

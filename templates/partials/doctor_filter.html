@@ -1,0 +1,12 @@
+{% if user.is_app_admin and doctors %}
+<form method="get" class="mb-3">
+  {% for key, value in request.GET.items %}{% if key != 'doctor' and key != 'page' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
+  <div class="input-group input-group-sm">
+    <span class="input-group-text"><i class="bi bi-person-badge"></i></span>
+    <select name="doctor" class="form-select" onchange="this.form.submit()">
+      <option value="">All doctors</option>
+      {% for d in doctors %}<option value="{{ d.pk }}" {% if selected_doctor.pk == d.pk %}selected{% endif %}>{{ d }}</option>{% endfor %}
+    </select>
+  </div>
+</form>
+{% endif %}

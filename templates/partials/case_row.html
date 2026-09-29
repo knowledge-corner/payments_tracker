@@ -1,0 +1,17 @@
+{% load money %}
+<a href="{{ case.get_absolute_url }}" class="list-group-item list-group-item-action py-3">
+  <div class="d-flex justify-content-between align-items-start gap-2">
+    <div class="min-w-0">
+      <div class="fw-semibold text-truncate">{{ case.hospital.name }}</div>
+      <div class="small text-muted text-truncate">
+        {{ case.case_date|date:"d M Y" }}{% if case.procedure_type %} · {{ case.procedure_type }}{% endif %}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}
+      </div>
+      {% if user.is_app_admin %}<div class="small text-muted">{{ case.doctor }}</div>{% endif %}
+    </div>
+    <div class="text-end flex-shrink-0">
+      <div class="fw-semibold">{{ case.fee|inr }}</div>
+      {% status_badge case %}
+      {% if case.outstanding > 0 and case.total_paid > 0 %}<div class="small text-danger mt-1">Due {{ case.outstanding|inr }}</div>{% endif %}
+    </div>
+  </div>
+</a>

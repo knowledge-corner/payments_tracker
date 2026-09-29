@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Monthly summary{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{% url 'reports:index' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">Monthly summary</h1>
+</div>
+{% include "reports/_filters.html" %}
+<div class="row g-2 mb-3">
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">Cases</div><div class="value">{{ totals.cases }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">Billed</div><div class="value">{{ totals.billed|inr }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">Received</div><div class="value text-success">{{ totals.received|inr }}</div></div></div>
+  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">Outstanding</div><div class="value text-danger">{{ totals.outstanding|inr }}</div></div></div>
+</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-report mb-0 align-middle">
+      <thead><tr><th>Month</th><th class="text-end">Cases</th><th class="text-end">Billed</th><th class="text-end">Received</th><th class="text-end">Outstanding</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td><a href="{% url 'cases:list' %}?month={{ r.month|date:'Y-m' }}{% if selected_doctor and user.is_app_admin %}&doctor={{ selected_doctor.pk }}{% endif %}">{{ r.month|date:"M Y" }}</a></td>
+          <td class="text-end">{{ r.cases }}</td>
+          <td class="text-end amount">{{ r.billed|inr }}</td>
+          <td class="text-end amount text-success">{{ r.received|inr }}</td>
+          <td class="text-end amount {% if r.outstanding %}text-danger{% endif %}">{{ r.outstanding|inr }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="fw-semibold"><tr><td>Total</td><td class="text-end">{{ totals.cases }}</td><td class="text-end amount">{{ totals.billed|inr }}</td><td class="text-end amount">{{ totals.received|inr }}</td><td class="text-end amount">{{ totals.outstanding|inr }}</td></tr></tfoot>
+    </table>
+  </div>
+</div>
+<p class="small text-muted mt-2">Billed and outstanding are grouped by case date; received is grouped by payment date.</p>
+{% endblock %}

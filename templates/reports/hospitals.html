@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Hospital-wise report{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{% url 'reports:index' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">Hospital-wise billing</h1>
+</div>
+{% include "reports/_filters.html" %}
+<div class="chips mb-2">
+  <span class="small text-muted align-self-center">Sort by</span>
+  <a class="chip {% if sort == 'outstanding' %}active{% endif %}" href="{% querystring_with sort='outstanding' %}">Outstanding</a>
+  <a class="chip {% if sort == 'billed' %}active{% endif %}" href="{% querystring_with sort='billed' %}">Billed</a>
+  <a class="chip {% if sort == 'cases' %}active{% endif %}" href="{% querystring_with sort='cases' %}">Cases</a>
+</div>
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for r in rows %}
+    <a class="list-group-item list-group-item-action py-3" href="{% url 'hospitals:detail' r.hospital.pk %}">
+      <div class="d-flex justify-content-between"><div class="fw-semibold text-truncate min-w-0">{{ r.hospital.name }}</div><div class="small text-muted text-nowrap flex-shrink-0 ms-2">{{ r.cases }} case{{ r.cases|pluralize }}</div></div>
+      <div class="row g-1 small mt-1">
+        <div class="col-4"><div class="text-muted">Billed</div><div class="amount">{{ r.billed|inr }}</div></div>
+        <div class="col-4"><div class="text-muted">Received</div><div class="amount text-success">{{ r.received|inr }}</div></div>
+        <div class="col-4"><div class="text-muted">Outstanding</div><div class="amount {% if r.outstanding %}text-danger fw-semibold{% endif %}">{{ r.outstanding|inr }}</div>{% if r.overdue %}<div class="text-danger" style="font-size:.7rem">{{ r.overdue|inr }} overdue</div>{% endif %}</div>
+      </div>
+    </a>
+    {% empty %}<div class="p-4 text-center text-muted">No cases in this period.</div>{% endfor %}
+  </div>
+  {% if rows %}
+  <div class="card-footer bg-white small fw-semibold d-flex justify-content-between flex-wrap gap-2">
+    <span>Total · {{ totals.cases }} cases</span><span>Billed {{ totals.billed|inr }}</span><span class="text-success">Received {{ totals.received|inr }}</span><span class="text-danger">Outstanding {{ totals.outstanding|inr }}</span>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

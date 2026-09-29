@@ -1,0 +1,31 @@
+# Production overlay: adds Caddy as an HTTPS reverse proxy with automatic
+# Let's Encrypt certificates for your domain.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# Requires in .env: APP_DOMAIN, strong DJANGO_SECRET_KEY / POSTGRES_PASSWORD,
+# DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS, DJANGO_SECURE=1, SEED_DEMO_DATA=0.
+services:
+  web:
+    ports: !reset []
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env, e.g. payments.example.com}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

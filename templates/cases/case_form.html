@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{% if is_new %}Add Case{% else %}Edit Case{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{% if case %}{{ case.get_absolute_url }}{% else %}{% url 'dashboard:home' %}{% endif %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">{% if is_new %}Add completed case{% else %}Edit case{% endif %}</h1>
+</div>
+
+<form method="post" novalidate style="max-width: 640px;">{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  <div class="card p-3">
+    {% if form.doctor %}{% include "partials/field.html" with field=form.doctor %}{% endif %}
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-baseline">
+        <label class="form-label" for="id_hospital">Hospital <span class="text-danger">*</span></label>
+        <a class="small" href="{% url 'hospitals:add' %}?next={% url 'cases:add' %}">+ New hospital</a>
+      </div>
+      {{ form.hospital }}
+      {% for error in form.hospital.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+    </div>
+    <div class="row g-2">
+      <div class="col-6">{% include "partials/field.html" with field=form.case_date %}</div>
+      <div class="col-6">
+        <div class="mb-3">
+          <label class="form-label" for="id_fee">Fee (₹) <span class="text-danger">*</span></label>
+          {{ form.fee }}
+          {% for error in form.fee.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+    {% include "partials/field.html" with field=form.procedure_type %}
+    <datalist id="procedure-options">{% for p in procedures %}<option value="{{ p }}">{% endfor %}</datalist>
+    {% include "partials/field.html" with field=form.patient_reference %}
+
+    {% if form.paid_now %}
+      {% include "partials/field.html" with field=form.paid_now %}
+      <div id="paid-now-fields" class="row g-2 d-none">
+        <div class="col-6">{% include "partials/field.html" with field=form.paid_amount %}</div>
+        <div class="col-6">{% include "partials/field.html" with field=form.paid_mode %}</div>
+      </div>
+    {% endif %}
+
+    <details {% if form.notes.value or form.due_date.errors or form.notes.errors %}open{% endif %}>
+      <summary class="small text-primary mb-2">More details (notes, due date)</summary>
+      {% include "partials/field.html" with field=form.notes %}
+      {% include "partials/field.html" with field=form.due_date %}
+    </details>
+  </div>
+
+  <div class="form-actions d-flex gap-2">
+    <button class="btn btn-primary btn-lg-touch flex-fill" name="save"><i class="bi bi-check2"></i> Save case</button>
+    {% if is_new %}<button class="btn btn-outline-primary btn-lg-touch" name="save_add" title="Save and add another"><i class="bi bi-plus-lg"></i> Save &amp; add</button>{% endif %}
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Dashboard · Payments Tracker{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <div>
+    <div class="text-muted small">{% now "l, d M Y" %}</div>
+    <h1 class="h5 mb-0">Hello, {{ user.doctor_profile|default:user.first_name|default:user.username }}</h1>
+  </div>
+</div>
+
+{% include "partials/doctor_filter.html" %}
+
+<div class="quick-actions my-3">
+  <a href="{% url 'cases:add' %}" class="primary"><i class="bi bi-plus-lg"></i>Add Case</a>
+  <a href="{% url 'payments:record' %}"><i class="bi bi-cash-coin"></i>Record Payment</a>
+  <a href="{% url 'receivables:list' %}"><i class="bi bi-hourglass-split"></i>Outstanding</a>
+  <a href="{% url 'reports:index' %}"><i class="bi bi-bar-chart-line"></i>Reports</a>
+</div>
+
+<div class="chips mb-2">
+  {% for key, label in periods %}
+    <a class="chip {% if key == period %}active{% endif %}" href="{% querystring_with period=key %}">{{ label }}</a>
+  {% endfor %}
+</div>
+
+<div class="row g-2">
+  <div class="col-12 col-md-4">
+    <div class="card stat-card hero">
+      <div class="label">Total earnings</div>
+      <div class="value">{{ total_earnings|inr }}</div>
+      <div class="sub">{{ period_case_count }} case{{ period_case_count|pluralize }} billed</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="card stat-card">
+      <div class="label">Received</div>
+      <div class="value text-success">{{ amount_received|inr }}</div>
+      <div class="sub">Payments in period</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-4">
+    <a class="stat-link" href="{% url 'receivables:list' %}">
+      <div class="card stat-card">
+        <div class="label">Outstanding</div>
+        <div class="value text-danger">{{ outstanding|inr }}</div>
+        <div class="sub">All unpaid cases</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="stat-link" href="{% url 'cases:list' %}?month={% now 'Y-m' %}">
+      <div class="card stat-card">
+        <div class="d-flex justify-content-between"><div class="label">Cases this month</div><span class="icon bg-primary-subtle text-primary"><i class="bi bi-journal-medical"></i></span></div>
+        <div class="value">{{ cases_this_month }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="stat-link" href="{% url 'cases:list' %}?status=unpaid">
+      <div class="card stat-card">
+        <div class="d-flex justify-content-between"><div class="label">Pending</div><span class="icon bg-secondary-subtle text-secondary"><i class="bi bi-clock"></i></span></div>
+        <div class="value">{{ pending_count }}</div>
+        <div class="sub">{{ pending_amount|inr }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="stat-link" href="{% url 'receivables:list' %}?view=overdue">
+      <div class="card stat-card">
+        <div class="d-flex justify-content-between"><div class="label">Overdue</div><span class="icon bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle"></i></span></div>
+        <div class="value text-danger">{{ overdue_count }}</div>
+        <div class="sub">{{ overdue_amount|inr }}</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="stat-link" href="{% url 'receivables:list' %}?view=followup">
+      <div class="card stat-card">
+        <div class="d-flex justify-content-between"><div class="label">Follow-ups</div><span class="icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-telephone-outbound"></i></span></div>
+        <div class="value">{{ followup_count }}</div>
+        <div class="sub">Due today</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-end">
+  <div class="section-title">Action required{% if action_total %} ({{ action_total }}){% endif %}</div>
+  {% if action_total > action_required|length %}<a class="small mb-2" href="{% url 'receivables:list' %}?view=followup">View all</a>{% endif %}
+</div>
+<div class="card">
+  {% if action_required %}
+  <div class="list-group list-group-flush">
+    {% for case in action_required %}
+    <div class="list-group-item py-3">
+      <a href="{{ case.get_absolute_url }}" class="text-decoration-none text-body d-flex justify-content-between gap-2">
+        <div class="min-w-0">
+          <div class="fw-semibold text-truncate">{{ case.hospital.name }}</div>
+          <div class="small text-muted">{{ case.case_date|date:"d M Y" }}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}{% if user.is_app_admin %} · {{ case.doctor }}{% endif %}</div>
+          <div class="mt-1 d-flex gap-1 flex-wrap">
+            {% status_badge case %}
+            {% if case.reminder.due %}<span class="badge rounded-pill text-bg-warning"><i class="bi bi-bell"></i> Follow up</span>{% endif %}
+            <span class="age-pill {% if case.age_days > 60 %}old{% endif %}">{{ case.age_days }} days</span>
+          </div>
+        </div>
+        <div class="text-end flex-shrink-0"><div class="fw-bold text-danger amount">{{ case.outstanding|inr }}</div></div>
+      </a>
+      <div class="d-flex gap-2 mt-2">
+        <a href="{% url 'payments:record_for_case' case.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-success flex-fill"><i class="bi bi-cash"></i> Paid</a>
+        <a href="{% url 'payments:followup_add' case.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary flex-fill"><i class="bi bi-telephone"></i> Follow-up</a>
+        {% if case.hospital.contact_number %}<a href="tel:{{ case.hospital.contact_number }}" class="btn btn-sm btn-outline-secondary" aria-label="Call hospital"><i class="bi bi-telephone-fill"></i></a>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="p-4 text-center text-muted"><i class="bi bi-check2-circle fs-2 text-success"></i><div>Nothing needs attention right now.</div></div>
+  {% endif %}
+</div>
+
+{% if recent_payments %}
+<div class="section-title">Latest payments</div>
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for p in recent_payments %}
+    <a class="list-group-item list-group-item-action d-flex justify-content-between" href="{{ p.case.get_absolute_url }}">
+      <div class="min-w-0"><div class="text-truncate">{{ p.case.hospital.name }}</div><div class="small text-muted">{{ p.payment_date|date:"d M" }} · {{ p.get_mode_display }}</div></div>
+      <div class="text-success fw-semibold amount">+{{ p.amount|inr }}</div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Delete case{% endblock %}
+{% block content %}
+<div class="card p-4" style="max-width: 520px;">
+  <h1 class="h5">Delete this case?</h1>
+  <p>{{ case.hospital.name }} · {{ case.case_date|date:"d M Y" }} · {{ case.fee|inr }}</p>
+  <p class="text-danger small">All payments and follow-ups recorded against it will also be deleted. This cannot be undone.</p>
+  <form method="post" class="d-flex gap-2">{% csrf_token %}
+    <button class="btn btn-danger">Yes, delete</button>
+    <a href="{{ case.get_absolute_url }}" class="btn btn-outline-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}
