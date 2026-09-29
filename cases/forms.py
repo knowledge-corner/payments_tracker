@@ -51,7 +51,7 @@ class CaseForm(StyledModelForm):
         model = Case
         fields = ["doctor", "hospital", "case_date", "patient_reference", "procedure_type", "fee", "due_date", "notes"]
         widgets = {
-            "hospital": HospitalSelect(),
+            "hospital": HospitalSelect(attrs={"data-searchable": "", "data-placeholder": "Type to search hospital"}),
             "case_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "fee": forms.NumberInput(attrs={"inputmode": "decimal", "step": "1"}),
@@ -73,6 +73,7 @@ class CaseForm(StyledModelForm):
 
         if user is not None and user.is_app_admin:
             self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
+            self.fields["doctor"].widget.attrs.update({"data-searchable": "", "data-placeholder": "Type to search doctor"})
         else:
             self.fields.pop("doctor")
 
@@ -94,3 +95,37 @@ class CaseForm(StyledModelForm):
         if case_date and case_date > timezone.localdate():
             self.add_error("case_date", "Case date cannot be in the future.")
         return cleaned
+
+
+class CaseImportForm(forms.Form):
+    file = forms.FileField(
+        label="Excel file (.xlsx)",
+        widget=forms.ClearableFileInput(attrs={"accept": ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+    )
+    create_missing_hospitals = forms.BooleanField(
+        required=False, initial=True, label="Create hospitals that are not in the app yet",
+    )
+    doctor = forms.ModelChoiceField(
+        queryset=Doctor.objects.none(), required=False,
+        help_text="Used for rows without a 'Doctor Username'.",
+    )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["file"].widget.attrs["class"] = "form-control"
+        self.fields["create_missing_hospitals"].widget.attrs["class"] = "form-check-input"
+        if user is not None and user.is_app_admin:
+            self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
+            self.fields["doctor"].widget.attrs.update({"class": "form-select", "data-searchable": "", "data-placeholder": "Type to search doctor"})
+        else:
+            self.fields.pop("doctor")
+
+    def clean_file(self):
+        from .importer import MAX_FILE_BYTES
+
+        f = self.cleaned_data["file"]
+        if not f.name.lower().endswith(".xlsx"):
+            raise forms.ValidationError("Please upload an Excel .xlsx file. (In Excel: File > Save As > Excel Workbook.)")
+        if f.size > MAX_FILE_BYTES:
+            raise forms.ValidationError("File is larger than 5 MB. Please split it into smaller files.")
+        return f

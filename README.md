@@ -135,7 +135,8 @@ docker compose down -v                                         # stop and DELETE
 | Module | What it does |
 |---|---|
 | **Dashboard** | Total earnings, amount received, outstanding, cases this month, pending, overdue and follow-ups due. **Action Required** list with one-tap *Paid*, *Follow-up* and *Call*. Quick actions: + Add Case, Record Payment, View Outstanding, View Reports. Period chips: This month, This FY (Apr–Mar), All time. |
-| **Add Case** | Built to take under a minute: remembers the last hospital, fills in the hospital's default fee (editable), suggests procedures, has an optional *Payment already received* switch, and *Save & add another*. |
+| **Add Case** | Built to take under a minute: type-to-search hospital box (matches any part of the name), remembers the last hospital, fills in the hospital's default fee (editable), suggests procedures, has an optional *Payment already received* switch, and *Save & add another*. |
+| **Excel import** | *Cases → Import Excel*: download a template (hospital dropdown, payment mode list, instructions), fill it in, upload. A preview shows what will be imported, flags errors row by row, skips duplicates and can create new hospitals (but never a look-alike of an existing one, e.g. a typo). Optional Amount Received / Payment Date / Mode columns create payments too. Existing sheets with headings like "Date", "Hospital Name", "Amount", "IP No" are recognised. |
 | **Cases** | Search and filter by status, month and hospital. Case detail shows payments, follow-ups and reminder status. |
 | **Payments** | Kept separate from cases: multiple or partial payments, different dates and modes (UPI, NEFT, cheque, cash, card). Over-payment is blocked. |
 | **Receivables** | Total outstanding, overdue amount, follow-ups due and an ageing breakdown (0-30 / 31-60 / 61-90 / 90+ days). Sort by oldest first (default), highest amount or hospital. Mark as followed up, snooze (3 days / 1 week / 2 weeks), or log a follow-up with date, method, contact, notes and promised payment date. |
@@ -266,7 +267,7 @@ python manage.py test
 
 | Item | Notes |
 |---|---|
-| **Excel import** | Once the doctors share their real sheets: a `manage.py import_excel` command that maps columns to Hospital, Case and Payment, sets `source="import"` and `legacy_ref="<file>:<sheet>:<row>"`, and is safe to run again. |
+| **Excel import - more formats** | V1 imports cases (+ first payment) from .xlsx. Next: separate payment-only uploads and doctor-specific column mappings once their real files are available. |
 | **REST API** | Django REST Framework endpoints on top of the existing querysets and services, for a native iOS/Android app. |
 | **WhatsApp reminders** | WhatsApp Business API templates triggered from the existing reminder engine. |
 | **Statements** | A PDF/Excel statement of pending cases per hospital, to send with follow-ups. |

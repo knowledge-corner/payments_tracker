@@ -12,7 +12,7 @@
   <div class="row g-2 align-items-end">
     <div class="col-6"><label class="form-label small mb-1">From</label><input type="month" name="from" value="{{ from_value }}" class="form-control form-control-sm"></div>
     <div class="col-6"><label class="form-label small mb-1">To</label><input type="month" name="to" value="{{ to_value }}" class="form-control form-control-sm"></div>
-    <div class="col-7"><select name="hospital" class="form-select form-select-sm"><option value="">All hospitals</option>{% for h in hospitals %}<option value="{{ h.pk }}" {% if hospital == h.pk|stringformat:'s' %}selected{% endif %}>{{ h.name }}</option>{% endfor %}</select></div>
+    <div class="col-7"><select name="hospital" class="form-select form-select-sm" data-searchable data-placeholder="All hospitals - type to search"><option value="">All hospitals</option>{% for h in hospitals %}<option value="{{ h.pk }}" {% if hospital == h.pk|stringformat:'s' %}selected{% endif %}>{{ h.name }}</option>{% endfor %}</select></div>
     <div class="col-5"><select name="mode" class="form-select form-select-sm"><option value="">All modes</option>{% for k, label in modes %}<option value="{{ k }}" {% if mode == k %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div>
     <div class="col-12 d-flex gap-2">
       <button class="btn btn-primary btn-sm flex-fill">Apply</button>

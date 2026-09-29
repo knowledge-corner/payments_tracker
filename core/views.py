@@ -10,7 +10,7 @@ from .models import AppSettings
 from .permissions import admin_required
 
 # Bump when static assets change so installed PWAs refresh their cache.
-SW_CACHE_VERSION = "v2"
+SW_CACHE_VERSION = "v3"
 
 
 @cache_control(max_age=3600)
@@ -49,6 +49,7 @@ def service_worker(request):
         static("vendor/bootstrap-icons/fonts/bootstrap-icons.woff2"),
         static("css/app.css"),
         static("js/app.js"),
+        static("js/searchable-select.js"),
         static("icons/icon-192.png"),
     ]
     response = render(

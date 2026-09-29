@@ -4,7 +4,10 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h1 class="h5 mb-0">Cases</h1>
-  <a href="{% url 'cases:add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Case</a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'cases:import' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Import Excel</a>
+    <a href="{% url 'cases:add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Case</a>
+  </div>
 </div>
 {% include "partials/doctor_filter.html" %}
 <form method="get" class="mb-2">
@@ -25,7 +28,7 @@
       <input type="month" name="month" value="{{ month }}" class="form-control form-control-sm" onchange="this.form.submit()">
     </div>
     <div class="col-12 col-md-6">
-      <select name="hospital" class="form-select form-select-sm" onchange="this.form.submit()">
+      <select name="hospital" class="form-select form-select-sm" onchange="this.form.submit()" data-searchable data-placeholder="All hospitals - type to search">
         <option value="">All hospitals</option>
         {% for h in hospitals %}<option value="{{ h.pk }}" {% if hospital == h.pk|stringformat:'s' %}selected{% endif %}>{{ h.name }}</option>{% endfor %}
       </select>

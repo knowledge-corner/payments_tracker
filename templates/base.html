@@ -43,6 +43,7 @@
               <li><span class="dropdown-item-text small text-muted">Signed in as<br><strong class="text-body">{{ user.doctor_profile|default:user.username }}</strong>{% if user.is_app_admin %} <span class="badge text-bg-warning">Admin</span>{% endif %}</span></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="{% url 'payments:record' %}"><i class="bi bi-cash-coin me-2"></i>Record payment</a></li>
+              <li><a class="dropdown-item" href="{% url 'cases:import' %}"><i class="bi bi-file-earmark-excel me-2"></i>Import cases from Excel</a></li>
               {% if user.is_app_admin %}
               <li><a class="dropdown-item" href="{% url 'accounts:doctor_list' %}"><i class="bi bi-people me-2"></i>Doctors</a></li>
               <li><a class="dropdown-item" href="{% url 'app_settings' %}"><i class="bi bi-gear me-2"></i>Settings</a></li>
@@ -92,6 +93,7 @@
 {% endif %}
 
 <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'js/searchable-select.js' %}"></script>
 <script src="{% static 'js/app.js' %}"></script>
 {% block scripts %}{% endblock %}
 </body>

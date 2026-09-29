@@ -96,3 +96,16 @@ a.stat-link { color: inherit; text-decoration: none; display: block; height: 100
 .bottom-nav a { position: relative; }
 .bottom-nav a.add-case.active::before { display: none; }
 .login-wrap .card { border-top: 4px solid var(--accent); }
+
+/* Searchable select (type-to-search dropdown) */
+.combo { position: relative; }
+.combo-input { padding-right: 2.25rem; }
+.combo-caret { position: absolute; right: .85rem; top: 50%; transform: translateY(-50%); color: #8a86a8; pointer-events: none; }
+.combo-menu { display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 1060; max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid #dcd8ec; border-radius: 12px; box-shadow: 0 10px 28px rgba(30, 27, 75, .16); padding: .25rem; }
+.combo.open .combo-menu { display: block; }
+.combo-item { padding: .65rem .75rem; border-radius: 8px; cursor: pointer; font-size: .95rem; line-height: 1.3; }
+.combo-item.active { background: var(--brand-soft); }
+.combo-item.selected { font-weight: 600; color: var(--brand-dark); }
+.combo-item mark { background: var(--accent-soft); color: inherit; padding: 0 1px; border-radius: 3px; }
+.combo-empty { padding: .75rem; color: #6c757d; font-size: .9rem; }
+.combo .form-control-sm + .combo-caret { right: .6rem; font-size: .8rem; }

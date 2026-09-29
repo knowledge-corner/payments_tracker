@@ -30,7 +30,10 @@ class PaymentForm(StyledModelForm):
         else:
             self.fields["case"] = CaseChoiceField(
                 queryset=case_queryset, empty_label="Select an unpaid case",
-                widget=forms.Select(attrs={"class": "form-select"}),
+                widget=forms.Select(attrs={
+                    "class": "form-select", "data-searchable": "",
+                    "data-placeholder": "Search hospital, date or case ref",
+                }),
             )
 
     def _case(self):

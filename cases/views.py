@@ -4,15 +4,18 @@ from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.http import require_POST
 
 from core.permissions import require_doctor_profile, scoped_cases, selected_doctor, visible_doctors
 from hospitals.models import Hospital
 from payments.models import Payment
 from payments.services import reminder_state
 
-from .forms import COMMON_PROCEDURES, CaseForm
+from . import importer
+from .forms import COMMON_PROCEDURES, CaseForm, CaseImportForm
 from .models import Case, PaymentStatus
 
 
@@ -155,3 +158,67 @@ def case_delete(request, pk):
         messages.success(request, "Case deleted.")
         return redirect("cases:list")
     return render(request, "cases/case_confirm_delete.html", {"case": case})
+
+
+# --- Excel import ------------------------------------------------------------
+
+IMPORT_SESSION_KEY = "case_import"
+
+
+@require_doctor_profile
+def import_template(request):
+    content = importer.build_template(include_doctor_column=request.user.is_app_admin)
+    response = HttpResponse(
+        content, content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = 'attachment; filename="cases_import_template.xlsx"'
+    return response
+
+
+@require_doctor_profile
+def import_cases(request):
+    """Step 1: upload + validate and show a preview. Nothing is saved yet."""
+    form = CaseImportForm(request.POST or None, request.FILES or None, user=request.user)
+    context = {"form": form}
+    if request.method == "POST" and form.is_valid():
+        upload = form.cleaned_data["file"]
+        result = importer.parse_workbook(
+            upload, request.user,
+            default_doctor=form.cleaned_data.get("doctor"),
+            create_missing_hospitals=form.cleaned_data["create_missing_hospitals"],
+        )
+        if result.fatal and not result.rows:
+            messages.error(request, result.fatal)
+        else:
+            request.session[IMPORT_SESSION_KEY] = {"filename": upload.name, "rows": importer.serialise(result)}
+            problem_rows = [r for r in result.rows if r.status != "ok" or r.warnings]
+            context.update({
+                "result": result,
+                "counts": result.counts(),
+                "problem_rows": problem_rows,
+                "ok_rows": result.ok_rows[:200],
+                "filename": upload.name,
+            })
+    return render(request, "cases/import.html", context)
+
+
+@require_doctor_profile
+@require_POST
+def import_confirm(request):
+    """Step 2: create the previewed rows."""
+    payload = request.session.pop(IMPORT_SESSION_KEY, None)
+    if not payload or not payload.get("rows"):
+        messages.error(request, "Nothing to import - please upload the file again.")
+        return redirect("cases:import")
+    rows = payload["rows"]
+    if not request.user.is_app_admin:
+        own = request.user.doctor_profile.pk
+        rows = [r for r in rows if r["data"].get("doctor_id") == own]
+    counts = importer.commit_rows(rows, request.user, payload.get("filename"))
+    msg = f"Imported {counts['cases']} case(s)"
+    if counts["payments"]:
+        msg += f" and {counts['payments']} payment(s)"
+    if counts["hospitals"]:
+        msg += f"; created {counts['hospitals']} new hospital(s)"
+    messages.success(request, msg + ".")
+    return redirect("cases:list")

@@ -51,5 +51,6 @@
     <button class="btn btn-primary btn-lg-touch flex-fill" name="save"><i class="bi bi-check2"></i> Save case</button>
     {% if is_new %}<button class="btn btn-outline-primary btn-lg-touch" name="save_add" title="Save and add another"><i class="bi bi-plus-lg"></i> Save &amp; add</button>{% endif %}
   </div>
+  {% if is_new %}<div class="text-center small mb-3"><a href="{% url 'cases:import' %}"><i class="bi bi-file-earmark-excel"></i> Have many cases in Excel? Import them</a></div>{% endif %}
 </form>
 {% endblock %}
