@@ -219,3 +219,6 @@ __marimo__/
 
 # Django collected static files
 staticfiles/
+
+# SQLite database and other runtime data
+data/

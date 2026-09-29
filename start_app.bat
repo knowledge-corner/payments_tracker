@@ -134,7 +134,7 @@ echo  [OK] Using free port %PORT% instead (saved in .env).
 
 REM --- 4. Build and start containers --------------------------------------------
 echo  [..] Building and starting containers (first run can take a few minutes)...
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 if errorlevel 1 (
   echo  [X] docker compose failed. See the messages above.
   goto :fail

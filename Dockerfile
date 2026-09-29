@@ -14,9 +14,12 @@ COPY . .
 # Guard against Windows line endings if the repo was checked out with CRLF.
 RUN sed -i 's/\r$//' docker/entrypoint.sh \
     && useradd --create-home appuser \
-    && mkdir -p /app/staticfiles \
+    && mkdir -p /app/staticfiles /app/data \
     && chown -R appuser /app
 USER appuser
+
+ENV DATA_DIR=/app/data
+VOLUME ["/app/data"]
 
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

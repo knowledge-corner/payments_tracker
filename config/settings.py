@@ -12,6 +12,25 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def load_env_file(path):
+    """Read KEY=VALUE lines from a .env file (for hosts without Docker, e.g.
+    PythonAnywhere). Real environment variables always win."""
+    if not path.is_file():
+        return
+    values = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip().strip('"').strip("'")  # last one wins
+    for key, value in values.items():
+        os.environ.setdefault(key, value)
+
+
+load_env_file(BASE_DIR / ".env")
+
+
 def env_bool(name, default=False):
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -83,12 +102,29 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default="postgres://payments:payments@localhost:5432/payments_tracker",
-        conn_max_age=60,
-    )
-}
+# Database
+# - Default: SQLite file in DATA_DIR (client testing / small single-server use).
+# - Production (e.g. DigitalOcean): set DATABASE_URL=postgres://user:pass@host:5432/dbname
+DATA_DIR = Path(os.environ.get("DATA_DIR", BASE_DIR / "data"))
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+
+if DATABASE_URL and not DATABASE_URL.startswith("sqlite"):
+    DATABASES = {"default": dj_database_url.parse(DATABASE_URL, conn_max_age=60)}
+else:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": DATA_DIR / "db.sqlite3",
+            "OPTIONS": {
+                # WAL + immediate transactions avoid "database is locked" errors
+                # when several people use the app at the same time.
+                "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;",
+                "transaction_mode": "IMMEDIATE",
+                "timeout": 20,
+            },
+        }
+    }
 
 AUTH_USER_MODEL = "accounts.User"
 

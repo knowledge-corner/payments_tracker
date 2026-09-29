@@ -1,0 +1,28 @@
+# PostgreSQL overlay (production, e.g. DigitalOcean). Use together with the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
+# and for HTTPS on a domain also add -f docker-compose.prod.yml
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-payments_tracker}
+      POSTGRES_USER: ${POSTGRES_USER:-payments}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-payments} -d ${POSTGRES_DB:-payments_tracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-payments}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-payments_tracker}
+
+volumes:
+  pgdata:

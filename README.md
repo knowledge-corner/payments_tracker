@@ -40,7 +40,7 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 1. Open the `payments_tracker` folder.
 2. **Double-click `start_app.bat`**.
    - It **downloads the latest code from GitHub (`git pull`)**, starts Docker Desktop if needed, creates `.env`
-     on first run, builds and starts the app and PostgreSQL, waits until the app is healthy,
+     on first run, builds and starts the app, waits until the app is healthy,
      **applies database migrations**, then opens **http://localhost:8010** in your browser.
    - If another program already uses port 8010, it picks the next free port automatically and saves it in `.env`.
    - The first run downloads images and can take 3 to 5 minutes. After that it takes a few seconds.
@@ -159,7 +159,7 @@ docker compose down -v                                         # stop and DELETE
 Browser / installed PWA (Bootstrap 5, mobile-first, bottom navigation)
         │  HTTPS (Caddy in production)
         ▼
-Django 5.1 (gunicorn + whitenoise)  ──►  PostgreSQL 16
+Django 5.1 on Python 3.12 (gunicorn + whitenoise)  ──►  SQLite (client testing) or PostgreSQL 16 (production)
   ├── accounts/    User (role) + Doctor profile, doctor management
   ├── hospitals/   Hospital master
   ├── cases/       Case model + queryset annotations (paid / outstanding / status)
@@ -172,6 +172,9 @@ Django 5.1 (gunicorn + whitenoise)  ──►  PostgreSQL 16
 - **Ready for a REST API / native app:** business rules live in model querysets (`Case.objects.with_totals()`)
   and `payments/services.py`, not in views or templates. A future Django REST Framework layer can reuse them directly.
 - **No CDN dependency:** Bootstrap and Bootstrap Icons are stored under `static/vendor/`.
+- **Database:** SQLite by default (one file in `data/`, or the Docker volume `appdata`). Setting `DATABASE_URL=postgres://...`
+  switches to PostgreSQL with no code changes. `manage.py export_data` moves all data across (see section 9).
+- **Python:** 3.12 in Docker; 3.10–3.13 supported (Django 5.1).
 - **Money** uses `Decimal`, and amounts are shown in Indian format (₹12,34,567).
 
 ---
@@ -214,43 +217,35 @@ imported later without creating duplicates.
 
 ---
 
-## 9. Deploying on a domain with HTTPS
+## 9. Hosting
 
-On any Linux server with Docker (e.g. AWS Lightsail, DigitalOcean, Azure VM):
+| Stage | Where | Database | Guide |
+|---|---|---|---|
+| **Client testing (free)** | PythonAnywhere free account: `https://<username>.pythonanywhere.com` | SQLite | [docs/DEPLOY_PYTHONANYWHERE.md](docs/DEPLOY_PYTHONANYWHERE.md) |
+| **Production (after approval)** | DigitalOcean Droplet with Docker, your domain with HTTPS | PostgreSQL | [docs/DEPLOY_DIGITALOCEAN.md](docs/DEPLOY_DIGITALOCEAN.md) |
 
-1. Point a DNS **A record** (e.g. `payments.yourdomain.com`) to the server IP. Open ports 80 and 443.
-2. Clone the repo and create `.env` from `.env.example`, setting:
-   ```env
-   APP_DOMAIN=payments.yourdomain.com
-   DJANGO_SECRET_KEY=<long random string>
-   POSTGRES_PASSWORD=<strong password>
-   DJANGO_ALLOWED_HOSTS=payments.yourdomain.com
-   DJANGO_CSRF_TRUSTED_ORIGINS=https://payments.yourdomain.com
-   DJANGO_SECURE=1
-   SEED_DEMO_DATA=0
-   DJANGO_SUPERUSER_USERNAME=admin
-   DJANGO_SUPERUSER_PASSWORD=<strong password>
-   ```
-3. Start with the production overlay. Caddy obtains and renews the HTTPS certificate automatically:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
-   ```
-4. Back up the database regularly:
-   ```bash
-   docker compose exec db pg_dump -U payments payments_tracker > backup_$(date +%F).sql
-   ```
+> Hosts with a temporary disk (e.g. Render's free plan) lose a SQLite database on every restart or redeploy.
+> Use a host with persistent storage (PythonAnywhere, a VPS) for SQLite.
+
+Moving data from SQLite to PostgreSQL later takes 3 commands:
+
+```bash
+python manage.py export_data export.json    # on the SQLite setup
+# on the PostgreSQL setup (empty database):
+python manage.py migrate
+python manage.py loaddata export.json
+```
 
 ---
 
 ## 10. Developing without Docker
 
-Requires Python 3.11+ and a local PostgreSQL.
+Requires Python 3.10–3.13 (3.12 recommended). No database server is needed: SQLite is used automatically.
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate                 # Windows  (macOS/Linux: source .venv/bin/activate)
 pip install -r requirements.txt
-set DATABASE_URL=postgres://payments:payments@localhost:5432/payments_tracker
 set DJANGO_DEBUG=1
 python manage.py migrate
 python manage.py seed_demo

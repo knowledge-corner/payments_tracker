@@ -1,7 +1,8 @@
 # Production overlay: adds Caddy as an HTTPS reverse proxy with automatic
 # Let's Encrypt certificates for your domain.
 #
-#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.prod.yml up -d --build
+#   (leave out docker-compose.postgres.yml to keep using SQLite)
 #
 # Requires in .env: APP_DOMAIN, strong DJANGO_SECRET_KEY / POSTGRES_PASSWORD,
 # DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS, DJANGO_SECURE=1, SEED_DEMO_DATA=0.

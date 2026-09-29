@@ -1,23 +1,30 @@
 #!/bin/sh
-# Container start-up: wait for PostgreSQL, apply migrations, collect static
+# Container start-up: wait for PostgreSQL (if used), apply migrations, collect static
 # files, optionally load demo data, then start the web server.
 set -e
 
-echo "Waiting for database..."
-python - <<'PY'
+case "${DATABASE_URL:-}" in
+  postgres*)
+    echo "Waiting for PostgreSQL..."
+    python - <<'PY'
 import os, sys, time
 import psycopg
-url = os.environ.get("DATABASE_URL", "")
+url = os.environ["DATABASE_URL"]
 for attempt in range(60):
     try:
         psycopg.connect(url, connect_timeout=3).close()
         print("Database is ready.")
         sys.exit(0)
-    except Exception as exc:
+    except Exception:
         time.sleep(1)
 print("Database not reachable after 60s", file=sys.stderr)
 sys.exit(1)
 PY
+    ;;
+  *)
+    echo "Using SQLite database in ${DATA_DIR:-/app/data}"
+    ;;
+esac
 
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput -v 0
