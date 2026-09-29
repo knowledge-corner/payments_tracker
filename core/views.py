@@ -10,7 +10,7 @@ from .models import AppSettings
 from .permissions import admin_required
 
 # Bump when static assets change so installed PWAs refresh their cache.
-SW_CACHE_VERSION = "v1"
+SW_CACHE_VERSION = "v2"
 
 
 @cache_control(max_age=3600)
@@ -24,8 +24,8 @@ def manifest(request):
         "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
-        "background_color": "#f4f6f9",
-        "theme_color": "#0f766e",
+        "background_color": "#f5f3fa",
+        "theme_color": "#1e1b4b",
         "icons": [
             {"src": static("icons/icon-192.png"), "sizes": "192x192", "type": "image/png"},
             {"src": static("icons/icon-512.png"), "sizes": "512x512", "type": "image/png"},
