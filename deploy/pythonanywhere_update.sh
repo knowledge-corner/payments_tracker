@@ -2,6 +2,7 @@
 # Update the PythonAnywhere deployment: bash deploy/pythonanywhere_update.sh
 set -e
 cd "$(dirname "$0")/.."
+# shellcheck source=/dev/null
 source ~/.venvs/payments/bin/activate
 
 echo "==> Pulling latest code"

@@ -222,7 +222,7 @@ imported later without creating duplicates.
 | Stage | Where | Database | Guide |
 |---|---|---|---|
 | **Client testing (free)** | PythonAnywhere free account: `https://<username>.pythonanywhere.com` | SQLite | [docs/DEPLOY_PYTHONANYWHERE.md](docs/DEPLOY_PYTHONANYWHERE.md) |
-| **Production (after approval)** | DigitalOcean Droplet with Docker, your domain with HTTPS | PostgreSQL | [docs/DEPLOY_DIGITALOCEAN.md](docs/DEPLOY_DIGITALOCEAN.md) |
+| **Production (after approval)** | DigitalOcean Droplet (~$7/month), your domain with HTTPS, **one-command setup** (`deploy/setup_server.sh`) | PostgreSQL | [docs/DEPLOY_DIGITALOCEAN.md](docs/DEPLOY_DIGITALOCEAN.md) |
 
 > Hosts with a temporary disk (e.g. Render's free plan) lose a SQLite database on every restart or redeploy.
 > Use a host with persistent storage (PythonAnywhere, a VPS) for SQLite.
