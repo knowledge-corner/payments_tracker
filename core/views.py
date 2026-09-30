@@ -15,7 +15,7 @@ from .permissions import admin_required
 logger = logging.getLogger(__name__)
 
 # Bump when static assets change so installed PWAs refresh their cache.
-SW_CACHE_VERSION = "v3"
+SW_CACHE_VERSION = "v4"
 
 
 @cache_control(max_age=3600)
@@ -29,8 +29,8 @@ def manifest(request):
         "scope": "/",
         "display": "standalone",
         "orientation": "portrait",
-        "background_color": "#f5f3fa",
-        "theme_color": "#1e1b4b",
+        "background_color": "#f8f8fb",
+        "theme_color": "#ffffff",
         "icons": [
             {"src": static("icons/icon-192.png"), "sizes": "192x192", "type": "image/png"},
             {"src": static("icons/icon-512.png"), "sizes": "512x512", "type": "image/png"},
