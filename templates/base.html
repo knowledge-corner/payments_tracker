@@ -44,6 +44,7 @@
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="{% url 'payments:record' %}"><i class="bi bi-cash-coin me-2"></i>Record payment</a></li>
               <li><a class="dropdown-item" href="{% url 'cases:import' %}"><i class="bi bi-file-earmark-excel me-2"></i>Import cases from Excel</a></li>
+              <li><a class="dropdown-item" href="{% url 'notifications:settings' %}"><i class="bi bi-bell me-2"></i>Notification settings</a></li>
               {% if user.is_app_admin %}
               <li><a class="dropdown-item" href="{% url 'accounts:doctor_list' %}"><i class="bi bi-people me-2"></i>Doctors</a></li>
               <li><a class="dropdown-item" href="{% url 'app_settings' %}"><i class="bi bi-gear me-2"></i>Settings</a></li>
@@ -95,6 +96,10 @@
 <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
 <script src="{% static 'js/searchable-select.js' %}"></script>
 <script src="{% static 'js/app.js' %}"></script>
+{% if user.is_authenticated %}
+<div id="push-config" hidden data-key-url="{% url 'notifications:key' %}" data-subscribe-url="{% url 'notifications:subscribe' %}" data-unsubscribe-url="{% url 'notifications:unsubscribe' %}"></div>
+<script src="{% static 'js/push.js' %}"></script>
+{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

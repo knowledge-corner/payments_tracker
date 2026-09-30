@@ -34,4 +34,5 @@ urlpatterns = [
     path("receivables/", include("payments.receivables_urls")),
     path("reports/", include("reports.urls")),
     path("doctors/", include("accounts.urls")),
+    path("notifications/", include("notifications.urls")),
 ]

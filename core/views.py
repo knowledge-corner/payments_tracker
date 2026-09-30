@@ -15,7 +15,7 @@ from .permissions import admin_required
 logger = logging.getLogger(__name__)
 
 # Bump when static assets change so installed PWAs refresh their cache.
-SW_CACHE_VERSION = "v4"
+SW_CACHE_VERSION = "v6"
 
 
 @cache_control(max_age=3600)
@@ -55,10 +55,11 @@ def service_worker(request):
         static("css/app.css"),
         static("js/app.js"),
         static("js/searchable-select.js"),
+        static("js/push.js"),
         static("icons/icon-192.png"),
     ]
     response = render(
-        request, "pwa/sw.js", {"version": SW_CACHE_VERSION, "precache": precache},
+        request, "pwa/sw.js", {"version": SW_CACHE_VERSION, "precache": precache, "icon": static("icons/icon-192.png")},
         content_type="application/javascript",
     )
     response["Service-Worker-Allowed"] = "/"

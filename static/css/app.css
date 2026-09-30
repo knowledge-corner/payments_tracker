@@ -159,3 +159,5 @@ h1, .h1, .h4, .h5 { color: var(--brand-deep); font-weight: 600; }
 h1.h5, .h5 { font-weight: 600; }
 .fw-semibold { font-weight: 550 !important; }
 .fw-bold { font-weight: 600 !important; }
+.form-switch { padding-left: 3.4em; }
+.form-switch .form-check-input { margin-left: -3.4em; }

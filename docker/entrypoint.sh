@@ -37,6 +37,17 @@ if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" 
   python manage.py ensure_admin
 fi
 
+# Push notifications: check hourly in the background (morning summary, follow-ups, ...).
+if [ "${NOTIFICATIONS_SCHEDULER:-1}" = "1" ]; then
+  (
+    sleep 120
+    while true; do
+      python manage.py send_notifications --quiet || true
+      sleep 3600
+    done
+  ) &
+fi
+
 exec gunicorn config.wsgi:application \
   --bind 0.0.0.0:8000 \
   --workers "${GUNICORN_WORKERS:-3}" \

@@ -89,7 +89,24 @@ python manage.py createsuperuser    # optional: your own admin login
 
 Demo logins: `admin / Admin@12345`, `dr.mehta / Demo@12345`, `dr.rao / Demo@12345` (change them before sharing).
 
-## 6. Updating after new code is pushed
+## 6. Push notifications (daily task)
+
+PythonAnywhere does not run background jobs, so add one scheduled task:
+
+1. **Tasks** tab → *Scheduled tasks* → time **03:30** (UTC = 9:00 AM India), frequency **Daily**.
+2. Command:
+   ```
+   cd ~/payments_tracker && ~/.venvs/payments/bin/python manage.py send_notifications
+   ```
+3. Click **Create**.
+
+Doctors turn notifications on in the app: account menu → **Notification settings** → *Turn on for this device*.
+On the free plan, morning summaries go out once a day at the task time (doctors choosing a later hour get them the next run).
+
+> Free accounts can only reach whitelisted websites. If the test notification fails with a connection error,
+> the push service for that browser is not on PythonAnywhere's whitelist - it works on a paid account or on DigitalOcean.
+
+## 7. Updating after new code is pushed
 
 ```bash
 cd ~/payments_tracker && bash deploy/pythonanywhere_update.sh
@@ -97,7 +114,7 @@ cd ~/payments_tracker && bash deploy/pythonanywhere_update.sh
 
 The script runs `git pull`, installs requirements, applies migrations, collects static files and reloads the site.
 
-## 7. Backup / hand-over to production
+## 8. Backup / hand-over to production
 
 - **Backup:** Files tab → `payments_tracker/data/db.sqlite3` → Download.
 - **Export for DigitalOcean:** `python manage.py export_data ~/export.json`, then download `export.json`
