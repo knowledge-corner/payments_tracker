@@ -16,7 +16,7 @@
 <div class="card">
   <div class="list-group list-group-flush">
     {% for r in rows %}
-    <a class="list-group-item list-group-item-action py-3" href="{% url 'hospitals:detail' r.hospital.pk %}">
+    <a class="list-group-item list-group-item-action py-3" href="{% url 'reports:cases' %}{% querystring_with hospital=r.hospital.pk sort='' period=f.period %}">
       <div class="d-flex justify-content-between"><div class="fw-semibold text-truncate min-w-0">{{ r.hospital.name }}</div><div class="small text-muted text-nowrap flex-shrink-0 ms-2">{{ r.cases }} case{{ r.cases|pluralize }}</div></div>
       <div class="row g-1 small mt-1">
         <div class="col-4"><div class="text-muted">Billed</div><div class="amount">{{ r.billed|inr }}</div></div>

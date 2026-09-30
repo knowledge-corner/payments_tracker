@@ -1,12 +1,75 @@
 {% include "partials/doctor_filter.html" %}
-<form method="get" class="card p-2 mb-3">
+<form method="get" class="card p-3 mb-3 report-filters" id="report-filters">
   {% if selected_doctor and user.is_app_admin %}<input type="hidden" name="doctor" value="{{ selected_doctor.pk }}">{% endif %}
-  <div class="row g-2 align-items-end">
-    <div class="col-6"><label class="form-label small mb-1">From</label><input type="month" name="from" value="{{ from_value }}" class="form-control form-control-sm"></div>
-    <div class="col-6"><label class="form-label small mb-1">To</label><input type="month" name="to" value="{{ to_value }}" class="form-control form-control-sm"></div>
-    <div class="col-12 d-flex gap-2">
-      <button class="btn btn-primary btn-sm flex-fill">Apply</button>
-      <a href="{% querystring_with export='csv' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-download"></i> CSV</a>
+  {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+  <div class="row g-2">
+    <div class="col-12 col-md-4">
+      <label class="form-label small mb-1" for="f-period">Period</label>
+      <select name="period" id="f-period" class="form-select form-select-sm">
+        {% for key, label in periods %}<option value="{{ key }}" {% if f.period == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
     </div>
+    <div class="col-6 col-md-4 custom-dates {% if f.period != 'custom' %}d-none{% endif %}">
+      <label class="form-label small mb-1" for="f-start">From date</label>
+      <input type="date" name="start" id="f-start" value="{{ f.start|date:'Y-m-d' }}" class="form-control form-control-sm" {% if f.period != 'custom' %}disabled{% endif %}>
+    </div>
+    <div class="col-6 col-md-4 custom-dates {% if f.period != 'custom' %}d-none{% endif %}">
+      <label class="form-label small mb-1" for="f-end">To date</label>
+      <input type="date" name="end" id="f-end" value="{{ f.end|date:'Y-m-d' }}" class="form-control form-control-sm" {% if f.period != 'custom' %}disabled{% endif %}>
+    </div>
+    {% if show_hospital %}
+    <div class="col-12 col-md-6">
+      <label class="form-label small mb-1" for="f-hospital">Hospital</label>
+      <select name="hospital" id="f-hospital" class="form-select form-select-sm" data-searchable data-placeholder="All hospitals - type to search">
+        <option value="">All hospitals</option>
+        {% for h in hospitals %}<option value="{{ h.pk }}" {% if f.hospital.pk == h.pk %}selected{% endif %}>{{ h.name }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    {% if show_status %}
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1" for="f-status">Payment status</label>
+      <select name="status" id="f-status" class="form-select form-select-sm">
+        <option value="">Any status</option>
+        {% for key, label in status_choices %}<option value="{{ key }}" {% if f.status == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    {% if show_mode %}
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1" for="f-mode">Payment mode</label>
+      <select name="mode" id="f-mode" class="form-select form-select-sm">
+        <option value="">All modes</option>
+        {% for key, label in modes %}<option value="{{ key }}" {% if f.mode == key %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    {% if show_q %}
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1" for="f-q">Search</label>
+      <input type="search" name="q" id="f-q" value="{{ f.q }}" class="form-control form-control-sm" placeholder="Procedure, ref, notes">
+    </div>
+    {% endif %}
   </div>
+  <div class="d-flex gap-2 mt-3 flex-wrap">
+    <button class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel"></i> Apply filters</button>
+    <a href="{% querystring_with export='xlsx' page='' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+    <a href="{% querystring_with export='csv' page='' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-filetype-csv"></i> CSV</a>
+    <a href="{{ request.path }}" class="btn btn-link btn-sm text-muted">Reset</a>
+  </div>
+  <div class="small text-muted mt-2"><i class="bi bi-info-circle"></i> {{ f.describe }}</div>
 </form>
+<script>
+(function () {
+  var period = document.getElementById("f-period");
+  if (!period) return;
+  period.addEventListener("change", function () {
+    var custom = period.value === "custom";
+    document.querySelectorAll("#report-filters .custom-dates").forEach(function (el) {
+      el.classList.toggle("d-none", !custom);
+      el.querySelector("input").disabled = !custom;
+    });
+    if (!custom) period.form.submit();
+  });
+})();
+</script>

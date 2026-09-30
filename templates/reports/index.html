@@ -4,6 +4,11 @@
 <h1 class="h5 mb-3">Reports</h1>
 <div class="card">
   <div class="list-group list-group-flush">
+    <a href="{% url 'reports:cases' %}" class="list-group-item list-group-item-action py-3 d-flex gap-3 align-items-center">
+      <span class="stat-card p-0"><span class="icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-table"></i></span></span>
+      <div class="flex-fill"><div class="fw-semibold">Cases report &amp; download</div><div class="small text-muted">Filter all cases by date range, month, hospital, status or search - download to Excel</div></div>
+      <i class="bi bi-chevron-right text-muted"></i>
+    </a>
     <a href="{% url 'reports:monthly' %}" class="list-group-item list-group-item-action py-3 d-flex gap-3 align-items-center">
       <span class="stat-card p-0"><span class="icon bg-primary-subtle text-primary"><i class="bi bi-calendar3"></i></span></span>
       <div class="flex-fill"><div class="fw-semibold">Monthly summary</div><div class="small text-muted">Cases, earnings, amount received and outstanding by month</div></div>
@@ -26,5 +31,5 @@
     </a>
   </div>
 </div>
-<p class="small text-muted mt-3">Each report can be downloaded as CSV to open in Excel.</p>
+<p class="small text-muted mt-3"><i class="bi bi-download"></i> Every report has filters (this month, last month, financial year, any date range, hospital...) and downloads to <strong>Excel</strong> or CSV.</p>
 {% endblock %}
