@@ -36,3 +36,23 @@ class DoctorManagementTests(TestCase):
         })
         self.assertRedirects(response, reverse("accounts:doctor_list"))
         self.assertTrue(self.client.login(username="dr.joshi", password="Str0ng!Pass99"))
+
+
+class CsrfFailureTests(TestCase):
+    def test_expired_login_page_redirects_back_with_message(self):
+        from django.test import Client
+
+        make_doctor()
+        client = Client(enforce_csrf_checks=True)
+        response = client.post(reverse("login"), {"username": "dr.test", "password": "Pass@12345"}, follow=True)
+        self.assertRedirects(response, reverse("login"))
+        self.assertContains(response, "sign-in page had expired")
+
+    def test_other_pages_show_friendly_page(self):
+        from django.test import Client
+
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(make_doctor().user)
+        response = client.post(reverse("cases:add"), {})
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "This page expired", status_code=403)

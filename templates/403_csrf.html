@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Page expired · Payments Tracker{% endblock %}
+{% block content %}
+<div class="card p-4 mx-auto text-center" style="max-width: 460px;">
+  <i class="bi bi-hourglass-bottom display-5 text-warning"></i>
+  <h1 class="h5 mt-2">This page expired</h1>
+  <p class="text-muted small">The form was open for too long, or your browser blocked a security cookie, so nothing was saved.
+    Please open the page again and repeat the last step.</p>
+  <a href="{{ retry_url }}" class="btn btn-primary w-100 mb-2">Open the page again</a>
+  <a href="{% url 'dashboard:home' %}" class="btn btn-outline-secondary w-100">Go to dashboard</a>
+  <p class="small text-muted mt-3 mb-0">Tip: open the app in Chrome or Safari (not inside WhatsApp or Gmail) and allow cookies.</p>
+</div>
+{% endblock %}
