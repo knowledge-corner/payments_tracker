@@ -9,7 +9,7 @@
       <h1 class="h4 mb-1">Payments Tracker</h1>
       <p class="text-muted small mb-0">Cases · Payments · Follow-ups</p>
     </div>
-    {% if form.errors %}<div class="alert alert-danger py-2 small">Username or password is incorrect.</div>{% endif %}
+    {% for e in form.non_field_errors %}<div class="alert {% if 'approval' in e %}alert-warning{% else %}alert-danger{% endif %} py-2 small">{{ e }}</div>{% endfor %}
     <form method="post">{% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}">
       <div class="mb-3">
@@ -22,6 +22,11 @@
       </div>
       <button class="btn btn-primary w-100 btn-lg-touch">Sign in</button>
     </form>
+    {% if app_settings.allow_signups %}
+    <div class="text-center mt-4 small">
+      New doctor? <a href="{% url 'signup' %}" class="fw-semibold">Create an account</a>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

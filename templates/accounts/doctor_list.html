@@ -9,7 +9,7 @@
   <div class="list-group list-group-flush">
     {% for d in doctors %}
     <a href="{% url 'accounts:doctor_edit' d.pk %}" class="list-group-item list-group-item-action py-3 d-flex justify-content-between">
-      <div><div class="fw-semibold">{{ d.display_name }} {% if not d.is_active %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</div>
+      <div><div class="fw-semibold">{{ d.display_name }} {% if not d.is_active %}{% if not d.user.last_login %}<span class="badge text-bg-warning">Awaiting approval</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}{% endif %}</div>
       <div class="small text-muted">@{{ d.user.username }}{% if d.phone %} · {{ d.phone }}{% endif %}</div></div>
       <i class="bi bi-chevron-right text-muted"></i>
     </a>

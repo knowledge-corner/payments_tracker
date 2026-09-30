@@ -53,6 +53,14 @@ class AppSettings(models.Model):
         default=7,
         help_text="After the last reminder above, keep reminding at this interval. 0 = stop.",
     )
+    allow_signups = models.BooleanField(
+        "Allow new doctors to sign up", default=True,
+        help_text="Shows a 'Create an account' link on the sign-in page.",
+    )
+    signup_requires_approval = models.BooleanField(
+        "New sign-ups need admin approval", default=False,
+        help_text="New accounts stay inactive until an admin ticks 'Active' on the Doctors page.",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

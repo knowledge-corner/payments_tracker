@@ -33,4 +33,5 @@ class AppSettingsForm(StyledModelForm):
         fields = [
             "practice_name", "default_payment_terms_days",
             "reminder_days", "repeat_reminder_every_days",
+            "allow_signups", "signup_requires_approval",
         ]
