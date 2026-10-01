@@ -82,6 +82,25 @@ When it prints **Done!**, open `https://payments.yourpractice.in` and sign in wi
 | `payments restore /var/backups/payments_tracker/db_....sql.gz` | Restore a backup (asks for confirmation) |
 | `payments createadmin` | Create another admin login |
 
+## Email for "Forgot password"
+
+Password-reset emails need an email account to send from. Example with Gmail
+(Google Account → Security → 2-Step Verification on → **App passwords** → create one):
+
+```bash
+nano /opt/payments_tracker/.env
+```
+add:
+```env
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=yourpractice@gmail.com
+EMAIL_HOST_PASSWORD=<16-character app password>
+DEFAULT_FROM_EMAIL=Payments Tracker <yourpractice@gmail.com>
+```
+then `payments update`. Until this is set, admins can reset a doctor's password on the **Doctors** page.
+Doctors need an email address on their account (sign-up asks for it; admins can add it on the Doctors page).
+
 ## Backups
 
 - **Daily at 02:30** a compressed PostgreSQL dump is saved to `/var/backups/payments_tracker/` (last 14 days kept).

@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 
@@ -173,3 +173,10 @@ class LoginForm(AuthenticationForm):
             if user and not user.is_active and password and user.check_password(password):
                 raise forms.ValidationError(self.error_messages["pending"], code="pending")
             raise
+
+
+class StyledSetPasswordForm(SetPasswordForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"

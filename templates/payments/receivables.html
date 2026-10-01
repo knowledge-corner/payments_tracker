@@ -2,7 +2,10 @@
 {% load money %}
 {% block title %}Receivables{% endblock %}
 {% block content %}
-<h1 class="h5 mb-2">Receivables</h1>
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{% url 'dashboard:home' %}" class="btn btn-link px-0 text-body" aria-label="Back to dashboard"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">{% if view == 'overdue' %}Overdue payments{% elif view == 'followup' %}Follow-ups due{% elif view == 'pending' %}Pending payments{% else %}Outstanding payments{% endif %}</h1>
+</div>
 {% include "partials/doctor_filter.html" %}
 
 <div class="row g-2 mb-2">
@@ -23,6 +26,7 @@
 <div class="chips mb-2">
   <a class="chip {% if view == 'all' %}active{% endif %}" href="{% querystring_with view='all' %}">All ({{ summary.count }})</a>
   <a class="chip {% if view == 'followup' %}active{% endif %}" href="{% querystring_with view='followup' %}">Follow-up due ({{ summary.followup_count }})</a>
+  <a class="chip {% if view == 'pending' %}active{% endif %}" href="{% querystring_with view='pending' %}">Pending ({{ summary.pending_count }})</a>
   <a class="chip {% if view == 'overdue' %}active{% endif %}" href="{% querystring_with view='overdue' %}">Overdue ({{ summary.overdue_count }})</a>
   <a class="chip {% if view == 'snoozed' %}active{% endif %}" href="{% querystring_with view='snoozed' %}">Snoozed</a>
 </div>

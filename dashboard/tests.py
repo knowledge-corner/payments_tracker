@@ -30,3 +30,31 @@ class DashboardTests(TestCase):
         self.assertEqual(ctx["overdue_count"], 1)
         self.assertEqual(ctx["pending_count"], 1)
         self.assertGreaterEqual(ctx["followup_count"], 1)
+
+
+class NavigationTests(TestCase):
+    def test_bottom_nav_and_receivables_links(self):
+        doctor = make_doctor()
+        hospital = make_hospital(terms=30)
+        make_case(doctor, hospital, days_ago=60, fee=2000)  # overdue
+        make_case(doctor, hospital, days_ago=2, fee=1000)   # pending
+        self.client.force_login(doctor.user)
+        page = self.client.get(reverse("dashboard:home")).content.decode()
+        nav = page[page.index('class="bottom-nav'):]
+        nav = nav[:nav.index("</nav>")]
+        labels = [label for label in ("Dashboard", "Cases", "Add Case", "Hospitals", "Reports", "Receivables") if label in nav]
+        self.assertEqual(labels, ["Dashboard", "Cases", "Add Case", "Hospitals", "Reports"])
+        self.assertLess(nav.index("Cases"), nav.index("Add Case"))
+        self.assertLess(nav.index("Add Case"), nav.index("Hospitals"))
+        for view in ("pending", "overdue", "followup"):
+            self.assertIn(f"/receivables/?view={view}", page)
+        pending = self.client.get(reverse("receivables:list") + "?view=pending")
+        self.assertEqual(len(pending.context["cases"]), 1)
+        self.assertContains(pending, "Pending payments")
+        self.assertContains(pending, 'aria-label="Back to dashboard"')
+
+    def test_reports_offer_excel_only(self):
+        self.client.force_login(make_doctor().user)
+        page = self.client.get(reverse("reports:cases"))
+        self.assertContains(page, "export=xlsx")
+        self.assertNotContains(page, "export=csv")

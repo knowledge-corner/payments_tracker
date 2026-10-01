@@ -62,7 +62,7 @@
     </a>
   </div>
   <div class="col-6 col-md-3">
-    <a class="stat-link" href="{% url 'cases:list' %}?status=unpaid">
+    <a class="stat-link" href="{% url 'receivables:list' %}?view=pending">
       <div class="card stat-card">
         <div class="label">Pending</div>
         <div class="value">{{ pending_count }}</div>

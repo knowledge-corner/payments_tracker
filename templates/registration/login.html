@@ -17,11 +17,20 @@
         <input class="form-control" id="id_username" name="username" autocomplete="username" autocapitalize="none" required autofocus value="{{ form.username.value|default:'' }}">
       </div>
       <div class="mb-4">
-        <label class="form-label" for="id_password">Password</label>
+        <div class="d-flex justify-content-between align-items-baseline">
+          <label class="form-label" for="id_password">Password</label>
+          <a href="{% url 'password_reset' %}" class="small">Forgot password?</a>
+        </div>
         <input class="form-control" id="id_password" name="password" type="password" autocomplete="current-password" required>
       </div>
       <button class="btn btn-primary w-100 btn-lg-touch">Sign in</button>
     </form>
+    <div class="text-center mt-3">
+      <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-install-app><i class="bi bi-download"></i> Install app</button>
+      <div id="install-help" class="small text-muted mt-2 d-none">
+        On iPhone: tap <i class="bi bi-box-arrow-up"></i> <strong>Share</strong> in Safari, then <strong>Add to Home Screen</strong>.
+      </div>
+    </div>
     {% if app_settings.allow_signups %}
     <div class="text-center mt-4 small">
       New doctor? <a href="{% url 'signup' %}" class="fw-semibold">Create an account</a>

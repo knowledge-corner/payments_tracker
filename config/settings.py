@@ -143,6 +143,21 @@ AUTH_PASSWORD_VALIDATORS = [
 
 CSRF_FAILURE_VIEW = "core.views.csrf_failure"
 
+# --- Email (used for "Forgot password") ----------------------------------------
+# Set EMAIL_HOST etc. to send real emails (e.g. Gmail with an App Password, Brevo, SES).
+# Without it, emails are written to the server log instead of being sent.
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT") or 587)
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "Payments Tracker <noreply@localhost>"
+PASSWORD_RESET_TIMEOUT = 60 * 60 * 3  # reset links work for 3 hours
+
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard:home"
 LOGOUT_REDIRECT_URL = "login"

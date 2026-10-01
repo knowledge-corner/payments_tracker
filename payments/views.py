@@ -141,6 +141,7 @@ def receivables(request):
         "overdue": sum(c.outstanding for c in cases if c.status == "overdue"),
         "overdue_count": sum(1 for c in cases if c.status == "overdue"),
         "followup_count": sum(1 for c in cases if c.reminder.due),
+        "pending_count": sum(1 for c in cases if c.status != "overdue"),
         "count": len(cases),
     }
     buckets = [("0-30 days", 0, 30), ("31-60 days", 31, 60), ("61-90 days", 61, 90), ("90+ days", 91, 10**6)]
@@ -153,6 +154,8 @@ def receivables(request):
     view = request.GET.get("view", "all")
     if view == "overdue":
         cases = [c for c in cases if c.status == "overdue"]
+    elif view == "pending":
+        cases = [c for c in cases if c.status != "overdue"]
     elif view == "followup":
         cases = [c for c in cases if c.reminder.due]
     elif view == "snoozed":

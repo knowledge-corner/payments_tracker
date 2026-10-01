@@ -85,3 +85,41 @@ class SignupTests(TestCase):
         self.client.logout()
         response = self.client.post(reverse("login"), {"username": "dr.anjali", "password": "Str0ng!Pass99"})
         self.assertRedirects(response, reverse("dashboard:home"))
+
+
+class PasswordResetTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("dr.reset", "reset@example.com", "OldPass!2026", role=User.ROLE_DOCTOR)
+
+    def test_login_page_has_forgot_password_and_install(self):
+        page = self.client.get(reverse("login"))
+        self.assertContains(page, reverse("password_reset"))
+        self.assertContains(page, "data-install-app")
+
+    def test_full_reset_flow(self):
+        import re
+
+        from django.core import mail
+
+        response = self.client.post(reverse("password_reset"), {"email": "RESET@example.com"})
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("dr.reset", mail.outbox[0].body)
+        link = re.search(r"https?://testserver(\S+)", mail.outbox[0].body).group(1)
+        form_page = self.client.get(link, follow=True)
+        self.assertContains(form_page, "Set a new password")
+        response = self.client.post(form_page.redirect_chain[-1][0], {
+            "new_password1": "BrandNew!2026", "new_password2": "BrandNew!2026",
+        })
+        self.assertRedirects(response, reverse("password_reset_complete"))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("BrandNew!2026"))
+        # link cannot be reused
+        self.assertContains(self.client.get(link, follow=True), "This link has expired")
+
+    def test_unknown_email_reveals_nothing(self):
+        from django.core import mail
+
+        response = self.client.post(reverse("password_reset"), {"email": "nobody@example.com"})
+        self.assertRedirects(response, reverse("password_reset_done"))
+        self.assertEqual(len(mail.outbox), 0)
