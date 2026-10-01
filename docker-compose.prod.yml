@@ -5,7 +5,7 @@
 #   (leave out docker-compose.postgres.yml to keep using SQLite)
 #
 # Requires in .env: APP_DOMAIN, strong DJANGO_SECRET_KEY / POSTGRES_PASSWORD,
-# DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS, DJANGO_SECURE=1, SEED_DEMO_DATA=0.
+# DJANGO_ALLOWED_HOSTS, DJANGO_CSRF_TRUSTED_ORIGINS, DJANGO_SECURE=1.
 services:
   web:
     ports: !reset []

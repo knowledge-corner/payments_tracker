@@ -11,7 +11,7 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 ## Table of contents
 
 1. [Quick start on Windows (Docker, one click)](#1-quick-start-on-windows-docker-one-click)
-2. [Demo logins](#2-demo-logins)
+2. [First sign-in and the hospital directory](#2-first-sign-in-and-the-hospital-directory)
 3. [Using the app on your phone](#3-using-the-app-on-your-phone)
 4. [Everyday commands](#4-everyday-commands)
 5. [Features (V1)](#5-features-v1)
@@ -53,7 +53,7 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 | `start_app.bat` | Update the code (git pull), start everything, apply migrations and open the browser |
 | `stop_app.bat` | Stop the containers (data is kept) |
 | `view_logs.bat` | Watch live application logs (useful if something fails) |
-| `reset_demo_data.bat` | **Delete all local data** and restart with fresh demo data (asks you to type `YES`) |
+| `reset_all_data.bat` | **Delete all local data** (logins included) and restart empty (asks you to type `YES`) |
 
 ### Troubleshooting
 
@@ -72,18 +72,28 @@ starts the version already on your computer.
 
 ---
 
-## 2. Demo logins
+## 2. First sign-in and the hospital directory
 
-With `SEED_DEMO_DATA=1` (the default in `.env.example`), the first start loads realistic dummy data:
-2 doctors, 8 Pune hospitals, about 7 months of cases, and partial/full payments and follow-ups.
+The app starts empty apart from the **hospital directory** (about 90 well-known Pune and Mumbai
+hospitals) and a list of **departments**.
 
-| Role | Username | Password |
+1. Doctors tap **Create an account** on the sign-in page.
+2. For an admin login run `docker compose exec web python manage.py createsuperuser`.
+3. *(Admin, optional)* Load the full government list: download the CSV of the
+   [Hospital Directory (National Health Portal)](https://data.gov.in/catalog/hospital-directory-national-health-portal)
+   from data.gov.in, then **account menu → Hospital directory → Import**
+   (or `python manage.py import_hospitals --file hospitals.csv`). Only Pune / Mumbai rows are kept by default;
+   re-importing updates rows instead of duplicating them.
+
+How the data fits together:
+
+| Item | Shared or private | Notes |
 |---|---|---|
-| Admin | `admin` | `Admin@12345` |
-| Doctor | `dr.mehta` | `Demo@12345` |
-| Doctor | `dr.rao` | `Demo@12345` |
+| Hospitals | Shared directory | Doctors can add a missing hospital (duplicate check, marked *unverified* until an admin verifies or merges it) |
+| Departments | Shared list | Optional on each case |
+| Contacts | **Private per doctor** | One person can be linked to several hospitals / departments; the call button picks the best match |
+| Fee, expected payment date | Per case | Nothing is pre-filled; if no date is given the app assumes 30 days (Settings) |
 
-Change these passwords (or set `SEED_DEMO_DATA=0`) before any real use.
 The Django admin panel is at `/admin/` (admin users only).
 
 ---
@@ -120,7 +130,7 @@ docker compose up -d --build                                   # start
 docker compose down                                            # stop (keep data)
 docker compose logs -f web                                     # logs
 docker compose exec web python manage.py createsuperuser       # create your own admin
-docker compose exec web python manage.py seed_demo --reset     # reload demo data
+docker compose exec web python manage.py reset_app_data --yes   # wipe cases/payments/contacts, keep logins
 docker compose exec web python manage.py test                  # run the test suite
 docker compose down -v                                         # stop and DELETE the database
 ```
@@ -166,7 +176,7 @@ Django 5.1 on Python 3.12 (gunicorn + whitenoise)  ──►  SQLite (client tes
   ├── payments/    Payment, PaymentFollowUp, receivables + reminder engine (services.py)
   ├── dashboard/   Home screen
   ├── reports/     Monthly, hospital-wise, payment history (+ CSV)
-  └── core/        Settings, permissions, PWA endpoints, demo-data command, template filters
+  └── core/        Settings, permissions, PWA endpoints, reset_app_data command, template filters
 ```
 
 - **Ready for a REST API / native app:** business rules live in model querysets (`Case.objects.with_totals()`)
@@ -248,7 +258,7 @@ python -m venv .venv
 pip install -r requirements.txt
 set DJANGO_DEBUG=1
 python manage.py migrate
-python manage.py seed_demo
+python manage.py createsuperuser
 python manage.py runserver
 python manage.py test
 ```

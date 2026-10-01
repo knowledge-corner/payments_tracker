@@ -14,7 +14,7 @@ class DashboardTests(TestCase):
 
     def test_totals(self):
         doctor = make_doctor()
-        hospital = make_hospital(terms=30)
+        hospital = make_hospital()
         paid = make_case(doctor, hospital, days_ago=0, fee=4000)
         Payment.objects.create(case=paid, amount=Decimal("4000"))
         make_case(doctor, hospital, days_ago=0, fee=3000)
@@ -35,7 +35,7 @@ class DashboardTests(TestCase):
 class NavigationTests(TestCase):
     def test_bottom_nav_and_receivables_links(self):
         doctor = make_doctor()
-        hospital = make_hospital(terms=30)
+        hospital = make_hospital()
         make_case(doctor, hospital, days_ago=60, fee=2000)  # overdue
         make_case(doctor, hospital, days_ago=2, fee=1000)   # pending
         self.client.force_login(doctor.user)

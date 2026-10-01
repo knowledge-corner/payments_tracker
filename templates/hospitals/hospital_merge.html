@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Merge duplicate{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{{ hospital.get_absolute_url }}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">Merge duplicate hospital</h1>
+</div>
+<div class="card p-3" style="max-width: 640px;">
+  <p class="small">Duplicate: <strong>{{ hospital.name }}</strong> <span class="text-muted">· {{ hospital.place }}</span></p>
+  <form method="post">{% csrf_token %}
+    {% include "partials/form_errors.html" %}
+    {% include "partials/field.html" with field=form.target %}
+    <button class="btn btn-primary" data-confirm="Move all cases and contacts to the selected hospital and hide this one?">Merge</button>
+  </form>
+</div>
+{% endblock %}

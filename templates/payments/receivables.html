@@ -40,41 +40,42 @@
 <div class="card">
   <div class="list-group list-group-flush">
   {% for case in cases %}
-    <div class="list-group-item py-3">
-      <a href="{{ case.get_absolute_url }}" class="text-decoration-none text-body d-flex justify-content-between gap-2">
+    <div class="list-group-item action-item">
+      <div class="d-flex justify-content-between align-items-start gap-2">
         <div class="min-w-0">
-          <div class="fw-semibold text-truncate">{{ case.hospital.name }}</div>
-          <div class="small text-muted text-truncate">{{ case.case_date|date:"d M Y" }}{% if case.procedure_type %} · {{ case.procedure_type }}{% endif %}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}</div>
-          {% if user.is_app_admin %}<div class="small text-muted">{{ case.doctor }}</div>{% endif %}
-          <div class="mt-1 d-flex gap-1 flex-wrap align-items-center">
-            {% status_badge case %}
-            <span class="age-pill {% if case.age_days > 60 %}old{% endif %}">{{ case.age_days }} days old</span>
-            {% if case.reminder.due %}<span class="badge rounded-pill text-bg-warning"><i class="bi bi-bell"></i> Follow up</span>
-            {% elif case.reminder.snoozed_until %}<span class="small text-muted"><i class="bi bi-alarm"></i> until {{ case.reminder.snoozed_until|date:"d M" }}</span>{% endif %}
-            {% if case.last_followup_date %}<span class="small text-muted">Last chased {{ case.last_followup_date|date:"d M" }}</span>{% endif %}
+          <div class="d-flex align-items-center gap-2">
+            <a href="{{ case.get_absolute_url }}" class="action-name text-truncate">{{ case.hospital.name }}</a>
+            {% if case.call %}<a href="tel:{{ case.call.phone }}" class="call-link" title="Call {{ case.call.label }}" aria-label="Call {{ case.call.label }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}
           </div>
+          <div class="action-meta text-truncate">{{ case.case_date|date:"d M Y" }}{% if case.department %} · {{ case.department }}{% endif %}{% if case.procedure_type %} · {{ case.procedure_type }}{% endif %}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}</div>
+          {% if case.call %}<div class="action-meta"><i class="bi bi-person"></i> {{ case.call.label }}</div>{% endif %}
+          {% if user.is_app_admin %}<div class="action-meta">{{ case.doctor }}</div>{% endif %}
         </div>
         <div class="text-end flex-shrink-0">
-          <div class="fw-bold text-danger amount">{{ case.outstanding|inr }}</div>
-          {% if case.total_paid > 0 %}<div class="small text-muted">of {{ case.fee|inr }}</div>{% endif %}
+          <a href="{{ case.get_absolute_url }}" class="action-amount text-danger amount text-decoration-none">{{ case.outstanding|inr }}</a>
+          {% if case.total_paid > 0 %}<div class="action-meta">of {{ case.fee|inr }}</div>{% endif %}
         </div>
-      </a>
-      <div class="d-flex gap-2 mt-2 flex-wrap">
-        <a href="{% url 'payments:record_for_case' case.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-success"><i class="bi bi-cash"></i> Paid</a>
-        <a href="{% url 'payments:followup_add' case.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i> Follow-up</a>
+      </div>
+      <div class="d-flex gap-1 flex-wrap mt-1 align-items-center">
+        {% status_badge case %}
+        <span class="age-pill {% if case.age_days > 60 %}old{% endif %}">{{ case.age_days }} days</span>
+        {% if case.reminder.due %}<span class="badge rounded-pill text-bg-warning"><i class="bi bi-bell"></i> Follow up</span>
+        {% elif case.reminder.snoozed_until %}<span class="action-meta"><i class="bi bi-alarm"></i> until {{ case.reminder.snoozed_until|date:"d M" }}</span>{% endif %}
+        {% if case.last_followup_date %}<span class="action-meta">· chased {{ case.last_followup_date|date:"d M" }}</span>{% endif %}
+      </div>
+      <div class="d-flex gap-2 mt-2">
+        <a href="{% url 'payments:record_for_case' case.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-xs btn-outline-success flex-fill"><i class="bi bi-cash"></i> Paid</a>
+        <a href="{% url 'payments:followup_add' case.pk %}?next={{ request.get_full_path|urlencode }}" class="btn btn-xs btn-outline-primary flex-fill"><i class="bi bi-chat-left-text"></i> Follow-up</a>
         {% if case.reminder.due %}
-        <form method="post" action="{% url 'payments:followup_quick' case.pk %}">{% csrf_token %}
-          <input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button class="btn btn-sm btn-outline-secondary" title="Mark as followed up today (phone call)"><i class="bi bi-check2-all"></i> Done</button>
-        </form>
         <div class="dropdown">
-          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-alarm"></i> Snooze</button>
-          <ul class="dropdown-menu">
-            <li><form method="post" action="{% url 'payments:followup_snooze' case.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="dropdown-item" name="days" value="3">3 days</button><button class="dropdown-item" name="days" value="7">1 week</button><button class="dropdown-item" name="days" value="14">2 weeks</button></form></li>
+          <button class="btn btn-xs btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-label="More"><i class="bi bi-three-dots"></i></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><form method="post" action="{% url 'payments:followup_quick' case.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="dropdown-item"><i class="bi bi-check2-all me-1"></i> Mark followed up today</button></form></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><form method="post" action="{% url 'payments:followup_snooze' case.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="dropdown-item" name="days" value="3"><i class="bi bi-alarm me-1"></i> Snooze 3 days</button><button class="dropdown-item" name="days" value="7">Snooze 1 week</button><button class="dropdown-item" name="days" value="14">Snooze 2 weeks</button></form></li>
           </ul>
         </div>
         {% endif %}
-        {% if case.hospital.contact_number %}<a href="tel:{{ case.hospital.contact_number }}" class="btn btn-sm btn-outline-secondary ms-auto" aria-label="Call hospital"><i class="bi bi-telephone-fill"></i></a>{% endif %}
       </div>
     </div>
   {% empty %}

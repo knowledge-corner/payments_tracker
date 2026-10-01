@@ -1,11 +1,14 @@
+import re
 from decimal import Decimal
 
 from django import forms
 from django.utils import timezone
 
 from accounts.models import Doctor
+from contacts.models import Contact
+from contacts.services import ensure_affiliation
 from core.forms import StyledModelForm
-from hospitals.models import Hospital
+from hospitals.models import Department, Hospital
 from payments.models import Payment
 
 from .models import Case
@@ -24,21 +27,6 @@ COMMON_PROCEDURES = [
 ]
 
 
-class HospitalSelect(forms.Select):
-    """Adds data-fee to each <option> so the page can pre-fill the hospital's default fee."""
-
-    def __init__(self, *args, **kwargs):
-        self.fees = {}
-        super().__init__(*args, **kwargs)
-
-    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
-        option = super().create_option(name, value, label, selected, index, subindex, attrs)
-        key = str(getattr(value, "value", value))
-        if key in self.fees:
-            option["attrs"]["data-fee"] = f"{self.fees[key]:.0f}"
-        return option
-
-
 class CaseForm(StyledModelForm):
     paid_now = forms.BooleanField(
         required=False, label="Payment already received",
@@ -46,15 +34,20 @@ class CaseForm(StyledModelForm):
     )
     paid_amount = forms.DecimalField(required=False, min_value=Decimal("0.01"), max_digits=10, decimal_places=2)
     paid_mode = forms.ChoiceField(choices=Payment.MODE_CHOICES, required=False, initial="upi", label="Mode")
+    # Quick "new contact" on the case form
+    new_contact_name = forms.CharField(required=False, max_length=100, label="Contact name")
+    new_contact_phone = forms.CharField(required=False, max_length=20, label="Mobile",
+                                        widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}))
+    new_contact_role = forms.ChoiceField(required=False, choices=Contact.ROLE_CHOICES, initial="billing", label="Role")
 
     class Meta:
         model = Case
-        fields = ["doctor", "hospital", "case_date", "patient_reference", "procedure_type", "fee", "due_date", "notes"]
+        fields = ["doctor", "hospital", "case_date", "department", "contact", "patient_reference", "procedure_type",
+                  "fee", "due_date", "notes"]
         widgets = {
-            "hospital": HospitalSelect(attrs={"data-searchable": "", "data-placeholder": "Type to search hospital"}),
             "case_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "fee": forms.NumberInput(attrs={"inputmode": "decimal", "step": "1"}),
+            "fee": forms.NumberInput(attrs={"inputmode": "decimal", "step": "1", "placeholder": "e.g. 6000"}),
             "notes": forms.Textarea(attrs={"rows": 2}),
             "procedure_type": forms.TextInput(attrs={"list": "procedure-options", "autocomplete": "off"}),
             "patient_reference": forms.TextInput(attrs={"autocomplete": "off", "placeholder": "e.g. IP 45821 / bill no."}),
@@ -63,23 +56,53 @@ class CaseForm(StyledModelForm):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
-        hospitals = Hospital.objects.filter(is_active=True)
-        if self.instance.pk:
-            hospitals = Hospital.objects.filter(pk=self.instance.hospital_id) | hospitals
-        self.fields["hospital"].queryset = hospitals.order_by("name")
-        self.fields["hospital"].widget.fees = {str(h.pk): h.default_fee for h in hospitals}
-        self.fields["hospital"].empty_label = "Select hospital"
-        self.fields["fee"].widget.attrs["placeholder"] = "Fee"
+        self.fields["fee"].required = True
+        self.fields["fee"].label = "Fee (₹)"
+
+        # Hospital: type-to-search against the whole directory (server-side).
+        hospital_field = self.fields["hospital"]
+        hospital_field.queryset = Hospital.objects.all()
+        selected = self.data.get(self.add_prefix("hospital")) or self.initial.get("hospital") or (
+            self.instance.hospital_id if self.instance.pk else None)
+        choices = [("", "Search hospital")]
+        if selected and str(selected).isdigit():
+            h = Hospital.objects.filter(pk=selected).first()
+            if h:
+                choices.append((h.pk, h.label))
+        hospital_field.widget.choices = choices
+        hospital_field.widget.attrs.update({
+            "data-searchable": "", "data-search-url": "/hospitals/search/",
+            "data-placeholder": "Type hospital name or area", "data-add-url": "/hospitals/add/?next=/cases/add/",
+        })
+
+        self.fields["department"].queryset = Department.objects.filter(is_active=True)
+        self.fields["department"].empty_label = "Not specified"
+
+        # Contact: the doctor's own contacts (re-ordered in the browser once a hospital is picked).
+        doctor = self._doctor()
+        contacts = Contact.objects.filter(is_active=True)
+        contacts = contacts.filter(doctor=doctor) if doctor else (contacts if user and user.is_app_admin else contacts.none())
+        self.fields["contact"].queryset = contacts
+        self.fields["contact"].empty_label = "Not specified"
+        self.fields["contact"].label = "Contact person"
 
         if user is not None and user.is_app_admin:
             self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
-            self.fields["doctor"].widget.attrs.update({"data-searchable": "", "data-placeholder": "Type to search doctor"})
         else:
             self.fields.pop("doctor")
 
         if self.instance.pk:
             for name in ("paid_now", "paid_amount", "paid_mode"):
                 self.fields.pop(name)
+
+    def _doctor(self):
+        if self.user is None:
+            return None
+        if self.user.is_app_admin:
+            doctor_id = self.data.get(self.add_prefix("doctor")) or self.initial.get("doctor") or (
+                self.instance.doctor_id if self.instance.pk else None)
+            return Doctor.objects.filter(pk=doctor_id).first() if doctor_id else self.user.doctor_profile
+        return self.user.doctor_profile
 
     def clean(self):
         cleaned = super().clean()
@@ -94,7 +117,39 @@ class CaseForm(StyledModelForm):
         case_date = cleaned.get("case_date")
         if case_date and case_date > timezone.localdate():
             self.add_error("case_date", "Case date cannot be in the future.")
+        due = cleaned.get("due_date")
+        if due and case_date and due < case_date:
+            self.add_error("due_date", "Expected payment date cannot be before the case date.")
+        doctor = cleaned.get("doctor") or self._doctor()
+        contact = cleaned.get("contact")
+        if contact and doctor and contact.doctor_id != doctor.pk:
+            self.add_error("contact", "This contact belongs to another doctor.")
+        if cleaned.get("new_contact_name") and not cleaned.get("new_contact_phone"):
+            self.add_error("new_contact_phone", "Add a mobile number for the new contact.")
         return cleaned
+
+    def save_contact(self, case):
+        """Create the quick new contact and/or record that the chosen contact works at this hospital."""
+        data = self.cleaned_data
+        contact = None
+        if data.get("new_contact_name"):
+            phone = data["new_contact_phone"].strip()
+            # Same mobile already saved by this doctor -> reuse that contact instead of a duplicate.
+            digits = re.sub(r"\D", "", phone)[-10:]
+            contact = next((c for c in Contact.objects.filter(doctor=case.doctor)
+                            if digits and re.sub(r"\D", "", c.phone)[-10:] == digits), None)
+            if contact is None:
+                contact = Contact.objects.create(
+                    doctor=case.doctor, name=data["new_contact_name"].strip(),
+                    phone=phone, role=data.get("new_contact_role") or "billing",
+                )
+            case.contact = contact
+            case.save(update_fields=["contact", "updated_at"])
+        elif case.contact_id:
+            contact = case.contact
+        if contact:
+            ensure_affiliation(contact, case.hospital, case.department)
+        return contact
 
 
 class CaseImportForm(forms.Form):

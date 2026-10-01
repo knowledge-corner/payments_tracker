@@ -1,3 +1,5 @@
+import io
+
 from django.test import TestCase
 from django.urls import reverse
 
@@ -56,3 +58,30 @@ class CsrfFailureTests(TestCase):
         response = client.post(reverse("cases:add"), {})
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, "This page expired", status_code=403)
+
+
+class ResetAppDataTests(TestCase):
+    def test_reset_keeps_users_and_doctors(self):
+        from django.core.management import call_command
+
+        from accounts.models import Doctor, User
+        from cases.models import Case
+        from contacts.models import Contact
+        from core.testing import make_admin, make_case, make_contact, make_doctor, make_hospital
+        from hospitals.models import Hospital
+
+        doctor = make_doctor()
+        make_admin()
+        hospital = make_hospital("Temporary Hospital")
+        make_case(doctor, hospital)
+        make_contact(doctor, hospital=hospital)
+        users = set(User.objects.values_list("username", "password"))
+
+        call_command("reset_app_data", "--yes", stdout=io.StringIO())
+
+        self.assertEqual(set(User.objects.values_list("username", "password")), users)
+        self.assertTrue(Doctor.objects.filter(pk=doctor.pk).exists())
+        self.assertFalse(Case.objects.exists())
+        self.assertFalse(Contact.objects.exists())
+        self.assertFalse(Hospital.objects.filter(name="Temporary Hospital").exists())
+        self.assertGreater(Hospital.objects.filter(source="starter").count(), 80)

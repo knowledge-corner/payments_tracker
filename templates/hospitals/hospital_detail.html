@@ -1,33 +1,62 @@
 {% extends "base.html" %}
-{% load money %}
 {% block title %}{{ hospital.name }}{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-2 mb-3">
   <a href="{% url 'hospitals:list' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
   <h1 class="h5 mb-0 flex-fill text-truncate">{{ hospital.name }}</h1>
-  <a href="{% url 'hospitals:edit' hospital.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+  {% if can_edit %}<a href="{% url 'hospitals:edit' hospital.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>{% endif %}
 </div>
 <div class="card p-3 mb-3">
   <dl class="row small mb-0">
-    <dt class="col-5 text-muted fw-normal">Status</dt><dd class="col-7">{% if hospital.is_active %}Active{% else %}Inactive{% endif %}</dd>
-    <dt class="col-5 text-muted fw-normal">Default fee</dt><dd class="col-7">{{ hospital.default_fee|inr }}</dd>
-    <dt class="col-5 text-muted fw-normal">Payment terms</dt><dd class="col-7">{% if hospital.payment_terms_days is not None %}{{ hospital.payment_terms_days }} days{% else %}Default ({{ app_settings.default_payment_terms_days }} days){% endif %}</dd>
-    <dt class="col-5 text-muted fw-normal">Contact</dt><dd class="col-7">{{ hospital.contact_person|default:"-" }}{% if hospital.contact_number %} · <a href="tel:{{ hospital.contact_number }}">{{ hospital.contact_number }}</a>{% endif %}</dd>
-    <dt class="col-5 text-muted fw-normal">Address</dt><dd class="col-7">{{ hospital.address|default:"-"|linebreaksbr }}{% if hospital.city %}<br>{{ hospital.city }}{% endif %}</dd>
+    <dt class="col-4 text-muted fw-normal">Location</dt><dd class="col-8">{{ hospital.place|default:"-" }}{% if hospital.pincode %} - {{ hospital.pincode }}{% endif %}{% if hospital.address %}<div class="text-muted">{{ hospital.address|linebreaksbr }}</div>{% endif %}</dd>
+    <dt class="col-4 text-muted fw-normal">Type</dt><dd class="col-8">{{ hospital.get_category_display }}{% if hospital.ownership %} · {{ hospital.get_ownership_display }}{% endif %}</dd>
+    <dt class="col-4 text-muted fw-normal">Main phone</dt><dd class="col-8">{% if hospital.phone %}<a href="tel:{{ hospital.phone }}">{{ hospital.phone }}</a>{% else %}-{% endif %}</dd>
+    {% if hospital.aliases %}<dt class="col-4 text-muted fw-normal">Also known as</dt><dd class="col-8">{{ hospital.aliases }}</dd>{% endif %}
+    <dt class="col-4 text-muted fw-normal">Source</dt><dd class="col-8">{{ hospital.get_source_display }}{% if hospital.verified %} <i class="bi bi-patch-check-fill text-success" title="Verified"></i>{% elif hospital.source == 'doctor' %} <span class="badge text-bg-secondary">unverified</span>{% endif %}</dd>
   </dl>
+  {% if user.is_app_admin %}
+  <div class="d-flex gap-2 mt-2">
+    {% if not hospital.verified %}<form method="post" action="{% url 'hospitals:verify' hospital.pk %}">{% csrf_token %}<button class="btn btn-xs btn-outline-success"><i class="bi bi-patch-check"></i> Mark verified</button></form>{% endif %}
+    <a href="{% url 'hospitals:merge' hospital.pk %}" class="btn btn-xs btn-outline-secondary"><i class="bi bi-intersect"></i> Merge duplicate</a>
+  </div>
+  {% endif %}
 </div>
+
+<div class="d-flex gap-2 mb-3">
+  <a href="{% url 'cases:add' %}?hospital={{ hospital.pk }}" class="btn btn-primary btn-sm flex-fill"><i class="bi bi-plus-lg"></i> Add case here</a>
+  <a href="{% url 'contacts:add' %}?hospital={{ hospital.pk }}&next={{ request.path|urlencode }}" class="btn btn-outline-primary btn-sm flex-fill"><i class="bi bi-person-plus"></i> Add contact here</a>
+</div>
+
+<div class="section-title">{% if user.is_app_admin %}Contacts here{% else %}My contacts here{% endif %}</div>
+<div class="card mb-3">
+  <div class="list-group list-group-flush">
+    {% for link in current_links %}
+    <div class="list-group-item action-item d-flex justify-content-between align-items-center gap-2">
+      <div class="min-w-0">
+        <a href="{{ link.contact.get_absolute_url }}" class="action-name">{{ link.contact.name }}</a>{% if link.is_primary %} <span class="combo-mine">Main</span>{% endif %}
+        <div class="action-meta">{{ link.department|default:"All departments" }} · {{ link.contact.get_role_display }}{% if user.is_app_admin %} · {{ link.contact.doctor }}{% endif %}</div>
+      </div>
+      {% if link.contact.best_phone %}<a href="tel:{{ link.contact.best_phone }}" class="call-link" aria-label="Call {{ link.contact.name }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}
+    </div>
+    {% empty %}<div class="p-3 small text-muted">No contacts saved for this hospital yet.</div>{% endfor %}
+  </div>
+</div>
+{% if past_links %}
+<details class="mb-3"><summary class="small text-muted">Former contacts ({{ past_links|length }})</summary>
+  <div class="card mt-2"><div class="list-group list-group-flush">
+    {% for link in past_links %}<a href="{{ link.contact.get_absolute_url }}" class="list-group-item small">{{ link.contact.name }} <span class="text-muted">· {{ link.department|default:"All departments" }} · until {{ link.end_date|date:"d M Y" }}</span></a>{% endfor %}
+  </div></div>
+</details>
+{% endif %}
+
 <div class="row g-2 mb-2">
-  <div class="col-6"><div class="card stat-card"><div class="label">Cases</div><div class="value">{{ case_count }}</div></div></div>
+  <div class="col-6"><div class="card stat-card"><div class="label">My cases</div><div class="value">{{ case_count }}</div></div></div>
   <div class="col-6"><div class="card stat-card"><div class="label">Outstanding</div><div class="value text-danger">{{ outstanding_total|inr }}</div><div class="sub">{{ open_cases|length }} unpaid</div></div></div>
-</div>
-<div class="d-flex gap-2 mb-2">
-  <a href="{% url 'cases:add' %}?hospital={{ hospital.pk }}" class="btn btn-primary flex-fill"><i class="bi bi-plus-lg"></i> Add case here</a>
-  <a href="{% url 'receivables:list' %}?hospital={{ hospital.pk }}" class="btn btn-outline-primary flex-fill">Unpaid cases</a>
 </div>
 <div class="section-title">Recent cases</div>
 <div class="card">
   <div class="list-group list-group-flush">
-    {% for case in recent_cases %}{% include "partials/case_row.html" %}{% empty %}<div class="p-3 text-muted small">No cases yet.</div>{% endfor %}
+    {% for case in recent_cases %}{% include "partials/case_row.html" %}{% empty %}<div class="p-3 text-muted small">No cases here yet.</div>{% endfor %}
   </div>
 </div>
 {% if case_count > 10 %}<div class="text-center mt-2"><a href="{% url 'cases:list' %}?hospital={{ hospital.pk }}" class="small">View all {{ case_count }} cases</a></div>{% endif %}

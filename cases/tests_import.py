@@ -48,7 +48,7 @@ class ParserUnitTests(TestCase):
 class ImportFlowTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
-        self.hospital = make_hospital("Ruby Hall Clinic", fee=7500)
+        self.hospital = make_hospital("Ruby Hall Clinic")
         self.client.force_login(self.doctor.user)
         self.day = timezone.localdate() - datetime.timedelta(days=10)
 
@@ -62,7 +62,7 @@ class ImportFlowTests(TestCase):
         self.assertEqual(response["Content-Type"], XLSX)
         wb = load_workbook(io.BytesIO(response.content))
         self.assertEqual(wb.sheetnames, ["Cases", "Hospitals", "Instructions"])
-        self.assertEqual(wb["Hospitals"]["A2"].value, "Ruby Hall Clinic")
+        self.assertIn("Ruby Hall Clinic", [c.value for c in wb["Hospitals"]["A"]])
         self.assertNotIn("Doctor Username", [c.value for c in wb["Cases"][1]])
 
     def test_preview_then_confirm(self):
@@ -82,7 +82,7 @@ class ImportFlowTests(TestCase):
         self.assertRedirects(response, reverse("cases:list"))
         self.assertEqual(Case.objects.count(), 2)
         self.assertEqual(Payment.objects.count(), 2)
-        self.assertTrue(Hospital.objects.filter(name="Brand New Nursing Home", default_fee=4000).exists())
+        self.assertTrue(Hospital.objects.filter(name="Brand New Nursing Home", source="doctor").exists())
         imported = Case.objects.get(patient_reference="IP 1")
         self.assertEqual(imported.hospital, self.hospital)
         self.assertEqual(imported.source, Case.SOURCE_IMPORT)

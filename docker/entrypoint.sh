@@ -1,6 +1,6 @@
 #!/bin/sh
 # Container start-up: wait for PostgreSQL (if used), apply migrations, collect static
-# files, optionally load demo data, then start the web server.
+# files, optionally load the hospital directory, then start the web server.
 set -e
 
 case "${DATABASE_URL:-}" in
@@ -29,8 +29,11 @@ esac
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput -v 0
 
-if [ "${SEED_DEMO_DATA:-0}" = "1" ]; then
-  python manage.py seed_demo
+# Optional: load the government hospital directory once (CSV URL from data.gov.in).
+if [ -n "${HOSPITAL_DIRECTORY_URL:-}" ] && [ ! -f "${DATA_DIR:-/app/data}/.directory_loaded" ]; then
+  if python manage.py import_hospitals --url "$HOSPITAL_DIRECTORY_URL" --districts "${HOSPITAL_DISTRICTS:-Pune, Mumbai, Mumbai Suburban}"; then
+    touch "${DATA_DIR:-/app/data}/.directory_loaded"
+  fi
 fi
 
 if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" ]; then

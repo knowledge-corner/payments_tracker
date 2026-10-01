@@ -62,9 +62,27 @@ class PaymentForm(StyledModelForm):
 class FollowUpForm(StyledModelForm):
     class Meta:
         model = PaymentFollowUp
-        fields = ["followup_date", "method", "contact_person", "promised_payment_date", "notes"]
+        fields = ["followup_date", "method", "contact", "promised_payment_date", "notes"]
         widgets = {
             "followup_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "promised_payment_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "notes": forms.Textarea(attrs={"rows": 3, "placeholder": "What did the hospital say?"}),
         }
+
+
+def followup_form(case, *args, **kwargs):
+    """FollowUpForm limited to the case doctor's contacts (people at this hospital first)."""
+    from contacts.services import contacts_for_hospital
+
+    form = FollowUpForm(*args, **kwargs)
+    here, others = contacts_for_hospital(case.doctor, case.hospital_id, case.department_id)
+    field = form.fields["contact"]
+    field.queryset = case.doctor.contacts.filter(is_active=True)
+    field.label = "Spoke to"
+    choices = [("", "Not specified")]
+    if here:
+        choices.append(("At this hospital", [(c.pk, c.name) for c, _ in here]))
+    if others:
+        choices.append(("Other contacts", [(c.pk, c.name) for c in others]))
+    field.widget.choices = choices
+    return form

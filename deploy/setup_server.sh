@@ -18,7 +18,7 @@
 #    5. Installs the `payments` helper command (update, logs, backup, ...)
 #
 #  Non-interactive use: set APP_DOMAIN, ADMIN_USERNAME, ADMIN_EMAIL,
-#  ADMIN_PASSWORD (and optionally LOAD_DEMO=1, REPO_URL, APP_DIR) beforehand.
+#  ADMIN_PASSWORD (and optionally HOSPITAL_DIRECTORY_URL, REPO_URL, APP_DIR) beforehand.
 # =============================================================================
 set -euo pipefail
 
@@ -64,11 +64,10 @@ if [ -z "${ADMIN_PASSWORD:-}" ]; then
     warn "Passwords do not match, try again."; ADMIN_PASSWORD=""
   done
 fi
-if [ -z "${LOAD_DEMO:-}" ]; then
-  read -r -p "  Load demo doctors/hospitals/cases? (y/N): " yn
-  case "$yn" in [Yy]*) LOAD_DEMO=1 ;; *) LOAD_DEMO=0 ;; esac
+if [ -z "${HOSPITAL_DIRECTORY_URL+x}" ]; then
+  read -r -p "  data.gov.in hospital directory CSV link (optional, Enter to skip): " HOSPITAL_DIRECTORY_URL
 fi
-ok "Domain: $APP_DOMAIN   Admin: $ADMIN_USERNAME   Demo data: $([ "$LOAD_DEMO" = 1 ] && echo yes || echo no)"
+ok "Domain: $APP_DOMAIN   Admin: $ADMIN_USERNAME"
 
 # -----------------------------------------------------------------------------
 if [ "$SKIP_SYSTEM" != "1" ]; then
@@ -142,7 +141,7 @@ DJANGO_SECURE=1
 POSTGRES_DB=payments_tracker
 POSTGRES_USER=payments
 POSTGRES_PASSWORD=$DB_PASSWORD
-SEED_DEMO_DATA=$LOAD_DEMO
+HOSPITAL_DIRECTORY_URL=$HOSPITAL_DIRECTORY_URL
 GUNICORN_WORKERS=2
 DJANGO_SUPERUSER_USERNAME=$ADMIN_USERNAME
 DJANGO_SUPERUSER_EMAIL=$ADMIN_EMAIL_ENV

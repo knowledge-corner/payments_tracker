@@ -9,7 +9,7 @@
 <div class="card p-3 mb-3" style="max-width: 640px;">
   <div class="fw-semibold">{{ case.hospital.name }}</div>
   <div class="small text-muted">{{ case.case_date|date:"d M Y" }}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %} · <span class="text-danger">Due {{ case.balance|inr }}</span></div>
-  {% if case.hospital.contact_number %}<a href="tel:{{ case.hospital.contact_number }}" class="btn btn-sm btn-outline-secondary mt-2 align-self-start"><i class="bi bi-telephone-fill"></i> Call {{ case.hospital.contact_person|default:"hospital" }}</a>{% endif %}
+  {% if case.call %}<a href="tel:{{ case.call.phone }}" class="btn btn-sm btn-outline-success mt-2 align-self-start"><i class="bi bi-telephone-fill"></i> Call {{ case.call.label }}</a>{% endif %}
 </div>
 <form method="post" novalidate style="max-width: 640px;">{% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">
@@ -18,7 +18,7 @@
       <div class="col-6">{% include "partials/field.html" with field=form.followup_date %}</div>
       <div class="col-6">{% include "partials/field.html" with field=form.method %}</div>
     </div>
-    {% include "partials/field.html" with field=form.contact_person %}
+    {% include "partials/field.html" with field=form.contact %}
     {% include "partials/field.html" with field=form.notes %}
     {% include "partials/field.html" with field=form.promised_payment_date %}
   </div>

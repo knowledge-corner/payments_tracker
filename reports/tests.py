@@ -10,8 +10,8 @@ from payments.models import Payment
 class ReportTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
-        self.a = make_hospital("Alpha", fee=1000)
-        self.b = make_hospital("Beta", fee=2000)
+        self.a = make_hospital("Alpha")
+        self.b = make_hospital("Beta")
         case = make_case(self.doctor, self.a, fee=1000)
         Payment.objects.create(case=case, amount=Decimal("400"), mode="upi")
         make_case(self.doctor, self.b, fee=2000)
@@ -45,8 +45,8 @@ class CasesReportTests(TestCase):
 
         self.today = timezone.localdate()
         self.doctor = make_doctor()
-        self.a = make_hospital("Alpha", fee=1000)
-        self.b = make_hospital("Beta", fee=2000)
+        self.a = make_hospital("Alpha")
+        self.b = make_hospital("Beta")
         self.recent = make_case(self.doctor, self.a, days_ago=0, fee=1000, procedure_type="LSCS spinal")
         Payment.objects.create(case=self.recent, amount=Decimal("1000"))
         self.old = make_case(self.doctor, self.b, days_ago=120, fee=2000, patient_reference="IP 55")

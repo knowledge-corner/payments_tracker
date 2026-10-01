@@ -20,12 +20,19 @@
     {% if show_hospital %}
     <div class="col-12 col-md-6">
       <label class="form-label small mb-1" for="f-hospital">Hospital</label>
-      <select name="hospital" id="f-hospital" class="form-select form-select-sm" data-searchable data-placeholder="All hospitals - type to search">
+      <select name="hospital" id="f-hospital" class="form-select form-select-sm" data-searchable data-search-url="{% url 'hospitals:search' %}" data-placeholder="All hospitals - type to search">
         <option value="">All hospitals</option>
-        {% for h in hospitals %}<option value="{{ h.pk }}" {% if f.hospital.pk == h.pk %}selected{% endif %}>{{ h.name }}</option>{% endfor %}
+        {% if f.hospital %}<option value="{{ f.hospital.pk }}" selected>{{ f.hospital.name }}</option>{% endif %}
       </select>
     </div>
     {% endif %}
+    <div class="col-6 col-md-3">
+      <label class="form-label small mb-1" for="f-department">Department</label>
+      <select name="department" id="f-department" class="form-select form-select-sm">
+        <option value="">All departments</option>
+        {% for d in departments %}<option value="{{ d.pk }}" {% if f.department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      </select>
+    </div>
     {% if show_status %}
     <div class="col-6 col-md-3">
       <label class="form-label small mb-1" for="f-status">Payment status</label>

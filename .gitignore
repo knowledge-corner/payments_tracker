@@ -221,4 +221,4 @@ __marimo__/
 staticfiles/
 
 # SQLite database and other runtime data
-data/
+/data/

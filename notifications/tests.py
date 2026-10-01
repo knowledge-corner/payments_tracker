@@ -57,7 +57,7 @@ class NotificationFlowTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.user = self.doctor.user
-        self.hospital = make_hospital("Ruby Hall Clinic", terms=30)
+        self.hospital = make_hospital("Ruby Hall Clinic")
         p256dh, auth = subscription_keys()
         self.sub = PushSubscription.objects.create(user=self.user, endpoint="https://fcm.googleapis.com/fcm/send/x",
                                                    p256dh=p256dh, auth=auth)

@@ -5,6 +5,7 @@ from django.db.models import Count, Sum
 from django.shortcuts import render
 from django.utils import timezone
 
+from contacts.services import attach_call_targets
 from core.periods import PERIODS, period_range
 from core.permissions import scoped_cases, selected_doctor, visible_doctors
 from payments.models import Payment
@@ -46,7 +47,7 @@ def home(request):
     def priority(c):
         return (0 if c.reminder.due else 1, 0 if c.status == "overdue" else 1, c.case_date)
 
-    action_required = sorted({c.pk: c for c in followups + overdue}.values(), key=priority)[:6]
+    action_required = attach_call_targets(sorted({c.pk: c for c in followups + overdue}.values(), key=priority)[:6])
 
     context = {
         "period": period,

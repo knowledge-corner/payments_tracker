@@ -9,8 +9,10 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from contacts.services import attach_call_targets
+from core.models import AppSettings
 from core.permissions import require_doctor_profile, scoped_cases, selected_doctor, visible_doctors
-from hospitals.models import Hospital
+from hospitals.models import Department, Hospital
 from payments.models import Payment
 from payments.services import reminder_state
 
@@ -57,6 +59,9 @@ def case_list(request):
         qs = qs.filter(outstanding__gt=0)
     if hospital.isdigit():
         qs = qs.filter(hospital_id=hospital)
+    department = request.GET.get("department", "")
+    if department.isdigit():
+        qs = qs.filter(department_id=department)
     if len(month) == 7 and month[4] == "-":
         try:
             qs = qs.filter(case_date__year=int(month[:4]), case_date__month=int(month[5:]))
@@ -70,7 +75,9 @@ def case_list(request):
         "hospital": hospital,
         "month": month,
         "status_choices": PaymentStatus.CHOICES,
-        "hospitals": Hospital.objects.order_by("name"),
+        "selected_hospital": Hospital.objects.filter(pk=hospital).first() if hospital.isdigit() else None,
+        "departments": Department.objects.filter(is_active=True),
+        "department": department,
         "doctors": visible_doctors(request.user),
         "selected_doctor": selected_doctor(request),
     }
@@ -85,14 +92,8 @@ def case_add(request):
     hospital_id = request.GET.get("hospital")
     if hospital_id and hospital_id.isdigit():
         initial["hospital"] = hospital_id
-    elif last_case:
-        initial["hospital"] = last_case.hospital_id
     if request.GET.get("date"):
         initial["case_date"] = request.GET["date"]
-    if initial.get("hospital"):
-        h = Hospital.objects.filter(pk=initial["hospital"]).first()
-        if h:
-            initial["fee"] = int(h.default_fee) if h.default_fee == int(h.default_fee) else h.default_fee
     if user.is_app_admin and last_case:
         initial["doctor"] = last_case.doctor_id
 
@@ -103,7 +104,9 @@ def case_add(request):
             if not user.is_app_admin:
                 case.doctor = user.doctor_profile
             case.created_by = user
+            auto_due = not case.due_date
             case.save()
+            form.save_contact(case)
             if form.cleaned_data.get("paid_now"):
                 Payment.objects.create(
                     case=case,
@@ -113,11 +116,15 @@ def case_add(request):
                     created_by=user,
                 )
         messages.success(request, f"Case saved: {case.hospital} - {case.fee:.0f}")
+        if auto_due:
+            messages.info(request, f"Expected payment date set to {case.due_date:%d %b %Y} "
+                                   f"({AppSettings.load().default_payment_terms_days} days). Edit the case to change it.")
         if "save_add" in request.POST:
             return redirect(f"{reverse('cases:add')}?hospital={case.hospital_id}&date={case.case_date:%Y-%m-%d}")
         return redirect("dashboard:home")
     return render(request, "cases/case_form.html", {
         "form": form, "procedures": procedure_suggestions(user), "is_new": True,
+        "default_days": AppSettings.load().default_payment_terms_days,
     })
 
 
@@ -126,11 +133,13 @@ def case_edit(request, pk):
     case = get_case_for_user(request, pk)
     form = CaseForm(request.POST or None, instance=case, user=request.user)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        case = form.save()
+        form.save_contact(case)
         messages.success(request, "Case updated.")
         return redirect(case)
     return render(request, "cases/case_form.html", {
         "form": form, "case": case, "procedures": procedure_suggestions(request.user), "is_new": False,
+        "default_days": AppSettings.load().default_payment_terms_days,
     })
 
 
@@ -139,12 +148,13 @@ def case_detail(request, pk):
     get_case_for_user(request, pk)
     case = (
         Case.objects.with_totals().with_last_followup()
-        .select_related("hospital", "doctor").get(pk=pk)
+        .select_related("hospital", "doctor", "department", "contact").get(pk=pk)
     )
+    attach_call_targets([case])
     context = {
         "case": case,
         "payments": case.payments.all(),
-        "followups": case.followups.all(),
+        "followups": case.followups.select_related("contact"),
         "reminder": reminder_state(case) if case.outstanding > 0 else None,
     }
     return render(request, "cases/case_detail.html", context)

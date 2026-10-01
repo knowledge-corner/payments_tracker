@@ -15,22 +15,26 @@ from .models import Case, PaymentStatus, compute_status
 class CaseStatusTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
-        self.hospital = make_hospital(terms=30)
+        self.hospital = make_hospital()
 
     def status_of(self, case):
         return Case.objects.with_totals().get(pk=case.pk)
 
-    def test_due_date_uses_hospital_terms(self):
+    def test_due_date_defaults_to_30_days(self):
         case = make_case(self.doctor, self.hospital, days_ago=0)
         self.assertEqual(case.due_date, case.case_date + datetime.timedelta(days=30))
 
-    def test_due_date_falls_back_to_global_setting(self):
+    def test_due_date_default_follows_setting(self):
         settings = AppSettings.load()
         settings.default_payment_terms_days = 45
         settings.save()
-        hospital = make_hospital(name="No terms", terms=None)
-        case = make_case(self.doctor, hospital)
+        case = make_case(self.doctor, self.hospital)
         self.assertEqual(case.due_date, case.case_date + datetime.timedelta(days=45))
+
+    def test_expected_payment_date_kept_when_given(self):
+        due = timezone.localdate() + datetime.timedelta(days=10)
+        case = make_case(self.doctor, self.hospital, due_date=due)
+        self.assertEqual(case.due_date, due)
 
     def test_pending_partial_paid_overdue(self):
         case = make_case(self.doctor, self.hospital, days_ago=5, fee=5000)
@@ -64,14 +68,21 @@ class CaseViewTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.other = make_doctor("dr.other", "Dr. Other")
-        self.hospital = make_hospital(fee=6500)
+        self.hospital = make_hospital()
         self.client.force_login(self.doctor.user)
 
-    def test_add_case_prefills_hospital_fee(self):
-        self.client.force_login(self.doctor.user)
+    def test_add_case_does_not_prefill_fee(self):
         response = self.client.get(reverse("cases:add") + f"?hospital={self.hospital.pk}")
-        self.assertContains(response, 'data-fee="6500"')
-        self.assertEqual(response.context["form"].initial["fee"], 6500)
+        self.assertIsNone(response.context["form"].initial.get("fee"))
+        self.assertEqual(str(response.context["form"].initial.get("hospital")), str(self.hospital.pk))
+
+    def test_fee_is_required(self):
+        response = self.client.post(reverse("cases:add"), {
+            "hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("fee", response.context["form"].errors)
+        self.assertFalse(Case.objects.exists())
 
     def test_add_case_with_custom_fee_and_payment(self):
         response = self.client.post(reverse("cases:add"), {

@@ -57,7 +57,7 @@ class PaymentViewTests(TestCase):
 class ReminderTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
-        self.hospital = make_hospital(terms=30)
+        self.hospital = make_hospital()
         self.settings = AppSettings.load()  # 7,14,21 then every 7 days
 
     def test_not_due_before_first_reminder(self):

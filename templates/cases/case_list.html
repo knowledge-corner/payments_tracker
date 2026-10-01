@@ -5,7 +5,6 @@
 <div class="d-flex justify-content-between align-items-center mb-2">
   <h1 class="h5 mb-0">Cases</h1>
   <div class="d-flex gap-2">
-    <a href="{% url 'cases:import' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Import Excel</a>
     <a href="{% url 'cases:add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Case</a>
   </div>
 </div>
@@ -28,14 +27,20 @@
       <input type="month" name="month" value="{{ month }}" class="form-control form-control-sm" onchange="this.form.submit()">
     </div>
     <div class="col-12 col-md-6">
-      <select name="hospital" class="form-select form-select-sm" onchange="this.form.submit()" data-searchable data-placeholder="All hospitals - type to search">
+      <select name="hospital" class="form-select form-select-sm" onchange="this.form.submit()" data-searchable data-search-url="{% url 'hospitals:search' %}" data-placeholder="All hospitals - type to search">
         <option value="">All hospitals</option>
-        {% for h in hospitals %}<option value="{{ h.pk }}" {% if hospital == h.pk|stringformat:'s' %}selected{% endif %}>{{ h.name }}</option>{% endfor %}
+        {% if selected_hospital %}<option value="{{ selected_hospital.pk }}" selected>{{ selected_hospital.name }}</option>{% endif %}
+      </select>
+    </div>
+    <div class="col-12 col-md-6">
+      <select name="department" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All departments</option>
+        {% for d in departments %}<option value="{{ d.pk }}" {% if department == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
       </select>
     </div>
   </div>
 </form>
-<div class="small text-muted mb-2">{{ page.paginator.count }} case{{ page.paginator.count|pluralize }}{% if q or status or hospital or month %} · <a href="{% url 'cases:list' %}">clear filters</a>{% endif %}</div>
+<div class="small text-muted mb-2">{{ page.paginator.count }} case{{ page.paginator.count|pluralize }}{% if q or status or hospital or month or department %} · <a href="{% url 'cases:list' %}">clear filters</a>{% endif %}</div>
 <div class="card">
   <div class="list-group list-group-flush">
     {% for case in page %}{% include "partials/case_row.html" %}{% empty %}

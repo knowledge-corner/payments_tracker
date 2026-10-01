@@ -42,6 +42,10 @@ def compute_status(fee, total_paid, due_date, today=None):
     return PaymentStatus.PENDING
 
 
+def default_due_date(case_date):
+    return case_date + datetime.timedelta(days=AppSettings.load().default_payment_terms_days)
+
+
 class CaseQuerySet(models.QuerySet):
     def for_user(self, user):
         if user.is_app_admin:
@@ -97,11 +101,15 @@ class Case(ImportableModel):
         "Case / patient ref", max_length=100, blank=True,
         help_text="IP number, initials or bill number - no clinical details needed.",
     )
+    department = models.ForeignKey("hospitals.Department", null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="cases")
+    contact = models.ForeignKey("contacts.Contact", null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="cases", help_text="Person to contact about this payment.")
     procedure_type = models.CharField("Procedure / case type", max_length=150, blank=True)
     fee = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     due_date = models.DateField(
-        null=True, blank=True, db_index=True,
-        help_text="Payment expected by. Auto-calculated from hospital/global payment terms if left blank.",
+        "Expected payment date", null=True, blank=True, db_index=True,
+        help_text="If left empty, it is set to the default payment period (30 days) after the case date.",
     )
     notes = models.TextField(blank=True)
     followup_snoozed_until = models.DateField(null=True, blank=True)
@@ -123,11 +131,8 @@ class Case(ImportableModel):
         return reverse("cases:detail", args=[self.pk])
 
     def save(self, *args, **kwargs):
-        if not self.due_date and self.case_date and self.hospital_id:
-            terms = self.hospital.payment_terms_days
-            if terms is None:
-                terms = AppSettings.load().default_payment_terms_days
-            self.due_date = self.case_date + datetime.timedelta(days=terms)
+        if not self.due_date and self.case_date:
+            self.due_date = default_due_date(self.case_date)
         super().save(*args, **kwargs)
 
     # --- Python-side helpers (used when the queryset was not annotated) ---

@@ -105,16 +105,15 @@ def build_template(include_doctor_column=False):
 
     # Hospitals list (for the dropdown) - new names are still allowed.
     hs = wb.create_sheet("Hospitals")
-    hs.append(["Hospital", "Default fee", "City"])
+    hs.append(["Hospital", "Area / city"])
     for c in hs[1]:
         c.font = Font(bold=True, color="FFFFFF")
         c.fill = header_fill
-    hospitals = list(Hospital.objects.filter(is_active=True).order_by("name"))
+    hospitals = list(Hospital.objects.active().order_by("name"))
     for h in hospitals:
-        hs.append([h.name, float(h.default_fee), h.city])
-    hs.column_dimensions["A"].width = 40
-    hs.column_dimensions["B"].width = 14
-    hs.column_dimensions["C"].width = 16
+        hs.append([h.name, h.place])
+    hs.column_dimensions["A"].width = 45
+    hs.column_dimensions["B"].width = 30
 
     col_index = {c[0]: i for i, c in enumerate(columns, start=1)}
     if hospitals:
@@ -297,7 +296,7 @@ def parse_workbook(uploaded_file, user, default_doctor=None, create_missing_hosp
     result.header_row = header_row
     result.columns = {k: v[1] for k, v in mapping.items()}
 
-    hospitals = {_key(h.name): h for h in Hospital.objects.all()}
+    hospitals = {_key(h.name): h for h in Hospital.objects.active()}
     hospital_names = [h.name for h in hospitals.values()]
     doctors_by_username = {}
     if user.is_app_admin:
@@ -457,8 +456,8 @@ def commit_rows(rows, user, filename):
             hospital = new_hospitals.get(key) or Hospital.objects.filter(name__iexact=data["hospital_name"]).first()
             if hospital is None:
                 hospital = Hospital.objects.create(
-                    name=data["hospital_name"], default_fee=Decimal(data["fee"]),
-                    source=Hospital.SOURCE_IMPORT, legacy_ref=f"excel:{label}",
+                    name=data["hospital_name"], city="", source="doctor", created_by=user,
+                    legacy_ref=f"excel:{label}",
                 )
                 created_hospitals += 1
             new_hospitals[key] = hospital

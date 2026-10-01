@@ -6,15 +6,13 @@
   <h1 class="h5 mb-0">{% if is_new %}Add completed case{% else %}Edit case{% endif %}</h1>
 </div>
 
-<form method="post" novalidate style="max-width: 640px;">{% csrf_token %}
+<form method="post" novalidate style="max-width: 640px;" id="case-form"
+      data-contacts-url="{% url 'contacts:for_hospital' %}" data-default-days="{{ default_days }}">{% csrf_token %}
   {% include "partials/form_errors.html" %}
   <div class="card p-3">
     {% if form.doctor %}{% include "partials/field.html" with field=form.doctor %}{% endif %}
     <div class="mb-3">
-      <div class="d-flex justify-content-between align-items-baseline">
-        <label class="form-label" for="id_hospital">Hospital <span class="text-danger">*</span></label>
-        <a class="small" href="{% url 'hospitals:add' %}?next={% url 'cases:add' %}">+ New hospital</a>
-      </div>
+      <label class="form-label" for="id_hospital">Hospital <span class="text-danger">*</span></label>
       {{ form.hospital }}
       {% for error in form.hospital.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
     </div>
@@ -28,9 +26,30 @@
         </div>
       </div>
     </div>
+    {% include "partials/field.html" with field=form.department %}
+
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-baseline">
+        <label class="form-label" for="id_contact">Contact person</label>
+        <a href="#" class="small" id="new-contact-toggle"><i class="bi bi-person-plus"></i> New contact</a>
+      </div>
+      {{ form.contact }}
+      {% for error in form.contact.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      <div class="form-text" id="contact-hint">Who to call about this payment. Contacts at the chosen hospital are listed first.</div>
+      <div id="new-contact-fields" class="border rounded-3 p-2 mt-2 {% if not form.new_contact_name.value and not form.new_contact_phone.errors %}d-none{% endif %}">
+        <div class="small fw-semibold mb-1">New contact (saved for next time)</div>
+        <div class="row g-2">
+          <div class="col-12 col-sm-5">{% include "partials/field.html" with field=form.new_contact_name %}</div>
+          <div class="col-7 col-sm-4">{% include "partials/field.html" with field=form.new_contact_phone %}</div>
+          <div class="col-5 col-sm-3">{% include "partials/field.html" with field=form.new_contact_role %}</div>
+        </div>
+      </div>
+    </div>
+
     {% include "partials/field.html" with field=form.procedure_type %}
     <datalist id="procedure-options">{% for p in procedures %}<option value="{{ p }}">{% endfor %}</datalist>
     {% include "partials/field.html" with field=form.patient_reference %}
+    {% include "partials/field.html" with field=form.due_date %}
 
     {% if form.paid_now %}
       {% include "partials/field.html" with field=form.paid_now %}
@@ -40,17 +59,122 @@
       </div>
     {% endif %}
 
-    <details {% if form.notes.value or form.due_date.errors or form.notes.errors %}open{% endif %}>
-      <summary class="small text-primary mb-2">More details (notes, due date)</summary>
+    <details {% if form.notes.value or form.notes.errors %}open{% endif %}>
+      <summary class="small text-primary mb-2">Notes</summary>
       {% include "partials/field.html" with field=form.notes %}
-      {% include "partials/field.html" with field=form.due_date %}
     </details>
   </div>
 
   <div class="form-actions d-flex gap-2">
-    <button class="btn btn-primary btn-lg-touch flex-fill" name="save"><i class="bi bi-check2"></i> Save case</button>
-    {% if is_new %}<button class="btn btn-outline-primary btn-lg-touch" name="save_add" title="Save and add another"><i class="bi bi-plus-lg"></i> Save &amp; add</button>{% endif %}
+    <button class="btn btn-primary btn-lg-touch flex-fill" name="save" value="1"><i class="bi bi-check2"></i> Save case</button>
+    {% if is_new %}<button class="btn btn-outline-primary btn-lg-touch" name="save_add" value="1" title="Save and add another"><i class="bi bi-plus-lg"></i> Save &amp; add</button>{% endif %}
   </div>
-  {% if is_new %}<div class="text-center small mb-3"><a href="{% url 'cases:import' %}"><i class="bi bi-file-earmark-excel"></i> Have many cases in Excel? Import them</a></div>{% endif %}
 </form>
+
+{# Shown when "Expected payment date" is left empty #}
+<div class="modal fade" id="due-date-modal" tabindex="-1" aria-labelledby="due-date-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-body">
+        <h2 class="h6" id="due-date-title"><i class="bi bi-calendar-event text-primary"></i> No expected payment date</h2>
+        <p class="small mb-0">We'll assume payment is due in <strong>{{ default_days }} days</strong> (<span id="due-date-default"></span>).
+          To change it later, edit this case and set the expected payment date.</p>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="due-date-set">Set a date</button>
+        <button type="button" class="btn btn-primary btn-sm" id="due-date-ok">OK, save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("case-form");
+  var hospital = document.getElementById("id_hospital");
+  var department = document.getElementById("id_department");
+  var contact = document.getElementById("id_contact");
+  var doctor = document.getElementById("id_doctor");
+  var hint = document.getElementById("contact-hint");
+
+  // ---- New contact toggle ----------------------------------------------------
+  var newBox = document.getElementById("new-contact-fields");
+  document.getElementById("new-contact-toggle").addEventListener("click", function (e) {
+    e.preventDefault();
+    newBox.classList.toggle("d-none");
+    if (!newBox.classList.contains("d-none")) {
+      contact.value = "";
+      document.getElementById("id_new_contact_name").focus();
+    }
+  });
+
+  // ---- Contacts + last department for the chosen hospital --------------------
+  function loadContacts(applyDefaults) {
+    if (!hospital.value) return;
+    var params = new URLSearchParams({ hospital: hospital.value });
+    if (department.value) params.set("department", department.value);
+    if (doctor && doctor.value) params.set("doctor", doctor.value);
+    fetch(form.dataset.contactsUrl + "?" + params.toString(), { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var keep = contact.value;
+        contact.innerHTML = "";
+        contact.appendChild(new Option("Not specified", ""));
+        function group(label, items) {
+          if (!items.length) return;
+          var g = document.createElement("optgroup");
+          g.label = label;
+          items.forEach(function (c) { g.appendChild(new Option(c.label, c.id)); });
+          contact.appendChild(g);
+        }
+        group("At this hospital", data.here);
+        group("Other contacts", data.others);
+        if (applyDefaults && !department.value && data.last_department) department.value = data.last_department;
+        if (keep && contact.querySelector('option[value="' + keep + '"]')) contact.value = keep;
+        else if (applyDefaults && data.suggested_contact) contact.value = data.suggested_contact;
+        hint.textContent = data.here.length
+          ? data.here.length + " contact(s) at this hospital listed first."
+          : "No contact saved for this hospital yet - add one with “New contact”.";
+      })
+      .catch(function () {});
+  }
+  hospital.addEventListener("change", function () { loadContacts(true); });
+  department.addEventListener("change", function () { loadContacts(false); });
+  if (doctor) doctor.addEventListener("change", function () { loadContacts(true); });
+  if (hospital.value) loadContacts({{ is_new|yesno:"true,false" }});
+
+  // ---- Expected payment date: confirm the default ----------------------------
+  var due = document.getElementById("id_due_date");
+  var caseDate = document.getElementById("id_case_date");
+  var modalEl = document.getElementById("due-date-modal");
+  var confirmed = false, submitter = null;
+  form.addEventListener("submit", function (e) {
+    submitter = e.submitter;
+    if (confirmed || due.value || !window.bootstrap) return;
+    e.preventDefault();
+    var base = caseDate.value ? new Date(caseDate.value + "T00:00:00") : new Date();
+    base.setDate(base.getDate() + parseInt(form.dataset.defaultDays || "30", 10));
+    document.getElementById("due-date-default").textContent =
+      base.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  });
+  document.getElementById("due-date-ok").addEventListener("click", function () {
+    confirmed = true;
+    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    if (submitter && submitter.name) {
+      var flag = document.createElement("input");
+      flag.type = "hidden"; flag.name = submitter.name; flag.value = "1";
+      form.appendChild(flag);
+    }
+    form.submit();
+  });
+  document.getElementById("due-date-set").addEventListener("click", function () {
+    bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+    setTimeout(function () { due.focus(); if (due.showPicker) { try { due.showPicker(); } catch (e) {} } }, 300);
+  });
+})();
+</script>
 {% endblock %}

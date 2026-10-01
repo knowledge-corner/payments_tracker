@@ -54,13 +54,12 @@ DJANGO_CSRF_TRUSTED_ORIGINS=https://<username>.pythonanywhere.com
 DJANGO_SECURE=0
 ```
 
-## 4. Create the database and demo data
+## 4. Create the database
 
 ```bash
 python manage.py migrate
 python manage.py collectstatic --noinput
-python manage.py seed_demo          # demo doctors, hospitals, cases (skip for an empty app)
-python manage.py createsuperuser    # optional: your own admin login
+python manage.py createsuperuser    # your admin login
 ```
 
 ## 5. Create the web app (Web tab)
@@ -87,7 +86,7 @@ python manage.py createsuperuser    # optional: your own admin login
 6. **Security:** turn on **Force HTTPS**.
 7. Click the green **Reload** button and open `https://<username>.pythonanywhere.com`.
 
-Demo logins: `admin / Admin@12345`, `dr.mehta / Demo@12345`, `dr.rao / Demo@12345` (change them before sharing).
+Doctors sign up with **Create an account** on the sign-in page. The starter list of Pune / Mumbai hospitals is loaded by `migrate`; to add the full government directory, upload the data.gov.in CSV under **account menu → Hospital directory**.
 
 ## 6. Push notifications (daily task)
 

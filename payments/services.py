@@ -78,7 +78,7 @@ def receivables_for(user, today=None):
         .with_totals(today)
         .with_last_followup()
         .filter(outstanding__gt=0)
-        .select_related("hospital", "doctor")
+        .select_related("hospital", "doctor", "department")
         .order_by("case_date", "id")
     )
     for case in cases:

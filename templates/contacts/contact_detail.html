@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.name }}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{% url 'contacts:list' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0 flex-fill text-truncate">{{ contact.name }}</h1>
+  <a href="{% url 'contacts:edit' contact.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+</div>
+<div class="card p-3 mb-3">
+  <dl class="row small mb-0">
+    <dt class="col-4 text-muted fw-normal">Role</dt><dd class="col-8">{{ contact.get_role_display }}</dd>
+    <dt class="col-4 text-muted fw-normal">Mobile</dt><dd class="col-8">{% if contact.phone %}<a href="tel:{{ contact.phone }}">{{ contact.phone }}</a>{% else %}-{% endif %}</dd>
+    {% if contact.alt_phone %}<dt class="col-4 text-muted fw-normal">Other phone</dt><dd class="col-8"><a href="tel:{{ contact.alt_phone }}">{{ contact.alt_phone }}</a></dd>{% endif %}
+    {% if contact.email %}<dt class="col-4 text-muted fw-normal">Email</dt><dd class="col-8"><a href="mailto:{{ contact.email }}">{{ contact.email }}</a></dd>{% endif %}
+    {% if contact.notes %}<dt class="col-4 text-muted fw-normal">Notes</dt><dd class="col-8">{{ contact.notes|linebreaksbr }}</dd>{% endif %}
+    {% if user.is_app_admin %}<dt class="col-4 text-muted fw-normal">Doctor</dt><dd class="col-8">{{ contact.doctor }}</dd>{% endif %}
+  </dl>
+  {% if contact.best_phone %}<a href="tel:{{ contact.best_phone }}" class="btn btn-outline-success btn-sm mt-2 align-self-start"><i class="bi bi-telephone-fill"></i> Call {{ contact.name }}</a>{% endif %}
+</div>
+
+<div class="section-title">Works at</div>
+<div class="card mb-2">
+  <div class="list-group list-group-flush">
+    {% for link in current_links %}
+    <div class="list-group-item action-item">
+      <div class="d-flex justify-content-between gap-2">
+        <div class="min-w-0">
+          <a href="{{ link.hospital.get_absolute_url }}" class="action-name">{{ link.hospital.name }}</a>{% if link.is_primary %} <span class="combo-mine">Main contact</span>{% endif %}
+          <div class="action-meta">{{ link.department|default:"All departments" }} · since {{ link.start_date|date:"d M Y" }}</div>
+        </div>
+        <div class="dropdown">
+          <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="dropdown" aria-label="Options"><i class="bi bi-three-dots"></i></button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            {% if not link.is_primary %}<li><form method="post" action="{% url 'contacts:link_primary' contact.pk link.pk %}">{% csrf_token %}<button class="dropdown-item">Make main contact here</button></form></li>{% endif %}
+            <li><form method="post" action="{% url 'contacts:link_end' contact.pk link.pk %}">{% csrf_token %}<button class="dropdown-item text-danger" data-confirm="Mark {{ contact.name }} as no longer working at {{ link.hospital.name }}?">No longer works here</button></form></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    {% empty %}<div class="p-3 small text-muted">Not linked to any hospital right now.</div>{% endfor %}
+  </div>
+</div>
+
+<details class="mb-3" {% if not current_links %}open{% endif %}>
+  <summary class="small text-primary"><i class="bi bi-plus-circle"></i> Add a hospital / moved to another hospital</summary>
+  <form method="post" action="{% url 'contacts:link_add' contact.pk %}" class="card p-3 mt-2">{% csrf_token %}
+    {% include "partials/field.html" with field=form.hospital %}
+    {% include "partials/field.html" with field=form.department %}
+    <div class="row g-2">
+      <div class="col-6">{% include "partials/field.html" with field=form.start_date %}</div>
+      <div class="col-6 pt-4">{% include "partials/field.html" with field=form.is_primary %}</div>
+    </div>
+    {% include "partials/field.html" with field=form.moved_from_others %}
+    <button class="btn btn-primary btn-sm">Save</button>
+  </form>
+</details>
+
+{% if past_links %}
+<div class="section-title">Previously worked at</div>
+<div class="card mb-3"><div class="list-group list-group-flush">
+  {% for link in past_links %}<div class="list-group-item small">{{ link.hospital.name }} <span class="text-muted">· {{ link.department|default:"All departments" }} · {{ link.start_date|date:"M Y" }} - {{ link.end_date|date:"M Y" }}</span></div>{% endfor %}
+</div></div>
+{% endif %}
+
+{% if recent_cases %}
+<div class="section-title">Cases with this contact</div>
+<div class="card"><div class="list-group list-group-flush">
+  {% for case in recent_cases %}{% include "partials/case_row.html" %}{% endfor %}
+</div></div>
+{% endif %}
+{% endblock %}

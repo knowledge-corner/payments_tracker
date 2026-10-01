@@ -51,5 +51,6 @@ urlpatterns = [
     path("receivables/", include("payments.receivables_urls")),
     path("reports/", include("reports.urls")),
     path("doctors/", include("accounts.urls")),
+    path("contacts/", include("contacts.urls")),
     path("notifications/", include("notifications.urls")),
 ]

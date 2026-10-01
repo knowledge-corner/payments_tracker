@@ -8,10 +8,11 @@ from django.views.decorators.http import require_POST
 
 from cases.models import Case
 from cases.views import get_case_for_user
+from contacts.services import attach_call_targets
 from core.permissions import selected_doctor, visible_doctors
 
 from . import services
-from .forms import FollowUpForm, PaymentForm
+from .forms import PaymentForm, followup_form
 from .models import Payment, PaymentFollowUp
 
 
@@ -80,10 +81,13 @@ def edit_payment(request, pk):
 @login_required
 def add_followup(request, case_pk):
     case = get_case_for_user(request, case_pk)
-    form = FollowUpForm(request.POST or None, initial={"contact_person": case.hospital.contact_person})
+    attach_call_targets([case])
+    initial = {"contact": case.call.contact_id} if case.call and case.call.contact_id else {}
+    form = followup_form(case, request.POST or None, initial=initial)
     if request.method == "POST" and form.is_valid():
         followup = form.save(commit=False)
         followup.case = case
+        followup.contact_person = followup.contact.name if followup.contact_id else ""
         followup.created_by = request.user
         followup.save()
         services.apply_followup(followup)
@@ -97,10 +101,12 @@ def add_followup(request, case_pk):
 def quick_followed_up(request, case_pk):
     """One-tap 'Followed up' from the receivables list (phone call, today)."""
     case = get_case_for_user(request, case_pk)
+    attach_call_targets([case])
     followup = PaymentFollowUp.objects.create(
         case=case, method=request.POST.get("method", "call"),
-        contact_person=case.hospital.contact_person, created_by=request.user,
-        notes="Marked as followed up from receivables list.",
+        contact_id=case.call.contact_id if case.call else None,
+        contact_person=case.call.name if case.call and case.call.contact_id else "",
+        created_by=request.user, notes="Marked as followed up from receivables list.",
     )
     services.apply_followup(followup)
     messages.success(request, f"Marked {case.hospital} as followed up today.")
@@ -168,6 +174,7 @@ def receivables(request):
     if sort not in SORTS:
         sort = "oldest"
     cases.sort(key=SORTS[sort][1])
+    attach_call_targets(cases)
 
     return render(request, "payments/receivables.html", {
         "cases": cases, "summary": summary, "ageing": ageing, "view": view, "sort": sort,

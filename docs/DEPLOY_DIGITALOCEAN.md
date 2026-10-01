@@ -55,7 +55,7 @@ It asks for:
 | Admin username | `admin` |
 | Admin email | `you@yourpractice.in` |
 | Admin password | at least 10 characters (typed twice, not shown) |
-| Load demo data? | `N` for a real start, `y` to show the client sample data |
+| Hospital directory CSV link | optional - a data.gov.in download link, or press Enter and upload the CSV later in the app |
 
 Everything else (database password, secret key) is generated automatically and stored in
 `/opt/payments_tracker/.env` (readable by root only).
@@ -144,4 +144,4 @@ cd /opt/payments_tracker
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.prod.yml cp export.json web:/app/data/import.json
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.prod.yml exec web python manage.py loaddata /app/data/import.json
 ```
-(Do this on a new, empty installation - answer `N` to demo data.)
+(Do this on a new, empty installation.)

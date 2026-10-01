@@ -171,3 +171,6 @@ h1.h5, .h5 { font-weight: 600; }
 .call-link { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #eef8f2; color: #3f8f63; font-size: .78rem; text-decoration: none; }
 .call-link:hover { background: #dff2e7; color: #2f7a52; }
 .btn-xs { padding: .28rem .5rem; font-size: .8rem; border-radius: 8px; }
+.combo-sub { font-size: .75rem; color: var(--text-muted); margin-top: 1px; }
+.combo-mine { font-size: .65rem; font-weight: 600; color: #2f7a52; background: #e9f6ef; border-radius: 999px; padding: .05rem .45rem; align-self: center; white-space: nowrap; }
+.combo-add { display: block; padding: .6rem .75rem; border-top: 1px solid var(--line); font-size: .85rem; text-decoration: none; }

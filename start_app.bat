@@ -175,10 +175,8 @@ echo  ==============================================
 echo    Payments Tracker is running
 echo    Open:   http://localhost:%PORT%
 echo.
-echo    Demo logins (first run with SEED_DEMO_DATA=1):
-echo      admin    / Admin@12345
-echo      dr.mehta / Demo@12345
-echo      dr.rao   / Demo@12345
+echo    First time? Tap "Create an account" on the sign-in page.
+echo    Admin login: docker compose exec web python manage.py createsuperuser
 echo.
 echo    The app keeps running in the background.
 echo    Use stop_app.bat to stop it.

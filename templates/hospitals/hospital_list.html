@@ -1,39 +1,42 @@
 {% extends "base.html" %}
-{% load money %}
 {% block title %}Hospitals{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-2">
-  <h1 class="h5 mb-0">Hospitals</h1>
-  <a href="{% url 'hospitals:add' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add hospital</a>
+  <h1 class="h5 mb-0">{% if q %}Search hospitals{% else %}My hospitals{% endif %}</h1>
+  <a href="{% url 'hospitals:add' %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i> Add hospital</a>
 </div>
 <form method="get" class="mb-2">
   <div class="input-group">
     <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search name, city, contact">
-    <input type="hidden" name="show" value="{{ show }}">
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search {{ directory_size }} hospitals - name, area or PIN">
   </div>
 </form>
-<div class="chips mb-2">
-  <a class="chip {% if show == 'active' %}active{% endif %}" href="{% querystring_with show='active' %}">Active</a>
-  <a class="chip {% if show == 'all' %}active{% endif %}" href="{% querystring_with show='all' %}">All</a>
-</div>
+{% if q %}<div class="small text-muted mb-2">{{ hospitals|length }}{% if hospitals|length == 60 %}+{% endif %} match{{ hospitals|length|pluralize:"es" }} · <a href="{% url 'hospitals:list' %}">back to my hospitals</a></div>{% endif %}
+
 <div class="card">
   <div class="list-group list-group-flush">
     {% for h in hospitals %}
-    <a href="{% url 'hospitals:detail' h.pk %}" class="list-group-item list-group-item-action py-3">
+    <a href="{% url 'hospitals:detail' h.pk %}" class="list-group-item list-group-item-action action-item">
       <div class="d-flex justify-content-between gap-2">
         <div class="min-w-0">
-          <div class="fw-semibold text-truncate">{{ h.name }} {% if not h.is_active %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</div>
-          <div class="small text-muted text-truncate">{% if h.city %}{{ h.city }} · {% endif %}Default fee {{ h.default_fee|inr }}</div>
-          {% if h.contact_person %}<div class="small text-muted text-truncate"><i class="bi bi-person"></i> {{ h.contact_person }}</div>{% endif %}
+          <div class="action-name text-truncate">{{ h.name }}{% if h.is_mine and q %} <span class="combo-mine">Mine</span>{% endif %}{% if not h.verified and h.source == 'doctor' %} <span class="badge text-bg-secondary">unverified</span>{% endif %}</div>
+          <div class="action-meta text-truncate">{{ h.place|default:"-" }}{% if h.pincode %} · {{ h.pincode }}{% endif %}{% if h.last_case %} · last case {{ h.last_case|date:"d M" }}{% endif %}</div>
         </div>
         <div class="text-end flex-shrink-0">
-          {% if h.open_cases %}<div class="fw-semibold text-danger amount">{{ h.outstanding_total|inr }}</div><div class="small text-muted">{{ h.open_cases }} unpaid</div>
-          {% else %}<span class="small text-success"><i class="bi bi-check2"></i> Clear</span>{% endif %}
+          {% if h.open_cases %}<div class="action-amount text-danger amount">{{ h.outstanding_total|inr }}</div><div class="action-meta">{{ h.open_cases }} unpaid</div>
+          {% elif h.is_mine %}<span class="action-meta text-success"><i class="bi bi-check2"></i> Clear</span>{% endif %}
         </div>
       </div>
     </a>
-    {% empty %}<div class="p-4 text-center text-muted">No hospitals yet.</div>{% endfor %}
+    {% empty %}
+    <div class="p-4 text-center text-muted small">
+      {% if q %}No hospital matches "{{ q }}". <a href="{% url 'hospitals:add' %}?name={{ q|urlencode }}">Add it</a>.
+      {% else %}Hospitals appear here once you add a case or a contact there. Use the search above to look through the directory.{% endif %}
+    </div>
+    {% endfor %}
   </div>
 </div>
+{% if user.is_app_admin %}
+<div class="small text-muted mt-3"><i class="bi bi-shield-check"></i> Admin: <a href="{% url 'hospitals:unverified' %}">review hospitals added by doctors</a> · <a href="{% url 'hospitals:directory_import' %}">import hospital directory</a></div>
+{% endif %}
 {% endblock %}

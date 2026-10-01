@@ -42,8 +42,7 @@ class AppSettings(models.Model):
     practice_name = models.CharField(max_length=120, default="Payments Tracker")
     default_payment_terms_days = models.PositiveIntegerField(
         default=30,
-        help_text="A case becomes Overdue this many days after the case date "
-        "(unless the hospital has its own payment terms).",
+        help_text="Used when a case has no expected payment date: it becomes Overdue this many days after the case date.",
     )
     reminder_days = models.CharField(
         max_length=100, default="7,14,21", validators=[validate_reminder_days],

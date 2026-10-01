@@ -1,11 +1,14 @@
-/* Searchable select ("type to search") for long dropdowns such as hospitals.
+/* Searchable select ("type to search").
  *
- * Usage: <select data-searchable data-placeholder="Search hospital">...</select>
+ * Local mode:   <select data-searchable> - filters the select's own options.
+ * Remote mode:  <select data-searchable data-search-url="/hospitals/search/"> - asks the
+ *               server as you type (for long lists like the hospital directory). The
+ *               endpoint returns {"results": [{"id", "label", "sub", "mine"}]}.
+ *               Optional data-add-url shows a "+ Add ... not in the list" link.
  *
- * The original <select> stays in the form (hidden) so normal form submission,
- * validation and "change" listeners keep working. Matching is "contains"
- * anywhere in the text, case-insensitive; with several words, every word must
- * appear somewhere (e.g. "ruby cl" finds "Ruby Hall Clinic").
+ * The original <select> stays in the form (hidden), so form posts, validation and
+ * "change" listeners keep working. Matching is "contains", every typed word must
+ * appear somewhere ("ruby cl" finds "Ruby Hall Clinic").
  */
 (function () {
   "use strict";
@@ -15,7 +18,7 @@
   }
 
   function escapeHtml(text) {
-    return text.replace(/[&<>"']/g, function (c) {
+    return String(text || "").replace(/[&<>"']/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
@@ -33,6 +36,10 @@
   function enhance(select) {
     if (select.dataset.searchableReady) return;
     select.dataset.searchableReady = "1";
+    var remoteUrl = select.dataset.searchUrl || "";
+    var addUrl = select.dataset.addUrl || "";
+    var emptyOption = Array.prototype.find.call(select.options, function (o) { return o.value === ""; });
+    var emptyLabel = emptyOption && /all /i.test(emptyOption.text) ? emptyOption.text : "";
 
     var wrapper = document.createElement("div");
     wrapper.className = "combo";
@@ -63,33 +70,64 @@
     select.classList.add("d-none");
     select.tabIndex = -1;
 
-    var options = Array.prototype.map.call(select.options, function (o) {
-      return { value: o.value, label: o.text, key: normalise(o.text), empty: o.value === "" };
+    var localOptions = Array.prototype.map.call(select.options, function (o) {
+      return { value: o.value, label: o.text, sub: "", key: normalise(o.text), empty: o.value === "" };
     });
     var visible = [];
     var active = -1;
+    var timer = null;
+    var requestNo = 0;
 
     function selectedLabel() {
       var opt = select.options[select.selectedIndex];
       return opt && opt.value !== "" ? opt.text : "";
     }
 
+    function paint(items, tokens, query, loading) {
+      visible = items;
+      var html = items.map(function (o, i) {
+        var cls = "combo-item" + (o.value === select.value ? " selected" : "") + (o.empty ? " text-muted" : "");
+        var sub = o.sub ? '<div class="combo-sub">' + escapeHtml(o.sub) + "</div>" : "";
+        var badge = o.mine ? '<span class="combo-mine">Mine</span>' : "";
+        return '<div class="' + cls + '" role="option" data-index="' + i + '"><div class="d-flex justify-content-between gap-2"><span>' +
+          highlight(o.label, tokens) + "</span>" + badge + "</div>" + sub + "</div>";
+      }).join("");
+      if (loading) html += '<div class="combo-empty">Searching...</div>';
+      else if (!items.length) html += '<div class="combo-empty">No match for "' + escapeHtml(query) + '"</div>';
+      if (addUrl) {
+        var sep = addUrl.indexOf("?") === -1 ? "?" : "&";
+        html += '<a class="combo-add" href="' + addUrl + sep + "name=" + encodeURIComponent(query || "") + '"><i class="bi bi-plus-circle"></i> Add a hospital not in the list</a>';
+      }
+      menu.innerHTML = html;
+      active = items.length ? 0 : -1;
+      paintActive();
+    }
+
     function render(query) {
       var tokens = normalise(query).split(" ").filter(Boolean);
-      visible = options.filter(function (o) {
-        if (o.empty) return tokens.length === 0; // "All hospitals" only when not searching
-        return tokens.every(function (t) { return o.key.indexOf(t) !== -1; });
-      });
-      if (!visible.length) {
-        menu.innerHTML = '<div class="combo-empty">No match for "' + escapeHtml(query) + '"</div>';
-      } else {
-        menu.innerHTML = visible.map(function (o, i) {
-          var cls = "combo-item" + (o.value === select.value ? " selected" : "") + (o.empty ? " text-muted" : "");
-          return '<div class="' + cls + '" role="option" data-index="' + i + '">' + highlight(o.label, tokens) + "</div>";
-        }).join("");
+      if (!remoteUrl) {
+        paint(localOptions.filter(function (o) {
+          if (o.empty) return tokens.length === 0;
+          return tokens.every(function (t) { return o.key.indexOf(t) !== -1; });
+        }), tokens, query);
+        return;
       }
-      active = visible.length ? 0 : -1;
-      paintActive();
+      var head = emptyLabel && !tokens.length ? [{ value: "", label: emptyLabel, empty: true }] : [];
+      paint(head, tokens, query, true);
+      clearTimeout(timer);
+      var mine = ++requestNo;
+      timer = setTimeout(function () {
+        fetch(remoteUrl + (remoteUrl.indexOf("?") === -1 ? "?" : "&") + "q=" + encodeURIComponent(query), { credentials: "same-origin" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (mine !== requestNo) return; // a newer search is running
+            var items = head.concat((data.results || []).map(function (r) {
+              return { value: String(r.id), label: r.label, sub: r.sub, mine: r.mine };
+            }));
+            paint(items, tokens, query);
+          })
+          .catch(function () { if (mine === requestNo) paint(head, tokens, query); });
+      }, query ? 220 : 0);
     }
 
     function paintActive() {
@@ -98,35 +136,27 @@
       if (items[active]) items[active].scrollIntoView({ block: "nearest" });
     }
 
-    function open() {
-      wrapper.classList.add("open");
-      input.setAttribute("aria-expanded", "true");
-    }
-
-    function close() {
-      wrapper.classList.remove("open");
-      input.setAttribute("aria-expanded", "false");
-    }
+    function open() { wrapper.classList.add("open"); input.setAttribute("aria-expanded", "true"); }
+    function close() { wrapper.classList.remove("open"); input.setAttribute("aria-expanded", "false"); }
 
     function choose(option) {
+      if (remoteUrl && option.value && !Array.prototype.some.call(select.options, function (o) { return o.value === option.value; })) {
+        var opt = document.createElement("option");
+        opt.value = option.value;
+        opt.text = option.sub ? option.label + " - " + option.sub : option.label;
+        select.appendChild(opt);
+      }
       var changed = select.value !== option.value;
       select.value = option.value;
-      input.value = option.empty ? "" : option.label;
+      input.value = option.empty ? "" : selectedLabel();
       close();
       if (changed) select.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     input.value = selectedLabel();
 
-    input.addEventListener("focus", function () {
-      input.select();
-      render("");
-      open();
-    });
-    input.addEventListener("input", function () {
-      render(input.value);
-      open();
-    });
+    input.addEventListener("focus", function () { input.select(); render(""); open(); });
+    input.addEventListener("input", function () { render(input.value); open(); });
     input.addEventListener("keydown", function (e) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -147,8 +177,8 @@
         close();
       }
     });
-    // mousedown (not click) so it fires before the input loses focus
     menu.addEventListener("mousedown", function (e) {
+      if (e.target.closest(".combo-add")) return; // normal link
       var item = e.target.closest(".combo-item");
       if (!item) return;
       e.preventDefault();
@@ -157,18 +187,17 @@
     input.addEventListener("blur", function () {
       setTimeout(function () {
         if (!wrapper.classList.contains("open")) return;
-        // Typed text that exactly matches one option selects it; otherwise restore.
         var typed = normalise(input.value);
-        var exact = options.filter(function (o) { return !o.empty && o.key === typed; });
+        var exact = visible.filter(function (o) { return !o.empty && normalise(o.label) === typed; });
         if (exact.length === 1) {
           choose(exact[0]);
-        } else if (!typed && options.some(function (o) { return o.empty; })) {
-          choose(options.filter(function (o) { return o.empty; })[0]);
+        } else if (!typed && emptyOption) {
+          choose({ value: "", label: "", empty: true });
         } else {
           input.value = selectedLabel();
           close();
         }
-      }, 120);
+      }, 150);
     });
     select.addEventListener("change", function () {
       if (document.activeElement !== input) input.value = selectedLabel();

@@ -1,0 +1,639 @@
+[
+ {
+  "name": "Ruby Hall Clinic",
+  "area": "Sassoon Road",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Ruby Hall"
+ },
+ {
+  "name": "Ruby Hall Clinic Wanowrie",
+  "area": "Wanowrie",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Ruby Hall"
+ },
+ {
+  "name": "Ruby Hall Clinic Hinjewadi",
+  "area": "Hinjewadi",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Ruby Hall"
+ },
+ {
+  "name": "Jehangir Hospital",
+  "area": "Sassoon Road",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Jehangir"
+ },
+ {
+  "name": "Sassoon General Hospital",
+  "area": "Station Road",
+  "city": "Pune",
+  "ownership": "government",
+  "aliases": "Sassoon, BJ Medical College, BJMC"
+ },
+ {
+  "name": "KEM Hospital Pune",
+  "area": "Rasta Peth",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "KEM, King Edward Memorial"
+ },
+ {
+  "name": "Deenanath Mangeshkar Hospital",
+  "area": "Erandwane",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Deenanath, DMH, Mangeshkar"
+ },
+ {
+  "name": "Poona Hospital and Research Centre",
+  "area": "Sadashiv Peth",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Poona Hospital"
+ },
+ {
+  "name": "Sahyadri Super Speciality Hospital Deccan Gymkhana",
+  "area": "Deccan Gymkhana",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Sahyadri"
+ },
+ {
+  "name": "Sahyadri Hospital Kothrud",
+  "area": "Kothrud",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Sahyadri"
+ },
+ {
+  "name": "Sahyadri Hospital Nagar Road",
+  "area": "Nagar Road",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Sahyadri"
+ },
+ {
+  "name": "Sahyadri Hospital Hadapsar",
+  "area": "Hadapsar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Sahyadri"
+ },
+ {
+  "name": "Sahyadri Hospital Bibwewadi",
+  "area": "Bibwewadi",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Sahyadri"
+ },
+ {
+  "name": "Jupiter Hospital Pune",
+  "area": "Baner",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Jupiter"
+ },
+ {
+  "name": "Manipal Hospital Kharadi",
+  "area": "Kharadi",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Columbia Asia, Manipal"
+ },
+ {
+  "name": "Noble Hospital",
+  "area": "Hadapsar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Noble"
+ },
+ {
+  "name": "Inamdar Multispeciality Hospital",
+  "area": "Fatima Nagar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Inamdar"
+ },
+ {
+  "name": "Bharati Hospital",
+  "area": "Dhankawadi",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Bharati Vidyapeeth"
+ },
+ {
+  "name": "Sancheti Hospital",
+  "area": "Shivajinagar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Sancheti"
+ },
+ {
+  "name": "Ratna Memorial Hospital",
+  "area": "Senapati Bapat Road",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Ratna"
+ },
+ {
+  "name": "Joshi Hospital",
+  "area": "Erandwane",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Joshi"
+ },
+ {
+  "name": "Oyster and Pearl Hospital",
+  "area": "Shivajinagar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Oyster Pearl"
+ },
+ {
+  "name": "Ranka Hospital",
+  "area": "Mukund Nagar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Ranka"
+ },
+ {
+  "name": "Shashwat Hospital",
+  "area": "Aundh",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Shashwat"
+ },
+ {
+  "name": "Medipoint Hospital",
+  "area": "Aundh",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Medipoint"
+ },
+ {
+  "name": "Surya Mother and Child Super Speciality Hospital",
+  "area": "Wakad",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Surya"
+ },
+ {
+  "name": "Cloudnine Hospital Kalyani Nagar",
+  "area": "Kalyani Nagar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Cloudnine"
+ },
+ {
+  "name": "Pune Adventist Hospital",
+  "area": "Salisbury Park",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Adventist"
+ },
+ {
+  "name": "Inlaks and Budhrani Hospital",
+  "area": "Koregaon Park",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Inlaks, Budhrani"
+ },
+ {
+  "name": "Hardikar Hospital",
+  "area": "Shivajinagar",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Hardikar"
+ },
+ {
+  "name": "Vishwaraj Hospital",
+  "area": "Loni Kalbhor",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Vishwaraj"
+ },
+ {
+  "name": "Mai Mangeshkar Hospital",
+  "area": "Warje",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Mai Mangeshkar"
+ },
+ {
+  "name": "Kamla Nehru Hospital",
+  "area": "Mangalwar Peth",
+  "city": "Pune",
+  "ownership": "government",
+  "aliases": "Kamla Nehru, PMC hospital"
+ },
+ {
+  "name": "District Hospital Aundh",
+  "area": "Aundh",
+  "city": "Pune",
+  "ownership": "government",
+  "aliases": "Aundh Hospital"
+ },
+ {
+  "name": "Command Hospital Southern Command",
+  "area": "Wanowrie",
+  "city": "Pune",
+  "ownership": "government",
+  "aliases": "Command Hospital"
+ },
+ {
+  "name": "Symbiosis University Hospital and Research Centre",
+  "area": "Lavale",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "Symbiosis, SUHRC"
+ },
+ {
+  "name": "Aditya Birla Memorial Hospital",
+  "area": "Chinchwad",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Aditya Birla, ABMH"
+ },
+ {
+  "name": "Dr. D. Y. Patil Hospital",
+  "area": "Pimpri",
+  "city": "Pune",
+  "ownership": "trust",
+  "aliases": "DY Patil, DPU"
+ },
+ {
+  "name": "Yashwantrao Chavan Memorial Hospital",
+  "area": "Pimpri",
+  "city": "Pune",
+  "ownership": "government",
+  "aliases": "YCM, YCMH"
+ },
+ {
+  "name": "Lokmanya Hospital Nigdi",
+  "area": "Nigdi",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Lokmanya"
+ },
+ {
+  "name": "Lokmanya Hospital Chinchwad",
+  "area": "Chinchwad",
+  "city": "Pune",
+  "ownership": "private",
+  "aliases": "Lokmanya"
+ },
+ {
+  "name": "Lilavati Hospital",
+  "area": "Bandra West",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Lilavati"
+ },
+ {
+  "name": "Breach Candy Hospital",
+  "area": "Breach Candy",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Breach Candy"
+ },
+ {
+  "name": "Jaslok Hospital",
+  "area": "Pedder Road",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Jaslok"
+ },
+ {
+  "name": "Bombay Hospital",
+  "area": "Marine Lines",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Bombay Hospital"
+ },
+ {
+  "name": "Kokilaben Dhirubhai Ambani Hospital",
+  "area": "Andheri West",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Kokilaben, KDAH, Ambani"
+ },
+ {
+  "name": "Nanavati Max Super Speciality Hospital",
+  "area": "Vile Parle West",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Nanavati"
+ },
+ {
+  "name": "P. D. Hinduja Hospital",
+  "area": "Mahim",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Hinduja"
+ },
+ {
+  "name": "Hinduja Hospital Khar",
+  "area": "Khar West",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Hinduja"
+ },
+ {
+  "name": "Sir H. N. Reliance Foundation Hospital",
+  "area": "Girgaon",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Reliance, HN Hospital, Harkisondas"
+ },
+ {
+  "name": "Fortis Hospital Mulund",
+  "area": "Mulund West",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Fortis"
+ },
+ {
+  "name": "Wockhardt Hospital Mumbai Central",
+  "area": "Mumbai Central",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Wockhardt"
+ },
+ {
+  "name": "Gleneagles Hospital Parel",
+  "area": "Parel",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Global Hospital, Gleneagles Global"
+ },
+ {
+  "name": "Tata Memorial Hospital",
+  "area": "Parel",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "Tata Memorial, TMH"
+ },
+ {
+  "name": "KEM Hospital Mumbai",
+  "area": "Parel",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "KEM, King Edward Memorial, Seth GS"
+ },
+ {
+  "name": "Lokmanya Tilak Municipal General Hospital",
+  "area": "Sion",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "Sion Hospital, LTMGH"
+ },
+ {
+  "name": "B. Y. L. Nair Hospital",
+  "area": "Mumbai Central",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "Nair Hospital, BYL Nair"
+ },
+ {
+  "name": "Sir J. J. Hospital",
+  "area": "Byculla",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "JJ Hospital, Grant Medical College"
+ },
+ {
+  "name": "Dr. R. N. Cooper Hospital",
+  "area": "Juhu",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "Cooper Hospital"
+ },
+ {
+  "name": "Saifee Hospital",
+  "area": "Charni Road",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Saifee"
+ },
+ {
+  "name": "Bhatia Hospital",
+  "area": "Tardeo",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Bhatia"
+ },
+ {
+  "name": "Masina Hospital",
+  "area": "Byculla",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Masina"
+ },
+ {
+  "name": "Holy Family Hospital",
+  "area": "Bandra West",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Holy Family"
+ },
+ {
+  "name": "Holy Spirit Hospital",
+  "area": "Andheri East",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Holy Spirit"
+ },
+ {
+  "name": "SevenHills Hospital",
+  "area": "Andheri East",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Seven Hills"
+ },
+ {
+  "name": "Dr. L. H. Hiranandani Hospital",
+  "area": "Powai",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Hiranandani Powai"
+ },
+ {
+  "name": "Prince Aly Khan Hospital",
+  "area": "Mazgaon",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Aly Khan"
+ },
+ {
+  "name": "Zen Multispeciality Hospital",
+  "area": "Chembur",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Zen"
+ },
+ {
+  "name": "Surana Sethia Hospital",
+  "area": "Chembur",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Surana"
+ },
+ {
+  "name": "K. J. Somaiya Hospital",
+  "area": "Sion",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Somaiya"
+ },
+ {
+  "name": "Kohinoor Hospital",
+  "area": "Kurla West",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Kohinoor"
+ },
+ {
+  "name": "Criticare Hospital",
+  "area": "Andheri East",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Criticare"
+ },
+ {
+  "name": "Suchak Hospital",
+  "area": "Malad East",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Suchak"
+ },
+ {
+  "name": "Bhaktivedanta Hospital",
+  "area": "Mira Road",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Bhaktivedanta"
+ },
+ {
+  "name": "Bai Jerbai Wadia Hospital for Children",
+  "area": "Parel",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Wadia Children"
+ },
+ {
+  "name": "Nowrosjee Wadia Maternity Hospital",
+  "area": "Parel",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Wadia Maternity"
+ },
+ {
+  "name": "Shushrusha Hospital",
+  "area": "Dadar West",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Shushrusha"
+ },
+ {
+  "name": "S. L. Raheja Hospital",
+  "area": "Mahim",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Raheja, Fortis Raheja"
+ },
+ {
+  "name": "Asian Heart Institute",
+  "area": "Bandra Kurla Complex",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Asian Heart, AHI"
+ },
+ {
+  "name": "Godrej Memorial Hospital",
+  "area": "Vikhroli",
+  "city": "Mumbai",
+  "ownership": "trust",
+  "aliases": "Godrej"
+ },
+ {
+  "name": "Rajawadi Hospital",
+  "area": "Ghatkopar East",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "Rajawadi"
+ },
+ {
+  "name": "K. B. Bhabha Hospital",
+  "area": "Bandra West",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "Bhabha Hospital"
+ },
+ {
+  "name": "Cama and Albless Hospital",
+  "area": "Fort",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "Cama Hospital"
+ },
+ {
+  "name": "St. George's Hospital",
+  "area": "Fort",
+  "city": "Mumbai",
+  "ownership": "government",
+  "aliases": "St George"
+ },
+ {
+  "name": "Cumballa Hill Hospital",
+  "area": "Kemps Corner",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Cumballa Hill"
+ },
+ {
+  "name": "Surya Hospital Santacruz",
+  "area": "Santacruz West",
+  "city": "Mumbai",
+  "ownership": "private",
+  "aliases": "Surya"
+ },
+ {
+  "name": "Jupiter Hospital Thane",
+  "area": "Thane West",
+  "city": "Thane",
+  "ownership": "private",
+  "aliases": "Jupiter"
+ },
+ {
+  "name": "Bethany Hospital",
+  "area": "Thane West",
+  "city": "Thane",
+  "ownership": "trust",
+  "aliases": "Bethany"
+ },
+ {
+  "name": "Apollo Hospitals Navi Mumbai",
+  "area": "CBD Belapur",
+  "city": "Navi Mumbai",
+  "ownership": "private",
+  "aliases": "Apollo"
+ },
+ {
+  "name": "Fortis Hiranandani Hospital Vashi",
+  "area": "Vashi",
+  "city": "Navi Mumbai",
+  "ownership": "private",
+  "aliases": "Fortis, Hiranandani Vashi"
+ },
+ {
+  "name": "MGM Hospital Vashi",
+  "area": "Vashi",
+  "city": "Navi Mumbai",
+  "ownership": "trust",
+  "aliases": "MGM"
+ }
+]

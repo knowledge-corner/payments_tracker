@@ -9,7 +9,7 @@ from django.shortcuts import render
 from cases.models import PaymentStatus
 from core.periods import add_months, month_start
 from core.permissions import scoped_cases, visible_doctors
-from hospitals.models import Hospital
+from hospitals.models import Department
 from payments.models import Payment
 
 from .exports import export_response
@@ -24,7 +24,7 @@ def base_context(request, filters, **flags):
         "periods": PERIODS,
         "status_choices": STATUS_CHOICES,
         "modes": Payment.MODE_CHOICES,
-        "hospitals": Hospital.objects.order_by("name"),
+        "departments": Department.objects.filter(is_active=True),
         "doctors": visible_doctors(request.user),
         "selected_doctor": filters.doctor,
     }
@@ -41,6 +41,8 @@ def filtered_cases(request, filters):
     qs = scoped_cases(request).filter(**filters.date_filter("case_date"))
     if filters.hospital:
         qs = qs.filter(hospital=filters.hospital)
+    if filters.department:
+        qs = qs.filter(department=filters.department)
     if filters.q:
         qs = qs.filter(
             Q(patient_reference__icontains=filters.q) | Q(procedure_type__icontains=filters.q)
@@ -58,7 +60,8 @@ def index(request):
 def cases_report(request):
     """All cases matching the filters, with totals and Excel/CSV download."""
     filters = parse_filters(request, default_period="this_month")
-    qs = filtered_cases(request, filters).select_related("hospital", "doctor").order_by("case_date", "id")
+    qs = (filtered_cases(request, filters).select_related("hospital", "doctor", "department", "contact")
+          .order_by("case_date", "id"))
     summary = qs.aggregate(n=Count("id"), billed=Sum("fee"), received=Sum("total_paid"))
     summary["outstanding"] = qs.filter(outstanding__gt=0).aggregate(t=Sum("outstanding"))["t"] or ZERO
 
@@ -66,17 +69,20 @@ def cases_report(request):
     if fmt:
         last_pay = Payment.objects.filter(case=OuterRef("pk")).order_by("-payment_date").values("payment_date")[:1]
         rows = [
-            [c.case_date, str(c.doctor), c.hospital.name, c.procedure_type, c.patient_reference,
+            [c.case_date, str(c.doctor), c.hospital.name, c.hospital.place, str(c.department or ""),
+             c.contact.name if c.contact_id else "", c.contact.best_phone if c.contact_id else "",
+             c.procedure_type, c.patient_reference,
              c.fee, c.total_paid, c.outstanding, PaymentStatus.LABELS[c.status], c.due_date,
              c.days_overdue if c.status == PaymentStatus.OVERDUE else 0, c.last_payment, c.notes]
             for c in qs.annotate(last_payment=Subquery(last_pay))
         ]
         columns = [
-            ("Case date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Procedure", "text"),
+            ("Case date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Area / city", "text"),
+            ("Department", "text"), ("Contact person", "text"), ("Contact phone", "text"), ("Procedure", "text"),
             ("Case / patient ref", "text"), ("Fee", "money"), ("Received", "money"), ("Outstanding", "money"),
             ("Status", "text"), ("Due date", "date"), ("Days overdue", "int"), ("Last payment", "date"), ("Notes", "text"),
         ]
-        totals = ["TOTAL", f"{summary['n']} cases", "", "", "", summary["billed"] or ZERO,
+        totals = ["TOTAL", f"{summary['n']} cases", "", "", "", "", "", "", "", summary["billed"] or ZERO,
                   summary["received"] or ZERO, summary["outstanding"], "", "", "", "", ""]
         return export_response(fmt, "cases_report", "Cases report", filters.describe(), columns, rows, totals)
 
@@ -94,6 +100,9 @@ def monthly(request):
     if filters.hospital:
         cases = cases.filter(hospital=filters.hospital)
         payments = payments.filter(case__hospital=filters.hospital)
+    if filters.department:
+        cases = cases.filter(department=filters.department)
+        payments = payments.filter(case__department=filters.department)
 
     start = filters.start
     if start is None:
@@ -181,6 +190,8 @@ def payment_history(request):
     )
     if filters.hospital:
         payments = payments.filter(case__hospital=filters.hospital)
+    if filters.department:
+        payments = payments.filter(case__department=filters.department)
     if filters.mode:
         payments = payments.filter(mode=filters.mode)
     if filters.q:

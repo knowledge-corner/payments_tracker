@@ -39,23 +39,7 @@
     });
   });
 
-  // Add Case: pre-fill fee from the selected hospital's default fee.
-  var hospital = document.getElementById("id_hospital");
   var fee = document.getElementById("id_fee");
-  if (hospital && fee) {
-    var lastAutoFee = fee.value;
-    hospital.addEventListener("change", function () {
-      var opt = hospital.options[hospital.selectedIndex];
-      var defaultFee = opt ? opt.getAttribute("data-fee") : null;
-      // Only overwrite the fee if the doctor has not typed a custom amount.
-      if (defaultFee && (fee.value === "" || fee.value === lastAutoFee || parseFloat(fee.value) === parseFloat(lastAutoFee))) {
-        fee.value = defaultFee;
-        lastAutoFee = defaultFee;
-        fee.classList.add("is-valid");
-        setTimeout(function () { fee.classList.remove("is-valid"); }, 800);
-      }
-    });
-  }
 
   // "Payment already received" switch reveals amount + mode.
   var paidNow = document.getElementById("id_paid_now");

@@ -49,6 +49,8 @@ class PaymentFollowUp(TimeStampedModel):
     case = models.ForeignKey("cases.Case", on_delete=models.CASCADE, related_name="followups")
     followup_date = models.DateField(default=timezone.localdate)
     method = models.CharField(max_length=20, choices=METHOD_CHOICES, default="call")
+    contact = models.ForeignKey("contacts.Contact", null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="followups", help_text="Who you spoke to.")
     contact_person = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
     promised_payment_date = models.DateField(

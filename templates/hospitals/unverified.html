@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Hospitals to review{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{% url 'hospitals:list' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">Hospitals added by doctors</h1>
+</div>
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for h in hospitals %}
+    <a href="{{ h.get_absolute_url }}" class="list-group-item list-group-item-action action-item">
+      <div class="action-name">{{ h.name }}</div>
+      <div class="action-meta">{{ h.place }} · added by {{ h.created_by|default:"-" }} on {{ h.created_at|date:"d M Y" }}</div>
+    </a>
+    {% empty %}<div class="p-4 text-center text-muted small">Nothing to review.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

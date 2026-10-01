@@ -22,15 +22,18 @@
   </div>
   <dl class="row small mb-0 mt-3">
     <dt class="col-5 text-muted fw-normal">Case date</dt><dd class="col-7">{{ case.case_date|date:"d M Y" }} <span class="age-pill">{{ case.age_days }} days ago</span></dd>
-    <dt class="col-5 text-muted fw-normal">Payment due</dt><dd class="col-7">{{ case.due_date|date:"d M Y"|default:"-" }}{% if case.status == 'overdue' %} <span class="text-danger">({{ case.days_overdue }} days overdue)</span>{% endif %}</dd>
+    <dt class="col-5 text-muted fw-normal">Expected payment</dt><dd class="col-7">{{ case.due_date|date:"d M Y"|default:"-" }}{% if case.status == 'overdue' %} <span class="text-danger">({{ case.days_overdue }} days overdue)</span>{% endif %}</dd>
     {% if user.is_app_admin %}<dt class="col-5 text-muted fw-normal">Doctor</dt><dd class="col-7">{{ case.doctor }}</dd>{% endif %}
     <dt class="col-5 text-muted fw-normal">Procedure</dt><dd class="col-7">{{ case.procedure_type|default:"-" }}</dd>
     <dt class="col-5 text-muted fw-normal">Case / patient ref</dt><dd class="col-7">{{ case.patient_reference|default:"-" }}</dd>
     {% if case.notes %}<dt class="col-5 text-muted fw-normal">Notes</dt><dd class="col-7">{{ case.notes|linebreaksbr }}</dd>{% endif %}
-    {% if case.hospital.contact_person or case.hospital.contact_number %}
-    <dt class="col-5 text-muted fw-normal">Hospital contact</dt>
-    <dd class="col-7">{{ case.hospital.contact_person }}{% if case.hospital.contact_number %} · <a href="tel:{{ case.hospital.contact_number }}">{{ case.hospital.contact_number }}</a>{% endif %}</dd>
-    {% endif %}
+    <dt class="col-5 text-muted fw-normal">Hospital</dt><dd class="col-7"><a href="{{ case.hospital.get_absolute_url }}">{{ case.hospital.name }}</a>{% if case.hospital.place %}<div class="text-muted">{{ case.hospital.place }}</div>{% endif %}</dd>
+    <dt class="col-5 text-muted fw-normal">Department</dt><dd class="col-7">{{ case.department|default:"-" }}</dd>
+    <dt class="col-5 text-muted fw-normal">Contact person</dt>
+    <dd class="col-7">
+      {% if case.contact %}<a href="{{ case.contact.get_absolute_url }}">{{ case.contact.name }}</a> <span class="text-muted">({{ case.contact.get_role_display }})</span>{% else %}<span class="text-muted">Not specified</span>{% endif %}
+      {% if case.call %}<div class="mt-1"><a href="tel:{{ case.call.phone }}" class="btn btn-xs btn-outline-success"><i class="bi bi-telephone-fill"></i> Call {{ case.call.label }}</a></div>{% endif %}
+    </dd>
   </dl>
 </div>
 
@@ -72,7 +75,7 @@
   <div class="list-group list-group-flush">
     {% for f in followups %}
     <div class="list-group-item">
-      <div class="d-flex justify-content-between"><strong class="small">{{ f.followup_date|date:"d M Y" }} · {{ f.get_method_display }}</strong>{% if f.contact_person %}<span class="small text-muted">{{ f.contact_person }}</span>{% endif %}</div>
+      <div class="d-flex justify-content-between"><strong class="small">{{ f.followup_date|date:"d M Y" }} · {{ f.get_method_display }}</strong>{% if f.contact %}<a class="small" href="{{ f.contact.get_absolute_url }}">{{ f.contact.name }}</a>{% elif f.contact_person %}<span class="small text-muted">{{ f.contact_person }}</span>{% endif %}</div>
       {% if f.notes %}<div class="small">{{ f.notes|linebreaksbr }}</div>{% endif %}
       {% if f.promised_payment_date %}<div class="small text-primary">Promised by {{ f.promised_payment_date|date:"d M Y" }}</div>{% endif %}
     </div>

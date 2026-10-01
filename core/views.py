@@ -15,7 +15,7 @@ from .permissions import admin_required
 logger = logging.getLogger(__name__)
 
 # Bump when static assets change so installed PWAs refresh their cache.
-SW_CACHE_VERSION = "v6"
+SW_CACHE_VERSION = "v7"
 
 
 @cache_control(max_age=3600)
