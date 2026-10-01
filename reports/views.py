@@ -1,10 +1,13 @@
+import datetime
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.db.models.functions import TruncMonth
+from django.http import Http404
 from django.shortcuts import render
+from django.utils import timezone
 
 from cases.models import PaymentStatus
 from core.periods import add_months, month_start
@@ -51,6 +54,33 @@ def filtered_cases(request, filters):
     return apply_case_status(qs.with_totals(), filters.status)
 
 
+def case_summary(qs):
+    summary = qs.aggregate(n=Count("id"), billed=Sum("fee"), received=Sum("total_paid"))
+    summary["outstanding"] = qs.filter(outstanding__gt=0).aggregate(t=Sum("outstanding"))["t"] or ZERO
+    return summary
+
+
+def export_cases(fmt, qs, summary, filters, filename, title):
+    last_pay = Payment.objects.filter(case=OuterRef("pk")).order_by("-payment_date").values("payment_date")[:1]
+    rows = [
+        [c.case_date, str(c.doctor), c.hospital.name, c.hospital.place, str(c.department or ""),
+         c.contact.name if c.contact_id else "", c.contact.best_phone if c.contact_id else "",
+         c.procedure_type, c.patient_reference,
+         c.fee, c.total_paid, c.outstanding, PaymentStatus.LABELS[c.status], c.due_date,
+         c.days_overdue if c.status == PaymentStatus.OVERDUE else 0, c.last_payment, c.notes]
+        for c in qs.annotate(last_payment=Subquery(last_pay))
+    ]
+    columns = [
+        ("Case date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Area / city", "text"),
+        ("Department", "text"), ("Contact person", "text"), ("Contact phone", "text"), ("Procedure", "text"),
+        ("Case / patient ref", "text"), ("Fee", "money"), ("Received", "money"), ("Outstanding", "money"),
+        ("Status", "text"), ("Due date", "date"), ("Days overdue", "int"), ("Last payment", "date"), ("Notes", "text"),
+    ]
+    totals = ["TOTAL", f"{summary['n']} cases", "", "", "", "", "", "", "", summary["billed"] or ZERO,
+              summary["received"] or ZERO, summary["outstanding"], "", "", "", "", ""]
+    return export_response(fmt, filename, title, filters.describe(), columns, rows, totals)
+
+
 @login_required
 def index(request):
     return render(request, "reports/index.html")
@@ -62,29 +92,11 @@ def cases_report(request):
     filters = parse_filters(request, default_period="this_month")
     qs = (filtered_cases(request, filters).select_related("hospital", "doctor", "department", "contact")
           .order_by("case_date", "id"))
-    summary = qs.aggregate(n=Count("id"), billed=Sum("fee"), received=Sum("total_paid"))
-    summary["outstanding"] = qs.filter(outstanding__gt=0).aggregate(t=Sum("outstanding"))["t"] or ZERO
+    summary = case_summary(qs)
 
     fmt = export_format(request)
     if fmt:
-        last_pay = Payment.objects.filter(case=OuterRef("pk")).order_by("-payment_date").values("payment_date")[:1]
-        rows = [
-            [c.case_date, str(c.doctor), c.hospital.name, c.hospital.place, str(c.department or ""),
-             c.contact.name if c.contact_id else "", c.contact.best_phone if c.contact_id else "",
-             c.procedure_type, c.patient_reference,
-             c.fee, c.total_paid, c.outstanding, PaymentStatus.LABELS[c.status], c.due_date,
-             c.days_overdue if c.status == PaymentStatus.OVERDUE else 0, c.last_payment, c.notes]
-            for c in qs.annotate(last_payment=Subquery(last_pay))
-        ]
-        columns = [
-            ("Case date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Area / city", "text"),
-            ("Department", "text"), ("Contact person", "text"), ("Contact phone", "text"), ("Procedure", "text"),
-            ("Case / patient ref", "text"), ("Fee", "money"), ("Received", "money"), ("Outstanding", "money"),
-            ("Status", "text"), ("Due date", "date"), ("Days overdue", "int"), ("Last payment", "date"), ("Notes", "text"),
-        ]
-        totals = ["TOTAL", f"{summary['n']} cases", "", "", "", "", "", "", "", summary["billed"] or ZERO,
-                  summary["received"] or ZERO, summary["outstanding"], "", "", "", "", ""]
-        return export_response(fmt, "cases_report", "Cases report", filters.describe(), columns, rows, totals)
+        return export_cases(fmt, qs, summary, filters, "cases_report", "Cases report")
 
     page = Paginator(qs.order_by("-case_date", "-id"), 50).get_page(request.GET.get("page"))
     ctx = base_context(request, filters, show_hospital=True, show_status=True, show_q=True)
@@ -143,6 +155,34 @@ def monthly(request):
     ctx = base_context(request, filters, show_hospital=True)
     ctx.update({"rows": rows, "totals": totals})
     return render(request, "reports/monthly.html", ctx)
+
+
+@login_required
+def month_cases(request, year, month):
+    """Cases of one month (opened from the monthly summary): hospital, department and status filters only."""
+    try:
+        first = datetime.date(year, month, 1)
+    except ValueError:
+        raise Http404
+    filters = parse_filters(request)
+    filters.period, filters.start, filters.end = "custom", first, add_months(first, 1) - datetime.timedelta(days=1)
+    filters.mode, filters.q = "", ""
+    qs = (filtered_cases(request, filters).select_related("hospital", "doctor", "department", "contact")
+          .order_by("case_date", "id"))
+    summary = case_summary(qs)
+
+    fmt = export_format(request)
+    if fmt:
+        return export_cases(fmt, qs, summary, filters, f"cases_{first:%Y_%m}", f"Cases - {first:%B %Y}")
+
+    page = Paginator(qs.order_by("-case_date", "-id"), 50).get_page(request.GET.get("page"))
+    ctx = base_context(request, filters)
+    ctx.update({
+        "page": page, "summary": summary, "month": first,
+        "prev_month": add_months(first, -1), "next_month": add_months(first, 1),
+        "has_next": add_months(first, 1) <= timezone.localdate(),
+    })
+    return render(request, "reports/month_cases.html", ctx)
 
 
 @login_required

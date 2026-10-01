@@ -98,3 +98,63 @@ class CasesReportTests(TestCase):
     def test_last_month_and_fy_presets_parse(self):
         for period in ("last_month", "last_3", "this_fy", "last_fy", "last_12"):
             self.assertEqual(self.client.get(self.url + f"?period={period}").status_code, 200)
+
+
+class MonthCasesTests(TestCase):
+    def setUp(self):
+        import datetime
+
+        from django.utils import timezone
+
+        from hospitals.models import Department
+
+        self.doctor = make_doctor()
+        self.a, self.b = make_hospital("Alpha"), make_hospital("Beta")
+        self.ortho = Department.objects.get(name="Orthopaedics")
+        today = timezone.localdate()
+        self.month = today.replace(day=1)
+        self.paid = make_case(self.doctor, self.a, days_ago=0, fee=1000, department=self.ortho)
+        Payment.objects.create(case=self.paid, amount=Decimal("1000"))
+        self.unpaid = make_case(self.doctor, self.b, days_ago=0, fee=2000)
+        self.last_month = make_case(self.doctor, self.a, days_ago=today.day + 3, fee=500)
+        make_case(make_doctor("dr.x", "Dr. X"), self.a, fee=99999)
+        self.client.force_login(self.doctor.user)
+        self.url = reverse("reports:month_cases", args=[self.month.year, self.month.month])
+        self.datetime = datetime
+
+    def ids(self, query=""):
+        return {c.pk for c in self.client.get(self.url + query).context["page"]}
+
+    def test_only_that_month_and_own_cases(self):
+        response = self.client.get(self.url)
+        self.assertContains(response, self.month.strftime("%B %Y"))
+        self.assertEqual(self.ids(), {self.paid.pk, self.unpaid.pk})
+        self.assertNotContains(response, 'name="period"')
+        self.assertNotContains(response, 'name="q"')
+
+    def test_filters(self):
+        self.assertEqual(self.ids(f"?hospital={self.b.pk}"), {self.unpaid.pk})
+        self.assertEqual(self.ids(f"?department={self.ortho.pk}"), {self.paid.pk})
+        self.assertEqual(self.ids("?status=paid"), {self.paid.pk})
+        self.assertEqual(self.ids("?status=unpaid"), {self.unpaid.pk})
+        # period params from other pages are ignored
+        self.assertEqual(self.ids("?period=all&start=2000-01-01"), {self.paid.pk, self.unpaid.pk})
+
+    def test_excel_download(self):
+        import io
+
+        from openpyxl import load_workbook
+
+        response = self.client.get(self.url + "?export=xlsx&status=unpaid")
+        self.assertIn(f"cases_{self.month:%Y_%m}", response["Content-Disposition"])
+        ws = load_workbook(io.BytesIO(response.content)).active
+        values = [str(c.value) for row in ws.iter_rows() for c in row if c.value is not None]
+        self.assertIn("Beta", values)
+        self.assertNotIn("Alpha", values)
+
+    def test_monthly_summary_links_to_month_page(self):
+        response = self.client.get(reverse("reports:monthly"))
+        self.assertContains(response, self.url)
+
+    def test_bad_month_404(self):
+        self.assertEqual(self.client.get("/reports/monthly/2026/13/").status_code, 404)

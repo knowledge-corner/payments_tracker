@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("cases/", views.cases_report, name="cases"),
     path("monthly/", views.monthly, name="monthly"),
+    path("monthly/<int:year>/<int:month>/", views.month_cases, name="month_cases"),
     path("hospitals/", views.hospital_wise, name="hospitals"),
     path("payments/", views.payment_history, name="payments"),
 ]

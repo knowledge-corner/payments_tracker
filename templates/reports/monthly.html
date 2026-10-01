@@ -20,7 +20,7 @@
       <tbody>
         {% for r in rows %}
         <tr>
-          <td><a href="{% url 'reports:cases' %}?period=custom&start={{ r.month|date:'Y-m-d' }}&end={{ r.month|date:'Y-m-t' }}{% if f.hospital %}&hospital={{ f.hospital.pk }}{% endif %}{% if selected_doctor and user.is_app_admin %}&doctor={{ selected_doctor.pk }}{% endif %}">{{ r.month|date:"M Y" }}</a></td>
+          <td><a href="{% url 'reports:month_cases' r.month.year r.month.month %}?{% if f.hospital %}hospital={{ f.hospital.pk }}&{% endif %}{% if f.department %}department={{ f.department.pk }}&{% endif %}{% if selected_doctor and user.is_app_admin %}doctor={{ selected_doctor.pk }}{% endif %}">{{ r.month|date:"M Y" }}</a></td>
           <td class="text-end">{{ r.cases }}</td>
           <td class="text-end amount">{{ r.billed|inr }}</td>
           <td class="text-end amount text-success">{{ r.received|inr }}</td>
@@ -32,5 +32,5 @@
     </table>
   </div>
 </div>
-<p class="small text-muted mt-2">Billed and outstanding are grouped by case date; received is grouped by payment date.</p>
+<p class="small text-muted mt-2">Tap a month to see its cases. Billed and outstanding are grouped by case date; received is grouped by payment date.</p>
 {% endblock %}
