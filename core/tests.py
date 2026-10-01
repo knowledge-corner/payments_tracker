@@ -85,3 +85,16 @@ class ResetAppDataTests(TestCase):
         self.assertFalse(Contact.objects.exists())
         self.assertFalse(Hospital.objects.filter(name="Temporary Hospital").exists())
         self.assertGreater(Hospital.objects.filter(source="starter").count(), 80)
+
+
+class AssetVersionTests(TestCase):
+    def test_own_scripts_are_versioned(self):
+        from core.assets import asset_version
+
+        version = asset_version()
+        self.assertEqual(len(version), 10)
+        response = self.client.get(reverse("login"))
+        self.assertContains(response, f"js/searchable-select.js?v={version}")
+        sw = self.client.get("/sw.js").content.decode()
+        self.assertIn(f"-{version}", sw)
+        self.assertIn(f"searchable-select.js?v={version}", sw)

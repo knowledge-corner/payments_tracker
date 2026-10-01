@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.templatetags.static import static
 from django.views.decorators.cache import cache_control, never_cache
 
+from .assets import OWN_ASSETS, asset_version
 from .forms import AppSettingsForm
 from .models import AppSettings
 from .permissions import admin_required
@@ -52,14 +53,10 @@ def service_worker(request):
         static("vendor/bootstrap/bootstrap.bundle.min.js"),
         static("vendor/bootstrap-icons/bootstrap-icons.min.css"),
         static("vendor/bootstrap-icons/fonts/bootstrap-icons.woff2"),
-        static("css/app.css"),
-        static("js/app.js"),
-        static("js/searchable-select.js"),
-        static("js/push.js"),
         static("icons/icon-192.png"),
-    ]
+    ] + [f"{static(path)}?v={asset_version()}" for path in OWN_ASSETS]
     response = render(
-        request, "pwa/sw.js", {"version": SW_CACHE_VERSION, "precache": precache, "icon": static("icons/icon-192.png")},
+        request, "pwa/sw.js", {"version": f"{SW_CACHE_VERSION}-{asset_version()}", "precache": precache, "icon": static("icons/icon-192.png")},
         content_type="application/javascript",
     )
     response["Service-Worker-Allowed"] = "/"

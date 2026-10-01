@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="{% static 'icons/apple-touch-icon.png' %}">
   <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
   <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ ASSET_V }}">
 </head>
 <body class="{% if user.is_authenticated %}has-bottom-nav{% endif %}">
 {% if user.is_authenticated %}
@@ -93,11 +93,11 @@
 {% endif %}
 
 <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
-<script src="{% static 'js/searchable-select.js' %}"></script>
-<script src="{% static 'js/app.js' %}"></script>
+<script src="{% static 'js/searchable-select.js' %}?v={{ ASSET_V }}"></script>
+<script src="{% static 'js/app.js' %}?v={{ ASSET_V }}"></script>
 {% if user.is_authenticated %}
 <div id="push-config" hidden data-key-url="{% url 'notifications:key' %}" data-subscribe-url="{% url 'notifications:subscribe' %}" data-unsubscribe-url="{% url 'notifications:unsubscribe' %}"></div>
-<script src="{% static 'js/push.js' %}"></script>
+<script src="{% static 'js/push.js' %}?v={{ ASSET_V }}"></script>
 {% endif %}
 {% block scripts %}{% endblock %}
 </body>
