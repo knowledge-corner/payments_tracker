@@ -41,7 +41,6 @@
             <ul class="dropdown-menu dropdown-menu-end shadow">
               <li><span class="dropdown-item-text small text-muted">Signed in as<br><strong class="text-body">{{ user.doctor_profile|default:user.username }}</strong>{% if user.is_app_admin %} <span class="badge text-bg-warning">Admin</span>{% endif %}</span></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="{% url 'payments:record' %}"><i class="bi bi-cash-coin me-2"></i>Record payment</a></li>
               <li><a class="dropdown-item" href="{% url 'contacts:list' %}"><i class="bi bi-person-lines-fill me-2"></i>My contacts</a></li>
               <li><a class="dropdown-item" href="{% url 'notifications:settings' %}"><i class="bi bi-bell me-2"></i>Notification settings</a></li>
               {% if user.is_app_admin %}
@@ -50,7 +49,6 @@
               <li><a class="dropdown-item" href="{% url 'hospitals:directory_import' %}"><i class="bi bi-buildings me-2"></i>Hospital directory</a></li>
               <li><a class="dropdown-item" href="{% url 'admin:index' %}"><i class="bi bi-database me-2"></i>Admin panel</a></li>
               {% endif %}
-              <li><a class="dropdown-item d-none" data-install-app href="#"><i class="bi bi-download me-2"></i>Install app</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form method="post" action="{% url 'logout' %}">{% csrf_token %}
