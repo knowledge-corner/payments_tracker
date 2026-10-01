@@ -4,6 +4,7 @@ Django settings for the Anaesthesia Payments Tracker.
 All environment-specific values are read from environment variables so the
 same code runs locally (Docker Compose) and in production (behind HTTPS).
 """
+import importlib.util
 import os
 from pathlib import Path
 
@@ -71,6 +72,12 @@ INSTALLED_APPS = [
     "reports",
     "notifications",
 ]
+
+# Optional add-on: "Dictate a case" (speech to text on Add Case). Set FEATURE_DICTATION=0 to hide it;
+# deleting the dictation/ folder removes it completely (no database tables involved).
+FEATURE_DICTATION = env_bool("FEATURE_DICTATION", True) and importlib.util.find_spec("dictation") is not None
+if FEATURE_DICTATION:
+    INSTALLED_APPS.append("dictation")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

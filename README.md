@@ -96,6 +96,11 @@ How the data fits together:
 
 The Django admin panel is at `/admin/` (admin users only).
 
+**Dictate this case (beta add-on).** Add Case has a mic: the doctor says e.g. *"Ruby Hall, ortho, TKR under
+spinal, IP 4521, fee 6500, yesterday, payment in 15 days, contact Patil"* and the form is filled in for checking.
+It uses the phone's built-in speech recognition (no cost). Turn it off with `FEATURE_DICTATION=0` in `.env`,
+or remove it completely by deleting the `dictation/` folder - no database changes are involved.
+
 ---
 
 ## 3. Using the app on your phone

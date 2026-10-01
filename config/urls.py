@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
@@ -40,3 +41,6 @@ urlpatterns = [
     path("contacts/", include("contacts.urls")),
     path("notifications/", include("notifications.urls")),
 ]
+
+if settings.FEATURE_DICTATION:  # optional add-on, see dictation/apps.py
+    urlpatterns.append(path("dictation/", include("dictation.urls")))
