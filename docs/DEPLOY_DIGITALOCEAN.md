@@ -88,8 +88,6 @@ No email setup is needed: on **Forgot password?** the doctor enters their userna
 mobile number and registered email. If all three match, they set a new password on the spot
 (5 wrong attempts lock the form for 15 minutes). Admin logins without a doctor profile reset with
 `python manage.py changepassword <username>`.
-then `payments update`. Until this is set, admins can reset a doctor's password on the **Doctors** page.
-Doctors need an email address on their account (sign-up asks for it; admins can add it on the Doctors page).
 
 ## Backups
 
