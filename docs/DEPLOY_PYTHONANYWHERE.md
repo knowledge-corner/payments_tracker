@@ -105,17 +105,12 @@ On the free plan, morning summaries go out once a day at the task time (doctors 
 > Free accounts can only reach whitelisted websites. If the test notification fails with a connection error,
 > the push service for that browser is not on PythonAnywhere's whitelist - it works on a paid account or on DigitalOcean.
 
-## 6b. Email for "Forgot password" (optional)
+## 6b. "Forgot password"
 
-Add to `~/payments_tracker/.env` (Gmail example - needs an App Password), then Reload the web app:
-```env
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_HOST_USER=yourpractice@gmail.com
-EMAIL_HOST_PASSWORD=<16-character app password>
-DEFAULT_FROM_EMAIL=Payments Tracker <yourpractice@gmail.com>
-```
-Without it, an admin can set a new password for a doctor on the **Doctors** page.
+No email setup is needed: on **Forgot password?** the doctor enters their username, registered
+mobile number and registered email. If all three match, they set a new password on the spot
+(5 wrong attempts lock the form for 15 minutes). Admin logins without a doctor profile reset with
+`python manage.py changepassword <username>`.
 
 ## 7. Updating after new code is pushed
 

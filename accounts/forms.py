@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
@@ -180,3 +182,42 @@ class StyledSetPasswordForm(SetPasswordForm):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+
+
+def _mobile_digits(value):
+    """Last 10 digits, so '+91 98220 12345', '098220-12345' and '9822012345' all match."""
+    return re.sub(r"\D", "", value or "")[-10:]
+
+
+class ForgotPasswordForm(forms.Form):
+    """Step 1 of 'Forgot password': username + registered mobile + registered email must all match."""
+
+    username = forms.CharField(max_length=150, widget=forms.TextInput(
+        attrs={"autocomplete": "username", "autocapitalize": "none", "autofocus": True}))
+    mobile = forms.CharField(label="Registered mobile number", max_length=20, widget=forms.TextInput(
+        attrs={"type": "tel", "inputmode": "tel", "autocomplete": "tel", "placeholder": "+91 98xxxxxxxx"}))
+    email = forms.EmailField(label="Registered email", widget=forms.EmailInput(attrs={"autocomplete": "email"}))
+
+    error_message = "These details don't match our records. Check the username, mobile number and email."
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+        self.user = None
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.errors:
+            return cleaned
+        user = User.objects.filter(username__iexact=cleaned["username"].strip()).first()
+        doctor = getattr(user, "doctor_profile", None) if user else None
+        mobile = _mobile_digits(cleaned["mobile"])
+        if (
+            user is None or doctor is None or len(mobile) < 10
+            or _mobile_digits(doctor.phone) != mobile
+            or not user.email or user.email.strip().lower() != cleaned["email"].strip().lower()
+        ):
+            raise forms.ValidationError(self.error_message, code="no_match")
+        self.user = user
+        return cleaned

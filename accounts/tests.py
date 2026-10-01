@@ -89,37 +89,59 @@ class SignupTests(TestCase):
 
 class PasswordResetTests(TestCase):
     def setUp(self):
+        from django.core.cache import cache
+
+        cache.clear()
         self.user = User.objects.create_user("dr.reset", "reset@example.com", "OldPass!2026", role=User.ROLE_DOCTOR)
+        Doctor.objects.create(user=self.user, display_name="Reset", phone="+91 98220 12345")
+        self.url = reverse("password_reset")
+        self.good = {"username": "Dr.Reset", "mobile": "098220-12345", "email": "RESET@example.com"}
 
     def test_login_page_has_forgot_password_and_install(self):
         page = self.client.get(reverse("login"))
-        self.assertContains(page, reverse("password_reset"))
+        self.assertContains(page, self.url)
         self.assertContains(page, "data-install-app")
 
-    def test_full_reset_flow(self):
-        import re
-
+    def test_full_reset_flow_without_email(self):
         from django.core import mail
 
-        response = self.client.post(reverse("password_reset"), {"email": "RESET@example.com"})
-        self.assertRedirects(response, reverse("password_reset_done"))
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("dr.reset", mail.outbox[0].body)
-        link = re.search(r"https?://testserver(\S+)", mail.outbox[0].body).group(1)
-        form_page = self.client.get(link, follow=True)
-        self.assertContains(form_page, "Set a new password")
-        response = self.client.post(form_page.redirect_chain[-1][0], {
+        response = self.client.post(self.url, self.good)
+        self.assertRedirects(response, reverse("password_reset_new"))
+        self.assertContains(self.client.get(reverse("password_reset_new")), "dr.reset")
+        response = self.client.post(reverse("password_reset_new"), {
             "new_password1": "BrandNew!2026", "new_password2": "BrandNew!2026",
         })
-        self.assertRedirects(response, reverse("password_reset_complete"))
+        self.assertRedirects(response, reverse("login"))
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password("BrandNew!2026"))
-        # link cannot be reused
-        self.assertContains(self.client.get(link, follow=True), "This link has expired")
-
-    def test_unknown_email_reveals_nothing(self):
-        from django.core import mail
-
-        response = self.client.post(reverse("password_reset"), {"email": "nobody@example.com"})
-        self.assertRedirects(response, reverse("password_reset_done"))
         self.assertEqual(len(mail.outbox), 0)
+        # the verification can't be reused
+        self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)
+
+    def test_passwords_must_match(self):
+        self.client.post(self.url, self.good)
+        response = self.client.post(reverse("password_reset_new"), {
+            "new_password1": "BrandNew!2026", "new_password2": "Different!2026",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("OldPass!2026"))
+
+    def test_every_detail_must_match(self):
+        for field, wrong in (("username", "dr.other"), ("mobile", "9822099999"), ("email", "other@example.com")):
+            data = dict(self.good, **{field: wrong})
+            response = self.client.post(self.url, data)
+            self.assertEqual(response.status_code, 200, field)
+            self.assertContains(response, "don&#x27;t match our records")
+        self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)
+
+    def test_cannot_jump_to_new_password_page(self):
+        self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)
+
+    def test_locked_after_too_many_attempts(self):
+        bad = dict(self.good, mobile="9000000000")
+        for _ in range(5):
+            self.client.post(self.url, bad)
+        response = self.client.post(self.url, self.good)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Too many attempts")
