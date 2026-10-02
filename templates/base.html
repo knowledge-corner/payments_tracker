@@ -39,18 +39,10 @@
               <i class="bi bi-person-circle fs-4"></i>
             </button>
             <ul class="dropdown-menu dropdown-menu-end shadow">
-              <li><span class="dropdown-item-text small text-muted">Signed in as<br><strong class="text-body">{{ user.doctor_profile|default:user.username }}</strong>{% if user.is_app_admin %} <span class="badge text-bg-warning">Admin{% if user.admin_view and not user.is_real_admin %} view{% endif %}</span>{% endif %}</span></li>
+              <li><span class="dropdown-item-text small text-muted">Signed in as<br><strong class="text-body">{{ user.doctor_profile|default:user.username }}</strong>{% if user.is_app_admin %} <span class="badge text-bg-warning">Admin</span>{% endif %}</span></li>
               <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="{% url 'contacts:list' %}"><i class="bi bi-person-lines-fill me-2"></i>My contacts</a></li>
               <li><a class="dropdown-item" href="{% url 'notifications:settings' %}"><i class="bi bi-bell me-2"></i>Notification settings</a></li>
-              {% if not user.is_real_admin %}
-              <li>
-                <form method="post" action="{% url 'toggle_admin_view' %}">{% csrf_token %}
-                  {% if user.admin_view %}<button class="dropdown-item"><i class="bi bi-person me-2"></i>Back to my view</button>
-                  {% else %}<button class="dropdown-item"><i class="bi bi-shield-lock me-2"></i>View as admin</button>{% endif %}
-                </form>
-              </li>
-              {% endif %}
               {% if user.is_app_admin %}
               <li><a class="dropdown-item" href="{% url 'accounts:doctor_list' %}"><i class="bi bi-people me-2"></i>Doctors</a></li>
               <li><a class="dropdown-item" href="{% url 'app_settings' %}"><i class="bi bi-gear me-2"></i>Settings</a></li>

@@ -12,6 +12,8 @@ today = timezone.localdate()
 u = User.objects.create_user("dr.anjali", password="Demo@12345", role=User.ROLE_DOCTOR, email="anjali@example.com",
                              first_name="Anjali", last_name="Mehta")
 d = Doctor.objects.create(user=u, display_name="Anjali Mehta", phone="9822012345")
+User.objects.create_user("admin", password="Admin@12345", role=User.ROLE_ADMIN, email="admin@example.com",
+                         first_name="Admin")
 u2 = User.objects.create_user("dr.rao", password="Demo@12345", role=User.ROLE_DOCTOR, email="rao@example.com")
 d2 = Doctor.objects.create(user=u2, display_name="Vikram Rao", phone="9822054321")
 

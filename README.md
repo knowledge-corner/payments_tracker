@@ -95,7 +95,7 @@ How the data fits together:
 | Contacts | **Private per doctor** | One person can be linked to several hospitals; the call button picks the best match |
 | Fee, expected payment date | Per case | Nothing is pre-filled; if no date is given the app assumes 30 days (Settings) |
 
-The raw database panel (`/admin/`) is for the developer only: it accepts superuser logins (`createsuperuser`) and is not linked anywhere in the app. Admins - and any user who taps **View as admin** - manage doctors, settings and the hospital directory from the account menu.
+The raw database panel (`/admin/`) is for the developer only: it accepts superuser logins (`createsuperuser`) and is not linked anywhere in the app. Administrators (sign in with an admin login) manage doctors, settings and the hospital directory from the account menu.
 
 ---
 

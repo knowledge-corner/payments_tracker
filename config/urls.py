@@ -8,8 +8,8 @@ from core import views as core_views
 
 admin.site.site_header = "Payments Tracker Admin"
 admin.site.site_title = "Payments Tracker"
-# /admin/ is the raw database panel: developer (superuser) only. App admins and
-# "View as admin" users never get in, and the app does not link to it.
+# /admin/ is the raw database panel: developer (superuser) only. App admins never
+# get in, and the app does not link to it.
 admin.site.has_permission = lambda request: request.user.is_active and request.user.is_superuser
 
 urlpatterns = [
@@ -33,7 +33,6 @@ urlpatterns = [
     path("offline/", core_views.offline, name="offline"),
     path("health/", core_views.health, name="health"),
     path("settings/", core_views.settings_view, name="app_settings"),
-    path("view-as-admin/", core_views.toggle_admin_view, name="toggle_admin_view"),
     # Feature modules
     path("", include("dashboard.urls")),
     path("hospitals/", include("hospitals.urls")),

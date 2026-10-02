@@ -143,16 +143,22 @@ const HL = 'outline:3px solid #e11d48 !important; outline-offset:2px !important;
     await p.goto(B + '/reports/payments/?period=last_3'); await shot(p, '76-payment-history', { scroll: '.stat-card' });
   });
   await step('notif', async () => { await p.goto(B + '/notifications/'); await shot(p, '80-notifications', { full: true }); });
-  // Admin view
+  await c.close();
+
+  // ---------- Administrator login ----------
+  c = await ctx(); p = await c.newPage();
   await step('admin', async () => {
-    await p.goto(B + '/'); await p.click('.account-btn'); await shot(p, '90-view-as-admin', { hl: ['form[action="/view-as-admin/"] button'] });
-    await p.click('form[action="/view-as-admin/"] button'); await p.waitForLoadState();
-    await p.click('.account-btn'); await shot(p, '91-admin-menu', { hl: ['.dropdown-menu'] });
-    await p.goto(B + '/doctors/'); await shot(p, '92-doctors');
-    await p.goto(B + '/settings/'); await shot(p, '93-settings');
-    await p.goto(B + '/hospitals/directory/import/'); await shot(p, '94-directory-import');
-    await p.goto(B + '/'); await shot(p, '95-admin-dashboard');
-    await p.click('.account-btn'); await p.click('form[action="/view-as-admin/"] button'); await p.waitForLoadState();
+    await p.goto(B + '/login/'); await p.fill('#id_username', 'admin'); await p.fill('#id_password', 'Admin@12345');
+    await shot(p, '90-admin-login', { hl: ['#id_username', '#id_password'] });
+    await Promise.all([p.waitForURL(x => !x.pathname.startsWith('/login')), p.click('form button.btn-primary')]);
+    await shot(p, '91-admin-dashboard', { hl: ['select[name="doctor"]'] });
+    await p.click('.account-btn'); await shot(p, '92-admin-menu', { hl: ['.dropdown-menu'] });
+    await p.goto(B + '/doctors/'); await shot(p, '93-doctors', { hl: ['a[href="/doctors/add/"]'] });
+    await p.click('.list-group a >> nth=0'); await p.waitForLoadState(); await shot(p, '94-doctor-edit');
+    await p.goto(B + '/cases/'); await shot(p, '95-admin-cases', { hl: ['select[name="doctor"]'] });
+    await p.goto(B + '/cases/add/'); await shot(p, '96-admin-add-case', { hl: ['#id_doctor, #id_doctor_search'] });
+    await p.goto(B + '/settings/'); await shot(p, '97-settings');
+    await p.goto(B + '/hospitals/directory/import/'); await shot(p, '98-directory-import');
   });
   console.log('ERRORS:\n' + errors.join('\n'));
   await browser.close();

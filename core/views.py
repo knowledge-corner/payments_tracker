@@ -7,7 +7,6 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.templatetags.static import static
 from django.views.decorators.cache import cache_control, never_cache
-from django.views.decorators.http import require_POST
 
 from .assets import OWN_ASSETS, asset_version
 from .forms import AppSettingsForm
@@ -103,15 +102,3 @@ def csrf_failure(request, reason=""):
         return redirect("login")
     return render(request, "403_csrf.html", {"retry_url": request.path}, status=403)
 
-
-@require_POST
-def toggle_admin_view(request):
-    """Profile menu: switch between "my view" and the admin view (every user can)."""
-    from .middleware import ADMIN_VIEW_SESSION_KEY
-
-    if not request.user.is_authenticated:
-        return redirect("login")
-    on = not request.session.get(ADMIN_VIEW_SESSION_KEY, False)
-    request.session[ADMIN_VIEW_SESSION_KEY] = on
-    messages.info(request, "Now viewing as admin - all doctors' data is visible." if on else "Back to your own view.")
-    return redirect("dashboard:home")

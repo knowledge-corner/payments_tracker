@@ -95,7 +95,6 @@ topic("The profile menu (round icon, top right)", [
     "Shows who is signed in.",
     "<b>My contacts</b> - your hospital contacts and surgeons.",
     "<b>Notification settings</b> - payment reminders on your phone.",
-    "<b>View as admin</b> - see the admin screens (see section 13).",
     "<b>Sign out</b> - log out of the app on this phone.",
 ], img="13-profile-menu")
 
@@ -358,30 +357,54 @@ topic("Turn on notifications", [
    note="On iPhone, notifications work only when the app is added to the Home Screen (iOS 16.4 or later).")
 
 # --------------------------------------------------------------------------- admin
-sec("admin", "13. Admin view")
-topic("Switch to the admin view", [
-    "Profile menu → <b>View as admin</b>.",
-    "You now see the data of <b>all doctors</b>, plus extra menu items: <b>Doctors</b>, <b>Settings</b>, <b>Hospital directory</b>.",
-    "To go back, profile menu → <b>Back to my view</b>.",
-], img="90-view-as-admin", img2="91-admin-menu", caption="View as admin", caption2="Admin menu")
-topic("Admin dashboard", [
-    "A <b>doctor selector</b> appears at the top of the Dashboard, Cases and Reports.",
-    "Choose <b>All doctors</b> or one doctor to see their figures.",
-], img="95-admin-dashboard", note="In the admin view you can see and change other doctors' data. Switch back to your own view when you are done.")
+sec("admin", "13. For the administrator", "This section is only for the person who manages the app for the practice. "
+    "The administrator has a separate login (for example <i>admin</i>) and can see the work of all doctors. "
+    "Doctors never see these screens.")
+topic("Sign in as administrator", [
+    "On the sign-in page type the <b>administrator User ID</b> and <b>password</b> given to you.",
+    "Tap <b>Sign in</b>.",
+    "Keep this login private - it can see and change every doctor's data.",
+], img="90-admin-login", note="The administrator password cannot be recovered with 'Forgot password' (that needs a doctor's mobile number). "
+   "If it is lost, ask your technical support person to reset it.")
+topic("Administrator dashboard", [
+    "Works like a doctor's dashboard, with one extra box at the top: the <b>doctor selector</b>.",
+    "Choose <b>All doctors</b> to see the whole practice, or pick one doctor to see only their figures.",
+    "The same selector appears on Cases, Outstanding and Reports.",
+], img="91-admin-dashboard")
+topic("Administrator menu", [
+    "Tap the round profile icon (top right). Next to your name is an orange <b>Admin</b> label.",
+    "<b>Doctors</b> - doctor accounts.",
+    "<b>Settings</b> - payment terms, reminders and sign-up rules for the whole app.",
+    "<b>Hospital directory</b> - load the government hospital list.",
+], img="92-admin-menu")
 topic("Doctors", [
-    "List of all doctor accounts with mobile numbers.",
-    "Tap a doctor to edit their details, or to activate a new sign-up.",
-    "Tap <b>+ Add doctor</b> to create an account for someone.",
-], img="92-doctors")
+    "Lists every doctor account with User ID and mobile number.",
+    "Tap <b>+ Add doctor</b> to create an account for a doctor.",
+    "Tap a doctor to change their name, mobile number or email, or to switch the account <b>Active</b> on or off.",
+], img="93-doctors", img2="94-doctor-edit", caption="Doctors", caption2="Edit a doctor",
+   tip="New sign-ups that need approval appear here. Switch on Active to let them sign in.")
+topic("See any doctor's cases", [
+    "Open <b>Cases</b> (or any report) and use the <b>doctor selector</b> at the top.",
+    "Each case shows which doctor it belongs to.",
+    "Reports and Excel downloads include a <b>Doctor</b> column.",
+], img="95-admin-cases")
+topic("Add a case for a doctor", [
+    "Tap <b>+ Add Case</b>. As administrator you first choose the <b>Doctor</b> the case belongs to.",
+    "The rest of the form is the same as in section 4. Surgeons and contacts shown are that doctor's own lists.",
+    "<b>Bulk upload</b> works too: choose the doctor on the upload page, or fill the <b>Doctor Username</b> column in the template.",
+], img="96-admin-add-case")
 topic("Settings", [
+    "<b>Practice name</b> - shown in the app.",
     "<b>Default payment terms</b> - days assumed when no expected payment date is entered (30).",
-    "<b>Reminder days</b> - when follow-up reminders appear (7, 14, 21) and how often they repeat.",
-    "<b>Sign-ups</b> - allow doctors to create accounts, and whether new accounts need approval.",
-], img="93-settings")
+    "<b>Reminder days</b> - when follow-up reminders appear (7, 14, 21) and how often they repeat after that.",
+    "<b>Sign-ups</b> - allow doctors to create their own accounts, and whether new accounts need your approval.",
+    "Tap <b>Save settings</b> at the bottom.",
+], img="97-settings")
 topic("Hospital directory", [
-    "Shows how many hospitals are in the list and where they came from.",
-    "To load the full government list: download the hospital CSV from <b>data.gov.in</b> and upload it here.",
-], img="94-directory-import")
+    "Shows how many hospitals are in the shared list and where they came from.",
+    "To load the full government list: download the hospital CSV from <b>data.gov.in</b>, choose it here and upload. "
+    "Only the districts you list (Pune, Mumbai by default) are added.",
+], img="98-directory-import")
 
 # --------------------------------------------------------------------------- FAQ
 sec("faq", "14. Questions and quick help")
@@ -395,7 +418,8 @@ table("Common questions", ["Question", "Answer"], [
     ["My bulk upload saved nothing.", "Some rows had mistakes. Fix the red cells and upload the same file again."],
     ["I see an old version of a screen.", "Close the app fully and open it again (or pull down to refresh)."],
     ["I changed my phone.", "Open the app link on the new phone, sign in, and add it to the home screen again. Your data is safe on the server."],
-    ["Can other doctors see my data?", "Not in their normal view. Anyone who switches to <b>View as admin</b> can see all doctors' data."],
+    ["Can other doctors see my data?", "No. Each doctor sees only their own cases, contacts and surgeons. Only the administrator login can see all doctors."],
+    ["The administrator forgot the password.", "Ask your technical support person to reset it (Forgot password works only for doctor accounts)."],
 ])
 table("Quick reference", ["Task", "Steps"], [
     ["Add a case", "+ Add Case → Hospital → Fee → Surgeon → Save case"],
