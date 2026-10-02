@@ -182,21 +182,3 @@ def import_directory(uploaded_file, districts=("Pune", "Mumbai", "Mumbai Suburba
             counts["created"] += 1
     return counts
 
-
-@transaction.atomic
-def merge_hospitals(duplicate, keep):
-    """Move everything from `duplicate` to `keep`, then hide `duplicate`."""
-    from cases.models import Case
-    from contacts.models import ContactAffiliation
-
-    moved_cases = Case.objects.filter(hospital=duplicate).update(hospital=keep)
-    ContactAffiliation.objects.filter(hospital=duplicate).update(hospital=keep)
-    if not keep.phone and duplicate.phone:
-        keep.phone = duplicate.phone
-    aliases = {a.strip() for a in (keep.aliases + "," + duplicate.name).split(",") if a.strip()}
-    keep.aliases = ", ".join(sorted(aliases))[:300]
-    keep.save()
-    duplicate.merged_into = keep
-    duplicate.is_active = False
-    duplicate.save(update_fields=["merged_into", "is_active", "updated_at"])
-    return moved_cases

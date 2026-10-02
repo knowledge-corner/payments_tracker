@@ -75,7 +75,7 @@ starts the version already on your computer.
 ## 2. First sign-in and the hospital directory
 
 The app starts empty apart from the **hospital directory** (about 90 well-known Pune and Mumbai
-hospitals) and a list of **departments**.
+hospitals).
 
 1. Doctors tap **Create an account** on the sign-in page.
 2. For an admin login run `docker compose exec web python manage.py createsuperuser`.
@@ -89,17 +89,13 @@ How the data fits together:
 
 | Item | Shared or private | Notes |
 |---|---|---|
-| Hospitals | Shared directory | Doctors can add a missing hospital (duplicate check, marked *unverified* until an admin verifies or merges it) |
-| Departments | Shared list | Optional on each case |
-| Contacts | **Private per doctor** | One person can be linked to several hospitals / departments; the call button picks the best match |
+| Hospitals | Shared directory | Any doctor can add a hospital; it is saved straight away (no approval, no merging) |
+| Surgeons | **Private per doctor** | Picked on each case; one surgeon can be linked to many hospitals (one link per surgeon + hospital) |
+| Patient name | Per case | Optional |
+| Contacts | **Private per doctor** | One person can be linked to several hospitals; the call button picks the best match |
 | Fee, expected payment date | Per case | Nothing is pre-filled; if no date is given the app assumes 30 days (Settings) |
 
-The Django admin panel is at `/admin/` (admin users only).
-
-**Dictate this case (beta add-on).** Add Case has a mic: the doctor says e.g. *"Ruby Hall, ortho, TKR under
-spinal, IP 4521, fee 6500, yesterday, payment in 15 days, contact Patil"* and the form is filled in for checking.
-It uses the phone's built-in speech recognition (no cost). Turn it off with `FEATURE_DICTATION=0` in `.env`,
-or remove it completely by deleting the `dictation/` folder - no database changes are involved.
+The raw database panel (`/admin/`) is for the developer only: it accepts superuser logins (`createsuperuser`) and is not linked anywhere in the app. Admins - and any user who taps **View as admin** - manage doctors, settings and the hospital directory from the account menu.
 
 ---
 

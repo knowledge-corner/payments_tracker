@@ -5,8 +5,8 @@ from .models import Department, Hospital
 
 @admin.register(Hospital)
 class HospitalAdmin(admin.ModelAdmin):
-    list_display = ["name", "area", "city", "category", "source", "verified", "is_active"]
-    list_filter = ["city", "source", "verified", "is_active", "category"]
+    list_display = ["name", "area", "city", "category", "source", "created_by", "is_active"]
+    list_filter = ["city", "source", "is_active", "category"]
     search_fields = ["name", "aliases", "area", "pincode"]
     raw_id_fields = ["merged_into"]
 

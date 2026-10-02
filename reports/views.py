@@ -12,7 +12,7 @@ from django.utils import timezone
 from cases.models import PaymentStatus
 from core.periods import add_months, month_start
 from core.permissions import scoped_cases, visible_doctors
-from hospitals.models import Department
+from contacts.models import Surgeon
 from payments.models import Payment
 
 from .exports import export_response
@@ -27,7 +27,8 @@ def base_context(request, filters, **flags):
         "periods": PERIODS,
         "status_choices": STATUS_CHOICES,
         "modes": Payment.MODE_CHOICES,
-        "departments": Department.objects.filter(is_active=True),
+        "surgeons": Surgeon.objects.for_user(request.user).filter(
+            **({"doctor": filters.doctor} if filters.doctor else {})),
         "doctors": visible_doctors(request.user),
         "selected_doctor": filters.doctor,
     }
@@ -44,8 +45,8 @@ def filtered_cases(request, filters):
     qs = scoped_cases(request).filter(**filters.date_filter("case_date"))
     if filters.hospital:
         qs = qs.filter(hospital=filters.hospital)
-    if filters.department:
-        qs = qs.filter(department=filters.department)
+    if filters.surgeon:
+        qs = qs.filter(surgeon=filters.surgeon)
     if filters.q:
         qs = qs.filter(
             Q(patient_reference__icontains=filters.q) | Q(procedure_type__icontains=filters.q)
@@ -63,7 +64,7 @@ def case_summary(qs):
 def export_cases(fmt, qs, summary, filters, filename, title):
     last_pay = Payment.objects.filter(case=OuterRef("pk")).order_by("-payment_date").values("payment_date")[:1]
     rows = [
-        [c.case_date, str(c.doctor), c.hospital.name, c.hospital.place, str(c.department or ""),
+        [c.case_date, str(c.doctor), c.hospital.name, c.hospital.place, c.patient_name, str(c.surgeon or ""),
          c.contact.name if c.contact_id else "", c.contact.best_phone if c.contact_id else "",
          c.procedure_type, c.patient_reference,
          c.fee, c.total_paid, c.outstanding, PaymentStatus.LABELS[c.status], c.due_date,
@@ -72,11 +73,11 @@ def export_cases(fmt, qs, summary, filters, filename, title):
     ]
     columns = [
         ("Case date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Area / city", "text"),
-        ("Department", "text"), ("Contact person", "text"), ("Contact phone", "text"), ("Procedure", "text"),
+        ("Patient name", "text"), ("Surgeon", "text"), ("Contact person", "text"), ("Contact phone", "text"), ("Procedure", "text"),
         ("Case / patient ref", "text"), ("Fee", "money"), ("Received", "money"), ("Outstanding", "money"),
         ("Status", "text"), ("Due date", "date"), ("Days overdue", "int"), ("Last payment", "date"), ("Notes", "text"),
     ]
-    totals = ["TOTAL", f"{summary['n']} cases", "", "", "", "", "", "", "", summary["billed"] or ZERO,
+    totals = ["TOTAL", f"{summary['n']} cases", "", "", "", "", "", "", "", "", summary["billed"] or ZERO,
               summary["received"] or ZERO, summary["outstanding"], "", "", "", "", ""]
     return export_response(fmt, filename, title, filters.describe(), columns, rows, totals)
 
@@ -90,7 +91,7 @@ def index(request):
 def cases_report(request):
     """All cases matching the filters, with totals and Excel/CSV download."""
     filters = parse_filters(request, default_period="this_month")
-    qs = (filtered_cases(request, filters).select_related("hospital", "doctor", "department", "contact")
+    qs = (filtered_cases(request, filters).select_related("hospital", "doctor", "surgeon", "contact")
           .order_by("case_date", "id"))
     summary = case_summary(qs)
 
@@ -112,9 +113,9 @@ def monthly(request):
     if filters.hospital:
         cases = cases.filter(hospital=filters.hospital)
         payments = payments.filter(case__hospital=filters.hospital)
-    if filters.department:
-        cases = cases.filter(department=filters.department)
-        payments = payments.filter(case__department=filters.department)
+    if filters.surgeon:
+        cases = cases.filter(surgeon=filters.surgeon)
+        payments = payments.filter(case__surgeon=filters.surgeon)
 
     start = filters.start
     if start is None:
@@ -159,7 +160,7 @@ def monthly(request):
 
 @login_required
 def month_cases(request, year, month):
-    """Cases of one month (opened from the monthly summary): hospital, department and status filters only."""
+    """Cases of one month (opened from the monthly summary): hospital, surgeon and status filters only."""
     try:
         first = datetime.date(year, month, 1)
     except ValueError:
@@ -167,7 +168,7 @@ def month_cases(request, year, month):
     filters = parse_filters(request)
     filters.period, filters.start, filters.end = "custom", first, add_months(first, 1) - datetime.timedelta(days=1)
     filters.mode, filters.q = "", ""
-    qs = (filtered_cases(request, filters).select_related("hospital", "doctor", "department", "contact")
+    qs = (filtered_cases(request, filters).select_related("hospital", "doctor", "surgeon", "contact")
           .order_by("case_date", "id"))
     summary = case_summary(qs)
 
@@ -222,6 +223,39 @@ def hospital_wise(request):
 
 
 @login_required
+def surgeon_wise(request):
+    """Cases per surgeon at each hospital (surgeon + hospital combinations)."""
+    filters = parse_filters(request, default_period="this_fy")
+    cases = filtered_cases(request, filters).select_related("hospital", "surgeon")
+    data = {}
+    for c in cases:
+        row = data.setdefault((c.surgeon_id, c.hospital_id), {
+            "surgeon": c.surgeon, "hospital": c.hospital, "cases": 0, "billed": ZERO, "received": ZERO,
+            "outstanding": ZERO,
+        })
+        row["cases"] += 1
+        row["billed"] += c.fee
+        row["received"] += c.total_paid
+        row["outstanding"] += max(c.outstanding, ZERO)
+    rows = sorted(data.values(), key=lambda r: (r["surgeon"] is None, str(r["surgeon"] or "").lower(), -r["cases"]))
+    totals = {k: sum(r[k] for r in rows) for k in ("cases", "billed", "received", "outstanding")}
+
+    fmt = export_format(request)
+    if fmt:
+        columns = [("Surgeon", "text"), ("Hospital", "text"), ("Cases", "int"), ("Billed", "money"),
+                   ("Received", "money"), ("Outstanding", "money")]
+        data_rows = [[str(r["surgeon"] or "Not specified"), r["hospital"].name, r["cases"], r["billed"], r["received"],
+                      r["outstanding"]] for r in rows]
+        total_row = ["TOTAL", "", totals["cases"], totals["billed"], totals["received"], totals["outstanding"]]
+        return export_response(fmt, "surgeon_hospital", "Surgeon & hospital", filters.describe(), columns,
+                               data_rows, total_row)
+
+    ctx = base_context(request, filters, show_hospital=True, show_status=True)
+    ctx.update({"rows": rows, "totals": totals})
+    return render(request, "reports/surgeons.html", ctx)
+
+
+@login_required
 def payment_history(request):
     filters = parse_filters(request, default_period="this_month")
     payments = (
@@ -230,8 +264,8 @@ def payment_history(request):
     )
     if filters.hospital:
         payments = payments.filter(case__hospital=filters.hospital)
-    if filters.department:
-        payments = payments.filter(case__department=filters.department)
+    if filters.surgeon:
+        payments = payments.filter(case__surgeon=filters.surgeon)
     if filters.mode:
         payments = payments.filter(mode=filters.mode)
     if filters.q:

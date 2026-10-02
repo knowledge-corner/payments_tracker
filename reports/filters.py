@@ -7,7 +7,8 @@ from django.utils import timezone
 from cases.models import PaymentStatus
 from core.periods import add_months, financial_year_start, month_start
 from core.permissions import selected_doctor
-from hospitals.models import Department, Hospital
+from contacts.models import Surgeon
+from hospitals.models import Hospital
 from payments.models import Payment
 
 PERIODS = [
@@ -65,7 +66,7 @@ class ReportFilters:
     start: datetime.date | None
     end: datetime.date
     hospital: Hospital | None = None
-    department: object = None
+    surgeon: object = None
     status: str = ""
     mode: str = ""
     q: str = ""
@@ -88,8 +89,8 @@ class ReportFilters:
             parts.append(f"Doctor: {self.doctor}")
         if self.hospital:
             parts.append(f"Hospital: {self.hospital.name}")
-        if self.department:
-            parts.append(f"Department: {self.department}")
+        if self.surgeon:
+            parts.append(f"Surgeon: {self.surgeon}")
         if self.status:
             parts.append(f"Status: {dict(STATUS_CHOICES).get(self.status, self.status)}")
         if self.mode:
@@ -129,9 +130,9 @@ def parse_filters(request, default_period="this_month"):
     hospital = None
     if params.get("hospital", "").isdigit():
         hospital = Hospital.objects.filter(pk=params["hospital"]).first()
-    department = None
-    if params.get("department", "").isdigit():
-        department = Department.objects.filter(pk=params["department"]).first()
+    surgeon = None
+    if params.get("surgeon", "").isdigit():
+        surgeon = Surgeon.objects.for_user(request.user).filter(pk=params["surgeon"]).first()
     status = params.get("status", "")
     if status not in dict(STATUS_CHOICES):
         status = ""
@@ -139,7 +140,7 @@ def parse_filters(request, default_period="this_month"):
     if mode not in dict(Payment.MODE_CHOICES):
         mode = ""
     return ReportFilters(
-        period=period, start=start, end=end, hospital=hospital, department=department, status=status, mode=mode,
+        period=period, start=start, end=end, hospital=hospital, surgeon=surgeon, status=status, mode=mode,
         q=params.get("q", "").strip()[:100], doctor=selected_doctor(request) if request.user.is_app_admin else None,
     )
 

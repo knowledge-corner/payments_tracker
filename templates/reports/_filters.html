@@ -27,10 +27,10 @@
     </div>
     {% endif %}
     <div class="col-6 col-md-3">
-      <label class="form-label small mb-1" for="f-department">Department</label>
-      <select name="department" id="f-department" class="form-select form-select-sm">
-        <option value="">All departments</option>
-        {% for d in departments %}<option value="{{ d.pk }}" {% if f.department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      <label class="form-label small mb-1" for="f-surgeon">Surgeon</label>
+      <select name="surgeon" id="f-surgeon" class="form-select form-select-sm">
+        <option value="">All surgeons</option>
+        {% for s in surgeons %}<option value="{{ s.pk }}" {% if f.surgeon.pk == s.pk %}selected{% endif %}>{{ s.name }}{% if user.is_app_admin and not selected_doctor %} ({{ s.doctor }}){% endif %}</option>{% endfor %}
       </select>
     </div>
     {% if show_status %}

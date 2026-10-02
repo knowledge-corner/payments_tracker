@@ -7,7 +7,7 @@ from django.urls import reverse
 from cases.models import Case
 from core.testing import make_admin, make_case, make_contact, make_doctor, make_hospital
 
-from .directory import import_directory, merge_hospitals
+from .directory import import_directory
 from .models import Department, Hospital
 
 
@@ -39,28 +39,21 @@ class HospitalViewTests(TestCase):
         data = self.client.get(reverse("hospitals:search"), {"q": "sahyadri test"}).json()
         self.assertEqual([r["id"] for r in data["results"]], [mine.pk])
 
-    def test_add_hospital_warns_about_duplicates(self):
-        existing = make_hospital("Lotus Care Hospital", city="Pune")
-        url = reverse("hospitals:add")
-        response = self.client.post(url, {"name": "Lotus Care Hospital", "city": "Pune", "category": "hospital"})
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(existing, response.context["form"].similar)
-        self.assertEqual(Hospital.objects.filter(name="Lotus Care Hospital").count(), 1)
-
-        response = self.client.post(url + "?next=/cases/add/", {
-            "name": "Lotus Care Hospital", "city": "Pune", "category": "hospital", "confirm_new": "on",
-            "next": "/cases/add/",
+    def test_add_hospital_saves_straight_away_even_if_name_exists(self):
+        make_hospital("Lotus Care Hospital", city="Pune")
+        response = self.client.post(reverse("hospitals:add") + "?next=/cases/add/", {
+            "name": "Lotus Care Hospital", "city": "Pune", "category": "hospital", "next": "/cases/add/",
         })
         added = Hospital.objects.filter(name="Lotus Care Hospital").latest("pk")
+        self.assertEqual(Hospital.objects.filter(name="Lotus Care Hospital").count(), 2)
         self.assertRedirects(response, f"/cases/add/?hospital={added.pk}", fetch_redirect_response=False)
-        self.assertEqual(added.source, "doctor")
-        self.assertFalse(added.verified)
-        self.assertEqual(added.created_by, self.doctor.user)
+        self.assertEqual((added.source, added.verified, added.created_by), ("doctor", True, self.doctor.user))
 
-    def test_doctor_cannot_edit_verified_or_others_hospitals(self):
-        hospital = make_hospital("Shared Hospital", verified=True)
-        self.assertEqual(self.client.get(reverse("hospitals:edit", args=[hospital.pk])).status_code, 403)
-        self.assertEqual(self.client.get(reverse("hospitals:merge", args=[hospital.pk])).status_code, 403)
+    def test_doctor_can_edit_only_own_hospitals(self):
+        other = make_hospital("Shared Hospital")
+        self.assertEqual(self.client.get(reverse("hospitals:edit", args=[other.pk])).status_code, 403)
+        own = make_hospital("Own Hospital", created_by=self.doctor.user)
+        self.assertEqual(self.client.get(reverse("hospitals:edit", args=[own.pk])).status_code, 200)
 
     def test_list_shows_my_hospitals_and_directory_search(self):
         mine = make_hospital("My Own Hospital")
@@ -71,34 +64,10 @@ class HospitalViewTests(TestCase):
         self.assertContains(self.client.get(reverse("hospitals:list"), {"q": "ruby"}), "Ruby Hall Clinic")
 
 
-class MergeAndImportTests(TestCase):
+class DirectoryImportTests(TestCase):
     def setUp(self):
         self.admin = make_admin()
         self.doctor = make_doctor()
-
-    def test_merge_moves_cases_and_contacts(self):
-        keep = make_hospital("Jehangir Hospital Test")
-        dup = make_hospital("Jehangir Hosp. Test")
-        case = make_case(self.doctor, dup)
-        contact = make_contact(self.doctor, hospital=dup)
-        self.assertEqual(merge_hospitals(dup, keep), 1)
-        case.refresh_from_db()
-        dup.refresh_from_db()
-        keep.refresh_from_db()
-        self.assertEqual(case.hospital, keep)
-        self.assertEqual(contact.affiliations.get().hospital, keep)
-        self.assertEqual(dup.merged_into, keep)
-        self.assertFalse(Hospital.objects.active().filter(pk=dup.pk).exists())
-        self.assertIn("Jehangir Hosp. Test", keep.aliases)
-
-    def test_merge_view_admin_only(self):
-        keep, dup = make_hospital("Keep Me"), make_hospital("Dup Me")
-        self.client.force_login(self.admin)
-        response = self.client.post(reverse("hospitals:merge", args=[dup.pk]), {"target": keep.pk})
-        self.assertRedirects(response, keep.get_absolute_url(), fetch_redirect_response=False)
-        # old links keep working
-        self.assertRedirects(self.client.get(dup.get_absolute_url()), keep.get_absolute_url(),
-                             fetch_redirect_response=False)
 
     CSV = (
         "Sr_No,Hospital_Name,Hospital_Category,Discipline_Systems_of_Medicine,State,District,Location,"

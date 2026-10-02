@@ -1,103 +1,53 @@
 {% extends "base.html" %}
-{% block title %}Import cases from Excel{% endblock %}
+{% block title %}Bulk upload cases{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-2 mb-3">
-  <a href="{% url 'cases:list' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
-  <h1 class="h5 mb-0">Import cases from Excel</h1>
+  <a href="{% url 'cases:add' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">Bulk upload cases</h1>
 </div>
 
-{% if not result %}
 <div class="card p-3 mb-3" style="max-width: 720px;">
-  <div class="d-flex gap-3">
-    <span class="stat-card p-0"><span class="icon bg-success-subtle text-success"><i class="bi bi-file-earmark-excel"></i></span></span>
-    <div>
-      <div class="fw-semibold">Step 1 - Download the template</div>
-      <div class="small text-muted mb-2">Columns: Case Date*, Hospital*, Fee*, Procedure, Case/Patient Ref, Notes, and optionally Amount Received, Payment Date, Payment Mode{% if user.is_app_admin %}, Doctor Username{% endif %}. The Hospital column has a dropdown of your hospitals.</div>
-      <a href="{% url 'cases:import_template' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-download"></i> Download Excel template</a>
-    </div>
-  </div>
-  <hr>
-  <div class="small text-muted">
-    <i class="bi bi-lightbulb text-warning"></i> You can also upload your <strong>existing</strong> Excel sheet: columns such as
-    "Date", "Hospital Name", "Amount", "IP No", "Received", "Mode" are recognised automatically.
-  </div>
+  <div class="fw-semibold mb-1">1. Download the template</div>
+  <div class="small text-muted mb-2">Required: Case Date, Hospital, Fee. Optional: Patient Name, Surgeon, Procedure, Case/Patient Ref, Notes, Amount Received, Payment Date, Payment Mode{% if user.is_app_admin %}, Doctor Username{% endif %}.</div>
+  <a href="{% url 'cases:import_template' %}" class="btn btn-outline-success btn-sm align-self-start"><i class="bi bi-download"></i> Download Excel template</a>
 </div>
 
-<form method="post" enctype="multipart/form-data" class="card p-3" style="max-width: 720px;">{% csrf_token %}
-  <div class="fw-semibold mb-2">Step 2 - Upload the filled file</div>
+<form method="post" enctype="multipart/form-data" class="card p-3 mb-3" style="max-width: 720px;">{% csrf_token %}
+  <div class="fw-semibold mb-2">2. Upload the filled file</div>
   {% include "partials/form_errors.html" %}
   {% include "partials/field.html" with field=form.file %}
   {% if form.doctor %}{% include "partials/field.html" with field=form.doctor %}{% endif %}
-  {% include "partials/field.html" with field=form.create_missing_hospitals %}
-  <button class="btn btn-primary btn-lg-touch w-100"><i class="bi bi-eye"></i> Check file &amp; preview</button>
-  <div class="form-text text-center mt-2">Nothing is saved until you confirm on the next screen.</div>
+  <button class="btn btn-primary btn-lg-touch"><i class="bi bi-upload"></i> Upload</button>
+  <div class="small text-muted mt-2">If every row is correct, the cases are saved straight away. If any row has a problem, nothing is saved and those rows are highlighted below.</div>
 </form>
 
-{% else %}
-<div class="small text-muted mb-2"><i class="bi bi-file-earmark-excel"></i> {{ filename }} · sheet "{{ result.sheet }}" · headings found in row {{ result.header_row }}</div>
-<div class="row g-2 mb-3">
-  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">Ready to import</div><div class="value text-success">{{ counts.ok }}</div><div class="sub">{{ counts.with_payment }} with payment</div></div></div>
-  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">Already in app</div><div class="value">{{ counts.duplicate }}</div><div class="sub">Will be skipped</div></div></div>
-  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">Rows with errors</div><div class="value {% if counts.error %}text-danger{% endif %}">{{ counts.error }}</div><div class="sub">Will be skipped</div></div></div>
-  <div class="col-6 col-md-3"><div class="card stat-card"><div class="label">New hospitals</div><div class="value">{{ counts.new_hospitals }}</div><div class="sub">Will be created</div></div></div>
+{% if result %}
+<div class="alert alert-danger small" style="max-width: 720px;">
+  <i class="bi bi-exclamation-triangle"></i> <strong>Nothing was saved.</strong>
+  {{ error_rows|length }} of {{ counts.total }} row{{ counts.total|pluralize }} in <em>{{ filename }}</em> need fixing.
+  {% if result.fatal %}<div>{{ result.fatal }}</div>{% endif %}
+  Correct the highlighted cells in Excel and upload the file again.
 </div>
-
-{% if result.fatal %}<div class="alert alert-warning py-2">{{ result.fatal }}</div>{% endif %}
-
-{% if problem_rows %}
-<div class="section-title">Rows to check ({{ problem_rows|length }})</div>
-<div class="card mb-3">
-  <div class="list-group list-group-flush">
-    {% for r in problem_rows %}
-    <div class="list-group-item">
-      <div class="d-flex justify-content-between">
-        <strong class="small">Excel row {{ r.row_no }}</strong>
-        {% if r.status == 'error' %}<span class="badge text-bg-danger">Error - skipped</span>
-        {% elif r.status == 'duplicate' %}<span class="badge text-bg-secondary">Duplicate - skipped</span>
-        {% else %}<span class="badge text-bg-warning">Will import</span>{% endif %}
-      </div>
-      <div class="small text-muted">{{ r.values.case_date }} · {{ r.values.hospital }} · {{ r.values.fee }}{% if r.values.patient_reference %} · {{ r.values.patient_reference }}{% endif %}</div>
-      {% for e in r.errors %}<div class="small text-danger"><i class="bi bi-x-circle"></i> {{ e }}</div>{% endfor %}
-      {% for w in r.warnings %}<div class="small text-warning-emphasis"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}
-    </div>
-    {% endfor %}
-  </div>
-</div>
-{% endif %}
-
-{% if ok_rows %}
-<div class="section-title">Preview of cases to import</div>
-<div class="card mb-3">
+<div class="card">
   <div class="table-responsive">
-    <table class="table table-report mb-0 align-middle">
-      <thead><tr><th>Row</th><th>Date</th><th>Hospital</th><th class="text-end">Fee</th><th>Procedure / ref</th><th class="text-end">Received</th>{% if user.is_app_admin %}<th>Doctor</th>{% endif %}</tr></thead>
+    <table class="table table-sm table-report mb-0 align-middle small import-table">
+      <thead><tr><th>Row</th>{% for key, header in columns %}<th>{{ header }}</th>{% endfor %}<th>Problem</th></tr></thead>
       <tbody>
-        {% for r in ok_rows %}
-        <tr>
+        {% for r in result.rows %}
+        <tr class="{% if r.errors %}table-danger{% endif %}">
           <td class="text-muted">{{ r.row_no }}</td>
-          <td class="text-nowrap">{{ r.values.case_date }}</td>
-          <td>{{ r.data.hospital_name }}{% if not r.data.hospital_id %} <span class="badge text-bg-info">new</span>{% endif %}</td>
-          <td class="text-end amount">{{ r.data.fee|inr }}</td>
-          <td class="small">{{ r.data.procedure_type }}{% if r.data.patient_reference %}<div class="text-muted">{{ r.data.patient_reference }}</div>{% endif %}</td>
-          <td class="text-end amount">{% if r.data.amount_received %}{{ r.data.amount_received|inr }}{% else %}-{% endif %}</td>
-          {% if user.is_app_admin %}<td class="small">{{ r.data.doctor_name }}</td>{% endif %}
+          {% for key, header in columns %}
+            <td class="{% if key in r.error_fields %}cell-error{% endif %}">{% for k, v in r.values.items %}{% if k == key %}{{ v|default:"" }}{% endif %}{% endfor %}</td>
+          {% endfor %}
+          <td>{% for e in r.errors %}<div class="text-danger">{{ e }}</div>{% empty %}<span class="text-success"><i class="bi bi-check2"></i></span>{% endfor %}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  {% if counts.ok > ok_rows|length %}<div class="card-footer bg-white small text-muted">Showing the first {{ ok_rows|length }} of {{ counts.ok }} rows.</div>{% endif %}
 </div>
-{% endif %}
-
-<div class="form-actions d-flex gap-2">
-  {% if counts.ok %}
-  <form method="post" action="{% url 'cases:import_confirm' %}" class="flex-fill">{% csrf_token %}
-    <button class="btn btn-primary btn-lg-touch w-100"><i class="bi bi-check2-circle"></i> Import {{ counts.ok }} case{{ counts.ok|pluralize }}</button>
-  </form>
-  {% endif %}
-  <a href="{% url 'cases:import' %}" class="btn btn-outline-secondary btn-lg-touch {% if not counts.ok %}flex-fill{% endif %}"><i class="bi bi-arrow-repeat"></i> Upload another file</a>
-</div>
-{% if counts.error %}<p class="small text-muted mt-2">Rows with errors are skipped. Fix them in Excel and upload the file again - rows already imported are detected as duplicates and skipped.</p>{% endif %}
+<style>
+  .import-table .cell-error { background: #f8d7da; outline: 2px solid #dc3545; outline-offset: -2px; font-weight: 600; }
+</style>
 {% endif %}
 {% endblock %}

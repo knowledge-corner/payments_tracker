@@ -11,9 +11,17 @@ class User(AbstractUser):
 
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_DOCTOR)
 
+    # Set per request by core.middleware.AdminViewMiddleware when the user switched to "View as admin".
+    admin_view = False
+
+    @property
+    def is_real_admin(self):
+        return self.is_superuser or self.role == self.ROLE_ADMIN
+
     @property
     def is_app_admin(self):
-        return self.is_superuser or self.role == self.ROLE_ADMIN
+        """Admin rights in the app: real admins, or anyone who chose "View as admin"."""
+        return self.is_real_admin or self.admin_view
 
     @property
     def doctor_profile(self):

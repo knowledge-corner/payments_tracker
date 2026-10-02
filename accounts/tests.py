@@ -95,7 +95,7 @@ class PasswordResetTests(TestCase):
         self.user = User.objects.create_user("dr.reset", "reset@example.com", "OldPass!2026", role=User.ROLE_DOCTOR)
         Doctor.objects.create(user=self.user, display_name="Reset", phone="+91 98220 12345")
         self.url = reverse("password_reset")
-        self.good = {"username": "Dr.Reset", "mobile": "098220-12345", "email": "RESET@example.com"}
+        self.good = {"username": "Dr.Reset", "mobile": "098220-12345"}
 
     def test_login_page_has_forgot_password_and_install(self):
         page = self.client.get(reverse("login"))
@@ -128,12 +128,21 @@ class PasswordResetTests(TestCase):
         self.assertTrue(self.user.check_password("OldPass!2026"))
 
     def test_every_detail_must_match(self):
-        for field, wrong in (("username", "dr.other"), ("mobile", "9822099999"), ("email", "other@example.com")):
+        for field, wrong in (("username", "dr.other"), ("mobile", "9822099999")):
             data = dict(self.good, **{field: wrong})
             response = self.client.post(self.url, data)
             self.assertEqual(response.status_code, 200, field)
             self.assertContains(response, "don&#x27;t match our records")
         self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)
+
+    def test_forgot_user_id_by_mobile(self):
+        url = reverse("forgot_username")
+        self.assertContains(self.client.get(reverse("login")), url)
+        response = self.client.post(url, {"mobile": "+91 98220 12345"})
+        self.assertContains(response, "dr.reset")
+        response = self.client.post(url, {"mobile": "9000000000"})
+        self.assertContains(response, "No account is registered")
+        self.assertNotContains(response, "dr.reset")
 
     def test_cannot_jump_to_new_password_page(self):
         self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)

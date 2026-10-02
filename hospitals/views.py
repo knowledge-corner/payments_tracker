@@ -9,8 +9,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from contacts.models import ContactAffiliation
 from core.permissions import admin_required, scoped_cases
 
-from .directory import import_directory, merge_hospitals
-from .forms import CITY_SUGGESTIONS, AdminHospitalForm, DirectoryImportForm, HospitalForm, MergeForm
+from .directory import import_directory
+from .forms import CITY_SUGGESTIONS, AdminHospitalForm, DirectoryImportForm, HospitalForm
 from .models import Hospital
 
 
@@ -82,7 +82,7 @@ def hospital_detail(request, pk):
     hospital = get_object_or_404(Hospital, pk=pk)
     if hospital.merged_into_id:
         return redirect(hospital.merged_into)
-    cases = scoped_cases(request).filter(hospital=hospital).with_totals().select_related("doctor", "department")
+    cases = scoped_cases(request).filter(hospital=hospital).with_totals().select_related("doctor", "surgeon")
     open_cases = [c for c in cases if c.outstanding > 0]
     links = hospital.contact_links.select_related("contact", "department").order_by("end_date", "-is_primary")
     if not request.user.is_app_admin:
@@ -102,7 +102,7 @@ def hospital_detail(request, pk):
 def _can_edit(user, hospital):
     if user.is_app_admin:
         return True
-    return hospital.created_by_id == user.pk and not hospital.verified
+    return hospital.created_by_id == user.pk
 
 
 @login_required
@@ -115,8 +115,7 @@ def hospital_add(request):
         hospital = form.save(commit=False)
         hospital.source = "admin" if is_admin else "doctor"
         hospital.created_by = request.user
-        if is_admin and "verified" not in form.data:
-            hospital.verified = False
+        hospital.verified = True
         hospital.save()
         messages.success(request, f"{hospital} added to the hospital list.")
         nxt = _safe_next(request)
@@ -135,24 +134,12 @@ def hospital_edit(request, pk):
     if not _can_edit(request.user, hospital):
         raise PermissionDenied
     form_class = AdminHospitalForm if request.user.is_app_admin else HospitalForm
-    form = form_class(request.POST or None, instance=hospital, check_duplicates=False)
+    form = form_class(request.POST or None, instance=hospital)
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Hospital updated.")
         return redirect(hospital)
     return render(request, "hospitals/hospital_form.html", {"form": form, "hospital": hospital, "cities": CITY_SUGGESTIONS})
-
-
-@admin_required
-def hospital_merge(request, pk):
-    hospital = get_object_or_404(Hospital, pk=pk, merged_into__isnull=True)
-    form = MergeForm(request.POST or None, hospital=hospital)
-    if request.method == "POST" and form.is_valid():
-        keep = form.cleaned_data["target"]
-        moved = merge_hospitals(hospital, keep)
-        messages.success(request, f"Merged into {keep}: {moved} case(s) moved.")
-        return redirect(keep)
-    return render(request, "hospitals/hospital_merge.html", {"form": form, "hospital": hospital})
 
 
 @admin_required
@@ -172,19 +159,5 @@ def directory_import(request):
             return redirect("hospitals:list")
     stats = {s: Hospital.objects.active().filter(source=s).count() for s, _ in Hospital.SOURCE_CHOICES}
     return render(request, "hospitals/directory_import.html", {"form": form, "stats": stats})
-
-
-@admin_required
-def unverified(request):
-    hospitals = Hospital.objects.active().filter(verified=False).exclude(source__in=["directory", "starter"])
-    return render(request, "hospitals/unverified.html", {"hospitals": hospitals.select_related("created_by")})
-
-
-@admin_required
-def verify(request, pk):
-    if request.method == "POST":
-        Hospital.objects.filter(pk=pk).update(verified=True)
-        messages.success(request, "Hospital marked as verified.")
-    return redirect("hospitals:detail", pk=pk)
 
 

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Surgeons{% endblock %}
+{% block content %}
+{% include "contacts/_tabs.html" with tab="surgeons" %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <h1 class="h5 mb-0">{% if user.is_app_admin %}Surgeons{% else %}My surgeons{% endif %}</h1>
+  <a href="{% url 'contacts:surgeon_add' %}" class="btn btn-primary btn-sm"><i class="bi bi-person-plus"></i> Add surgeon</a>
+</div>
+<form method="get" class="mb-2">
+  <div class="input-group">
+    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search name, phone or hospital">
+  </div>
+</form>
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for s in surgeons %}
+    <div class="list-group-item action-item d-flex justify-content-between align-items-center gap-2">
+      <a href="{{ s.get_absolute_url }}" class="min-w-0 text-decoration-none text-body flex-fill">
+        <div class="action-name">{{ s.name }}{% if not s.is_active %} <span class="badge text-bg-secondary">inactive</span>{% endif %}</div>
+        <div class="action-meta text-truncate">{{ s.case_count }} case{{ s.case_count|pluralize }}{% for link in s.hospital_links.all %} · {{ link.hospital.name }}{% empty %} · no hospital yet{% endfor %}</div>
+        {% if user.is_app_admin %}<div class="action-meta">{{ s.doctor }}</div>{% endif %}
+      </a>
+      {% if s.phone %}<a href="tel:{{ s.phone }}" class="call-link" aria-label="Call {{ s.name }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}
+    </div>
+    {% empty %}<div class="p-4 text-center text-muted small">No surgeons yet. They are also added when you add a case with a new surgeon.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

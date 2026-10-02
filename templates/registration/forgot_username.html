@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Forgot user ID · Payments Tracker{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="card p-4 w-100" style="max-width: 400px;">
+    <div class="text-center mb-3">
+      <i class="bi bi-person-vcard fs-1 text-primary"></i>
+      <h1 class="h5 mt-1 mb-1">Forgot your user ID?</h1>
+      <p class="text-muted small mb-0">Enter the mobile number you registered with.</p>
+    </div>
+    {% if users %}
+      <div class="alert alert-success small">
+        Your user ID{{ users|length|pluralize }}:
+        {% for u in users %}<div class="fs-5 fw-semibold text-body">{{ u.username }}</div>{% endfor %}
+      </div>
+      <a href="{% url 'login' %}" class="btn btn-primary w-100 btn-lg-touch mb-2">Sign in</a>
+      <a href="{% url 'password_reset' %}?username={{ users.0.username|urlencode }}" class="btn btn-outline-secondary w-100">Also forgot password?</a>
+    {% elif locked %}
+      <div class="alert alert-warning small">Too many attempts. Please wait 15 minutes and try again, or ask the admin.</div>
+    {% else %}
+    <form method="post" novalidate>{% csrf_token %}
+      {% include "partials/form_errors.html" %}
+      {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+      <button class="btn btn-primary w-100 btn-lg-touch"><i class="bi bi-search"></i> Find my user ID</button>
+    </form>
+    {% endif %}
+    <div class="d-flex justify-content-between mt-3 small">
+      <a href="{% url 'login' %}"><i class="bi bi-arrow-left"></i> Back to sign in</a>
+      <a href="{% url 'password_reset' %}">Forgot password?</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -25,10 +25,11 @@
     <dt class="col-5 text-muted fw-normal">Expected payment</dt><dd class="col-7">{{ case.due_date|date:"d M Y"|default:"-" }}{% if case.status == 'overdue' %} <span class="text-danger">({{ case.days_overdue }} days overdue)</span>{% endif %}</dd>
     {% if user.is_app_admin %}<dt class="col-5 text-muted fw-normal">Doctor</dt><dd class="col-7">{{ case.doctor }}</dd>{% endif %}
     <dt class="col-5 text-muted fw-normal">Procedure</dt><dd class="col-7">{{ case.procedure_type|default:"-" }}</dd>
+    <dt class="col-5 text-muted fw-normal">Patient name</dt><dd class="col-7">{{ case.patient_name|default:"-" }}</dd>
     <dt class="col-5 text-muted fw-normal">Case / patient ref</dt><dd class="col-7">{{ case.patient_reference|default:"-" }}</dd>
     {% if case.notes %}<dt class="col-5 text-muted fw-normal">Notes</dt><dd class="col-7">{{ case.notes|linebreaksbr }}</dd>{% endif %}
     <dt class="col-5 text-muted fw-normal">Hospital</dt><dd class="col-7"><a href="{{ case.hospital.get_absolute_url }}">{{ case.hospital.name }}</a>{% if case.hospital.place %}<div class="text-muted">{{ case.hospital.place }}</div>{% endif %}</dd>
-    <dt class="col-5 text-muted fw-normal">Department</dt><dd class="col-7">{{ case.department|default:"-" }}</dd>
+    <dt class="col-5 text-muted fw-normal">Surgeon</dt><dd class="col-7">{% if case.surgeon %}<a href="{{ case.surgeon.get_absolute_url }}">{{ case.surgeon.name }}</a>{% else %}-{% endif %}</dd>
     <dt class="col-5 text-muted fw-normal">Contact person</dt>
     <dd class="col-7">
       {% if case.contact %}<a href="{{ case.contact.get_absolute_url }}">{{ case.contact.name }}</a> <span class="text-muted">({{ case.contact.get_role_display }})</span>{% else %}<span class="text-muted">Not specified</span>{% endif %}

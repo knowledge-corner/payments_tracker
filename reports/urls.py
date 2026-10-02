@@ -10,5 +10,6 @@ urlpatterns = [
     path("monthly/", views.monthly, name="monthly"),
     path("monthly/<int:year>/<int:month>/", views.month_cases, name="month_cases"),
     path("hospitals/", views.hospital_wise, name="hospitals"),
+    path("surgeons/", views.surgeon_wise, name="surgeons"),
     path("payments/", views.payment_history, name="payments"),
 ]

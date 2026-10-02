@@ -106,14 +106,14 @@ class MonthCasesTests(TestCase):
 
         from django.utils import timezone
 
-        from hospitals.models import Department
+        from contacts.models import Surgeon
 
         self.doctor = make_doctor()
         self.a, self.b = make_hospital("Alpha"), make_hospital("Beta")
-        self.ortho = Department.objects.get(name="Orthopaedics")
+        self.ortho = Surgeon.objects.create(doctor=self.doctor, name="Dr. Ortho")
         today = timezone.localdate()
         self.month = today.replace(day=1)
-        self.paid = make_case(self.doctor, self.a, days_ago=0, fee=1000, department=self.ortho)
+        self.paid = make_case(self.doctor, self.a, days_ago=0, fee=1000, surgeon=self.ortho)
         Payment.objects.create(case=self.paid, amount=Decimal("1000"))
         self.unpaid = make_case(self.doctor, self.b, days_ago=0, fee=2000)
         self.last_month = make_case(self.doctor, self.a, days_ago=today.day + 3, fee=500)
@@ -134,7 +134,7 @@ class MonthCasesTests(TestCase):
 
     def test_filters(self):
         self.assertEqual(self.ids(f"?hospital={self.b.pk}"), {self.unpaid.pk})
-        self.assertEqual(self.ids(f"?department={self.ortho.pk}"), {self.paid.pk})
+        self.assertEqual(self.ids(f"?surgeon={self.ortho.pk}"), {self.paid.pk})
         self.assertEqual(self.ids("?status=paid"), {self.paid.pk})
         self.assertEqual(self.ids("?status=unpaid"), {self.unpaid.pk})
         # period params from other pages are ignored
@@ -158,3 +158,30 @@ class MonthCasesTests(TestCase):
 
     def test_bad_month_404(self):
         self.assertEqual(self.client.get("/reports/monthly/2026/13/").status_code, 404)
+
+
+class SurgeonReportTests(TestCase):
+    def test_counts_per_surgeon_and_hospital_with_filters_and_excel(self):
+        import io
+
+        from openpyxl import load_workbook
+
+        from contacts.models import Surgeon
+
+        doctor = make_doctor()
+        a, b = make_hospital("Criticare R"), make_hospital("Hinduja R")
+        shah = Surgeon.objects.create(doctor=doctor, name="Dr. Shah")
+        rao = Surgeon.objects.create(doctor=doctor, name="Dr. Rao")
+        for hospital, surgeon in ((a, shah), (a, shah), (b, shah), (a, rao)):
+            make_case(doctor, hospital, fee=1000, surgeon=surgeon)
+        make_case(make_doctor("dr.x", "Dr. X"), a, fee=5000)
+        self.client.force_login(doctor.user)
+        url = reverse("reports:surgeons")
+        rows = self.client.get(url + "?period=all").context["rows"]
+        got = {(str(r["surgeon"]), r["hospital"].name): r["cases"] for r in rows}
+        self.assertEqual(got, {("Dr. Shah", "Criticare R"): 2, ("Dr. Shah", "Hinduja R"): 1, ("Dr. Rao", "Criticare R"): 1})
+        rows = self.client.get(url + f"?period=all&surgeon={shah.pk}&hospital={a.pk}").context["rows"]
+        self.assertEqual([(str(r["surgeon"]), r["cases"]) for r in rows], [("Dr. Shah", 2)])
+        response = self.client.get(url + "?period=all&export=xlsx")
+        values = [c.value for row in load_workbook(io.BytesIO(response.content)).active.iter_rows() for c in row]
+        self.assertIn("Dr. Shah", values)

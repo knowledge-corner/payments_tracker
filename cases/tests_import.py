@@ -53,7 +53,7 @@ class ImportFlowTests(TestCase):
         self.day = timezone.localdate() - datetime.timedelta(days=10)
 
     def upload(self, file, **extra):
-        data = {"file": file, "create_missing_hospitals": "on"}
+        data = {"file": file}
         data.update(extra)
         return self.client.post(reverse("cases:import"), data)
 
@@ -65,49 +65,54 @@ class ImportFlowTests(TestCase):
         self.assertIn("Ruby Hall Clinic", [c.value for c in wb["Hospitals"]["A"]])
         self.assertNotIn("Doctor Username", [c.value for c in wb["Cases"][1]])
 
-    def test_preview_then_confirm(self):
+    def test_valid_file_is_saved_straight_away(self):
+        headers = ["Case Date *", "Hospital *", "Fee *", "Patient Name", "Surgeon", "Procedure / Case Type",
+                   "Case / Patient Ref", "Notes", "Amount Received", "Payment Date", "Payment Mode"]
         f = workbook_file([
-            [self.day, "ruby hall clinic", 7500, "LSCS - spinal", "IP 1", "", 7500, self.day, "UPI"],
-            [self.day.strftime("%d/%m/%Y"), "Brand New Nursing Home", "₹4,000", "GA", "IP 2", "", 1000, "", "cheque"],
-            [self.day, "Ruby Hall Clinic", "abc", "", "", "", "", "", ""],          # bad fee
-            ["", "", "", "", "", "", "", "", ""],                                  # blank row ignored
-            [self.day, "Ruby Hall Clinic", 5000, "", "IP 9", "", 6000, "", ""],    # overpaid
-        ])
+            [self.day, "ruby hall clinic", 7500, "Sunita Patil", "Dr. Kulkarni", "LSCS - spinal", "IP 1", "", 7500,
+             self.day, "UPI"],
+            [self.day.strftime("%d/%m/%Y"), "Brand New Nursing Home", "₹4,000", "", "dr. kulkarni", "GA", "IP 2", "",
+             1000, "", "cheque"],
+            ["", "", "", "", "", "", "", "", "", "", ""],                       # blank row ignored
+        ], headers=headers)
         response = self.upload(f)
-        counts = response.context["counts"]
-        self.assertEqual((counts["ok"], counts["error"], counts["new_hospitals"]), (2, 2, 1))
-        self.assertEqual(Case.objects.count(), 0)  # preview saves nothing
-
-        response = self.client.post(reverse("cases:import_confirm"))
         self.assertRedirects(response, reverse("cases:list"))
         self.assertEqual(Case.objects.count(), 2)
         self.assertEqual(Payment.objects.count(), 2)
         self.assertTrue(Hospital.objects.filter(name="Brand New Nursing Home", source="doctor").exists())
         imported = Case.objects.get(patient_reference="IP 1")
-        self.assertEqual(imported.hospital, self.hospital)
+        self.assertEqual((imported.hospital, imported.patient_name), (self.hospital, "Sunita Patil"))
         self.assertEqual(imported.source, Case.SOURCE_IMPORT)
         self.assertEqual(imported.payment_status, "paid")
+        # one surgeon (name matched case-insensitively), linked to both hospitals
+        surgeon = imported.surgeon
+        self.assertEqual(Case.objects.get(patient_reference="IP 2").surgeon, surgeon)
+        self.assertEqual(surgeon.hospital_links.count(), 2)
         self.assertEqual(Payment.objects.get(case__patient_reference="IP 2").mode, "cheque")
+
+    def test_any_error_saves_nothing_and_highlights_rows(self):
+        f = workbook_file([
+            [self.day, "Ruby Hall Clinic", 7500, "", "IP 1"],
+            [self.day, "Ruby Hall Clinic", "abc", "", ""],                       # bad fee
+            [self.day, "Ruby Hall Clinic", 5000, "", "IP 9", "", 6000, "", ""],  # overpaid
+        ])
+        response = self.upload(f)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Case.objects.count(), 0)
+        self.assertEqual([r.row_no for r in response.context["error_rows"]], [3, 4])
+        self.assertEqual(response.context["error_rows"][0].error_fields, ["fee"])
+        self.assertContains(response, "Nothing was saved")
+        self.assertContains(response, "cell-error")
 
     def test_duplicates_skipped_on_reupload(self):
         make_case(self.doctor, self.hospital, days_ago=10, fee=7500, patient_reference="IP 1")
-        response = self.upload(workbook_file([[self.day, "Ruby Hall Clinic", 7500, "", "IP 1"]]))
-        self.assertEqual(response.context["counts"]["duplicate"], 1)
-        self.assertEqual(response.context["counts"]["ok"], 0)
+        self.upload(workbook_file([[self.day, "Ruby Hall Clinic", 7500, "", "IP 1"],
+                                   [self.day, "Ruby Hall Clinic", 8000, "", "IP 2"]]))
+        self.assertEqual(Case.objects.count(), 2)
 
-    def test_missing_hospital_is_error_when_creation_disabled(self):
-        response = self.client.post(reverse("cases:import"), {
-            "file": workbook_file([[self.day, "Jupiter Hospital", 7500]]),
-        })
-        row = response.context["result"].rows[0]
-        self.assertEqual(row.status, "error")
-        self.assertIn("not found", row.errors[0])
-
-    def test_typo_of_existing_hospital_is_not_created(self):
-        response = self.upload(workbook_file([[self.day, "Ruby Hall Clinc", 7500]]))
-        row = response.context["result"].rows[0]
-        self.assertEqual(row.status, "error")
-        self.assertIn("looks like a typo of 'Ruby Hall Clinic'", row.errors[0])
+    def test_close_hospital_name_becomes_new_hospital(self):
+        self.upload(workbook_file([[self.day, "Ruby Hall Clinc", 7500]]))
+        self.assertTrue(Hospital.objects.filter(name="Ruby Hall Clinc").exists())
 
     def test_existing_sheet_with_other_headings(self):
         f = workbook_file(
@@ -115,9 +120,7 @@ class ImportFlowTests(TestCase):
              [self.day, "Ruby Hall Clinic", 6000, "IP 77", 3000, "NEFT"]],
             headers=["Dr. Test - 2026"],
         )
-        response = self.upload(f)
-        self.assertEqual(response.context["counts"]["ok"], 1)
-        self.client.post(reverse("cases:import_confirm"))
+        self.upload(f)
         case = Case.objects.with_totals().get()
         self.assertEqual((case.patient_reference, case.status), ("IP 77", "partial"))
 
@@ -133,8 +136,6 @@ class ImportFlowTests(TestCase):
         headers = ["Case Date", "Hospital", "Fee", "Doctor Username"]
         f = workbook_file([[self.day, "Ruby Hall Clinic", 1000, "dr.rao"], [self.day, "Ruby Hall Clinic", 2000, ""]],
                           headers=headers)
-        response = self.upload(f, doctor=self.doctor.pk)
-        self.assertEqual(response.context["counts"]["ok"], 2)
-        self.client.post(reverse("cases:import_confirm"))
+        self.upload(f, doctor=self.doctor.pk)
         self.assertEqual(Case.objects.get(fee=1000).doctor, other)
         self.assertEqual(Case.objects.get(fee=2000).doctor, self.doctor)

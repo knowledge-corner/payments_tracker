@@ -4,7 +4,7 @@ from django.utils import timezone
 from core.forms import StyledModelForm
 from hospitals.models import Department, Hospital
 
-from .models import Contact, ContactAffiliation
+from .models import Contact, ContactAffiliation, Surgeon
 
 
 class ContactForm(StyledModelForm):
@@ -53,3 +53,25 @@ class AffiliationForm(StyledModelForm):
         self.fields["department"].queryset = Department.objects.filter(is_active=True)
         self.fields["department"].empty_label = "All departments"
         self.fields["start_date"].initial = timezone.localdate()
+
+
+class SurgeonForm(StyledModelForm):
+    class Meta:
+        model = Surgeon
+        fields = ["name", "phone", "speciality", "notes", "is_active"]
+        widgets = {
+            "phone": forms.TextInput(attrs={"type": "tel", "inputmode": "tel", "autocomplete": "off"}),
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+
+class SurgeonHospitalForm(forms.Form):
+    hospital = forms.ModelChoiceField(queryset=Hospital.objects.active())
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["hospital"].widget.choices = [("", "Search hospital")]
+        self.fields["hospital"].widget.attrs.update({
+            "class": "form-select", "data-searchable": "", "data-search-url": "/hospitals/search/",
+            "data-placeholder": "Type to search hospital",
+        })

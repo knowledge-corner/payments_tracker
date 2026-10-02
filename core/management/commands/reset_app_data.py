@@ -24,7 +24,7 @@ class Command(BaseCommand):
             raise CommandError("This deletes all cases, payments, contacts and hospitals. Re-run with --yes to confirm.")
         from accounts.models import User
         from cases.models import Case
-        from contacts.models import Contact, ContactAffiliation
+        from contacts.models import Contact, ContactAffiliation, Surgeon, SurgeonHospital
         from hospitals.directory import load_starter
         from hospitals.models import Hospital
         from notifications.models import NotifiedCase, SentNotification
@@ -36,6 +36,7 @@ class Command(BaseCommand):
             ("notifications", SentNotification), ("notification marks", NotifiedCase),
             ("follow-ups", PaymentFollowUp), ("payments", Payment), ("cases", Case),
             ("contact links", ContactAffiliation), ("contacts", Contact),
+            ("surgeon links", SurgeonHospital), ("surgeons", Surgeon),
         ]:
             counts[label] = model.objects.all().delete()[0]
         Hospital.objects.update(merged_into=None)

@@ -107,10 +107,10 @@ On the free plan, morning summaries go out once a day at the task time (doctors 
 
 ## 6b. "Forgot password"
 
-No email setup is needed: on **Forgot password?** the doctor enters their username, registered
-mobile number and registered email. If all three match, they set a new password on the spot
-(5 wrong attempts lock the form for 15 minutes). Admin logins without a doctor profile reset with
-`python manage.py changepassword <username>`.
+No email setup is needed. **Forgot password?** asks for the user ID and the registered mobile number;
+if they match, a new password is set on the spot. **Forgot user ID?** shows the user ID for a registered
+mobile number. 5 wrong attempts lock the form for 15 minutes. Admin logins without a doctor profile
+reset with `python manage.py changepassword <username>`.
 
 ## 7. Updating after new code is pushed
 

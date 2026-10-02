@@ -101,8 +101,11 @@ class Case(ImportableModel):
         "Case / patient ref", max_length=100, blank=True,
         help_text="IP number, initials or bill number - no clinical details needed.",
     )
+    patient_name = models.CharField(max_length=150, blank=True)
+    surgeon = models.ForeignKey("contacts.Surgeon", null=True, blank=True, on_delete=models.SET_NULL,
+                                related_name="cases")
     department = models.ForeignKey("hospitals.Department", null=True, blank=True, on_delete=models.SET_NULL,
-                                   related_name="cases")
+                                   related_name="cases")  # no longer asked on the form; kept for older cases
     contact = models.ForeignKey("contacts.Contact", null=True, blank=True, on_delete=models.SET_NULL,
                                 related_name="cases", help_text="Person to contact about this payment.")
     procedure_type = models.CharField("Procedure / case type", max_length=150, blank=True)

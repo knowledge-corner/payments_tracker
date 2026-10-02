@@ -92,22 +92,6 @@ class Hospital(TimeStampedModel):
     def get_absolute_url(self):
         return reverse("hospitals:detail", args=[self.pk])
 
-    def similar(self, limit=5):
-        """Possible duplicates: same city and overlapping name words."""
-        words = [w for w in normalise_name(self.name).split() if len(w) > 2 and w not in STOP_WORDS]
-        if not words:
-            return Hospital.objects.none()
-        qs = Hospital.objects.active().exclude(pk=self.pk)
-        if self.city:
-            qs = qs.filter(city__iexact=self.city)
-        for w in words[:3]:
-            qs = qs.filter(name__icontains=w)
-        return qs[:limit]
-
-
-STOP_WORDS = {"hospital", "hospitals", "clinic", "nursing", "home", "centre", "center", "the", "and", "multispeciality",
-              "multi", "speciality", "specialty", "super", "care", "medical", "research", "institute", "pvt", "ltd"}
-
 
 class Department(models.Model):
     name = models.CharField(max_length=80, unique=True)

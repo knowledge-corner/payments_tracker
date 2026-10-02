@@ -33,14 +33,14 @@
       </select>
     </div>
     <div class="col-12 col-md-6">
-      <select name="department" class="form-select form-select-sm" onchange="this.form.submit()">
-        <option value="">All departments</option>
-        {% for d in departments %}<option value="{{ d.pk }}" {% if department == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      <select name="surgeon" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">All surgeons</option>
+        {% for s in surgeons %}<option value="{{ s.pk }}" {% if surgeon == s.pk|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
       </select>
     </div>
   </div>
 </form>
-<div class="small text-muted mb-2">{{ page.paginator.count }} case{{ page.paginator.count|pluralize }}{% if q or status or hospital or month or department %} · <a href="{% url 'cases:list' %}">clear filters</a>{% endif %}</div>
+<div class="small text-muted mb-2">{{ page.paginator.count }} case{{ page.paginator.count|pluralize }}{% if q or status or hospital or month or surgeon %} · <a href="{% url 'cases:list' %}">clear filters</a>{% endif %}</div>
 <div class="card">
   <div class="list-group list-group-flush">
     {% for case in page %}{% include "partials/case_row.html" %}{% empty %}

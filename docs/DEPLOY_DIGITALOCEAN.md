@@ -66,7 +66,7 @@ When it prints **Done!**, open `https://payments.yourpractice.in` and sign in wi
 
 1. **Settings** → decide on *Allow new doctors to sign up* and *New sign-ups need admin approval*
    (recommended for real use: approval **on**).
-2. **Doctors** → add doctors (or let them sign up); **Hospitals** → add hospitals, or import cases from Excel.
+2. **Doctors** → add doctors (or let them sign up); **Hospitals** → add hospitals, or bulk-upload cases (Add Case → Bulk upload).
 3. Phones: open the address → *Add to Home Screen* (iPhone) / *Install app* (Android).
 
 ---
@@ -84,10 +84,10 @@ When it prints **Done!**, open `https://payments.yourpractice.in` and sign in wi
 
 ## "Forgot password"
 
-No email setup is needed: on **Forgot password?** the doctor enters their username, registered
-mobile number and registered email. If all three match, they set a new password on the spot
-(5 wrong attempts lock the form for 15 minutes). Admin logins without a doctor profile reset with
-`python manage.py changepassword <username>`.
+No email setup is needed. **Forgot password?** asks for the user ID and the registered mobile number;
+if they match, a new password is set on the spot. **Forgot user ID?** shows the user ID for a registered
+mobile number. 5 wrong attempts lock the form for 15 minutes. Admin logins without a doctor profile
+reset with `python manage.py changepassword <username>`.
 
 ## Backups
 

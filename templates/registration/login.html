@@ -13,7 +13,10 @@
     <form method="post">{% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}">
       <div class="mb-3">
-        <label class="form-label" for="id_username">Username</label>
+        <div class="d-flex justify-content-between align-items-baseline">
+          <label class="form-label" for="id_username">User ID</label>
+          <a href="{% url 'forgot_username' %}" class="small">Forgot user ID?</a>
+        </div>
         <input class="form-control" id="id_username" name="username" autocomplete="username" autocapitalize="none" required autofocus value="{{ form.username.value|default:'' }}">
       </div>
       <div class="mb-4">

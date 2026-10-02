@@ -12,6 +12,7 @@
     <div class="mb-3"><label class="form-label" for="id_doctor_pick">Doctor <span class="text-danger">*</span></label>
       <select name="doctor" id="id_doctor_pick" class="form-select" required>{% for d in doctors %}<option value="{{ d.pk }}">{{ d }}</option>{% endfor %}</select></div>
     {% endif %}
+    {% if not contact and not surgeon %}<button type="button" class="btn btn-outline-primary btn-sm mb-2" data-contact-pick data-name="#id_name" data-phone="#id_phone" hidden><i class="bi bi-person-lines-fill"></i> Pick from phone contacts</button>{% endif %}
     {% for field in form %}{% include "partials/field.html" %}{% endfor %}
   </div>
   {% if link_form %}

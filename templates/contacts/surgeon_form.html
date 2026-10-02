@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{% if surgeon %}Edit surgeon{% else %}Add surgeon{% endif %}{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <a href="{% if surgeon %}{{ surgeon.get_absolute_url }}{% else %}{% url 'contacts:surgeon_list' %}{% endif %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">{% if surgeon %}Edit {{ surgeon.name }}{% else %}Add surgeon{% endif %}</h1>
+</div>
+<form method="post" novalidate style="max-width: 640px;">{% csrf_token %}
+  {% include "partials/form_errors.html" %}
+  <div class="card p-3 mb-3">
+    {% if doctors %}
+    <div class="mb-3"><label class="form-label" for="id_doctor_pick">Anaesthetist <span class="text-danger">*</span></label>
+      <select name="doctor" id="id_doctor_pick" class="form-select" required>{% for d in doctors %}<option value="{{ d.pk }}">{{ d }}</option>{% endfor %}</select></div>
+    {% endif %}
+    {% if not contact and not surgeon %}<button type="button" class="btn btn-outline-primary btn-sm mb-2" data-contact-pick data-name="#id_name" data-phone="#id_phone" hidden><i class="bi bi-person-lines-fill"></i> Pick from phone contacts</button>{% endif %}
+    {% for field in form %}{% include "partials/field.html" %}{% endfor %}
+  </div>
+  {% if link_form %}
+  <div class="section-title">Calls you to (optional)</div>
+  <div class="card p-3 mb-3">{% include "partials/field.html" with field=link_form.hospital %}</div>
+  {% endif %}
+  <div class="form-actions"><button class="btn btn-primary btn-lg-touch w-100"><i class="bi bi-check2"></i> Save surgeon</button></div>
+</form>
+{% endblock %}

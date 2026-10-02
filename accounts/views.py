@@ -9,7 +9,7 @@ from django.views.decorators.cache import never_cache
 from core.models import AppSettings
 from core.permissions import admin_required
 
-from .forms import DoctorForm, ForgotPasswordForm, SignupForm, StyledSetPasswordForm
+from .forms import DoctorForm, ForgotPasswordForm, ForgotUsernameForm, SignupForm, StyledSetPasswordForm
 from .models import Doctor, User
 
 
@@ -57,8 +57,8 @@ def signup(request):
 
 
 # --------------------------------------------------------------------------- #
-# Forgot password: verify username + mobile + email, then set a new password
-# on the spot (no email or OTP).
+# Forgot password / user ID: the registered mobile number is the check
+# (no email or OTP). Password is reset on the spot.
 # --------------------------------------------------------------------------- #
 
 RESET_SESSION_KEY = "pw_reset"
@@ -71,20 +71,40 @@ def _client_ip(request):
     return forwarded.split(",")[0].strip() or request.META.get("REMOTE_ADDR", "")
 
 
+def _attempts(request, kind):
+    key = f"{kind}-attempts:{_client_ip(request)}"
+    return key, cache.get(key, 0)
+
+
 @never_cache
 def forgot_password(request):
-    attempts_key = f"pw-reset-attempts:{_client_ip(request)}"
-    attempts = cache.get(attempts_key, 0)
+    key, attempts = _attempts(request, "pw-reset")
     locked = attempts >= MAX_ATTEMPTS
-    form = ForgotPasswordForm(request.POST or None)
+    form = ForgotPasswordForm(request.POST or None, initial={"username": request.GET.get("username", "")})
     if request.method == "POST" and not locked:
         if form.is_valid():
-            cache.delete(attempts_key)
+            cache.delete(key)
             request.session[RESET_SESSION_KEY] = {"uid": form.user.pk, "at": time.time()}
             return redirect("password_reset_new")
-        cache.set(attempts_key, attempts + 1, LOCK_SECONDS)
+        cache.set(key, attempts + 1, LOCK_SECONDS)
         locked = attempts + 1 >= MAX_ATTEMPTS
     return render(request, "registration/forgot_password.html", {"form": form, "locked": locked})
+
+
+@never_cache
+def forgot_username(request):
+    key, attempts = _attempts(request, "username")
+    locked = attempts >= MAX_ATTEMPTS
+    form = ForgotUsernameForm(request.POST or None)
+    users = []
+    if request.method == "POST" and not locked:
+        if form.is_valid():
+            cache.delete(key)
+            users = form.users
+        else:
+            cache.set(key, attempts + 1, LOCK_SECONDS)
+            locked = attempts + 1 >= MAX_ATTEMPTS
+    return render(request, "registration/forgot_username.html", {"form": form, "locked": locked, "users": users})
 
 
 @never_cache

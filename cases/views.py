@@ -7,12 +7,12 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.views.decorators.http import require_POST
 
 from contacts.services import attach_call_targets
 from core.models import AppSettings
 from core.permissions import require_doctor_profile, scoped_cases, selected_doctor, visible_doctors
-from hospitals.models import Department, Hospital
+from contacts.models import Surgeon
+from hospitals.models import Hospital
 from payments.models import Payment
 from payments.services import reminder_state
 
@@ -59,9 +59,9 @@ def case_list(request):
         qs = qs.filter(outstanding__gt=0)
     if hospital.isdigit():
         qs = qs.filter(hospital_id=hospital)
-    department = request.GET.get("department", "")
-    if department.isdigit():
-        qs = qs.filter(department_id=department)
+    surgeon = request.GET.get("surgeon", "")
+    if surgeon.isdigit():
+        qs = qs.filter(surgeon_id=surgeon)
     if len(month) == 7 and month[4] == "-":
         try:
             qs = qs.filter(case_date__year=int(month[:4]), case_date__month=int(month[5:]))
@@ -76,8 +76,8 @@ def case_list(request):
         "month": month,
         "status_choices": PaymentStatus.CHOICES,
         "selected_hospital": Hospital.objects.filter(pk=hospital).first() if hospital.isdigit() else None,
-        "departments": Department.objects.filter(is_active=True),
-        "department": department,
+        "surgeons": Surgeon.objects.for_user(request.user),
+        "surgeon": surgeon,
         "doctors": visible_doctors(request.user),
         "selected_doctor": selected_doctor(request),
     }
@@ -94,8 +94,11 @@ def case_add(request):
         initial["hospital"] = hospital_id
     if request.GET.get("date"):
         initial["case_date"] = request.GET["date"]
-    if user.is_app_admin and last_case:
-        initial["doctor"] = last_case.doctor_id
+    if user.is_app_admin:
+        if user.doctor_profile:
+            initial["doctor"] = user.doctor_profile.pk
+        elif last_case:
+            initial["doctor"] = last_case.doctor_id
 
     form = CaseForm(request.POST or None, user=user, initial=initial)
     if request.method == "POST" and form.is_valid():
@@ -148,7 +151,7 @@ def case_detail(request, pk):
     get_case_for_user(request, pk)
     case = (
         Case.objects.with_totals().with_last_followup()
-        .select_related("hospital", "doctor", "department", "contact").get(pk=pk)
+        .select_related("hospital", "doctor", "surgeon", "contact").get(pk=pk)
     )
     attach_call_targets([case])
     context = {
@@ -172,8 +175,6 @@ def case_delete(request, pk):
 
 # --- Excel import ------------------------------------------------------------
 
-IMPORT_SESSION_KEY = "case_import"
-
 
 @require_doctor_profile
 def import_template(request):
@@ -187,48 +188,36 @@ def import_template(request):
 
 @require_doctor_profile
 def import_cases(request):
-    """Step 1: upload + validate and show a preview. Nothing is saved yet."""
+    """Bulk upload: valid file -> saved at once; any problem -> nothing saved, rows highlighted."""
     form = CaseImportForm(request.POST or None, request.FILES or None, user=request.user)
     context = {"form": form}
     if request.method == "POST" and form.is_valid():
         upload = form.cleaned_data["file"]
-        result = importer.parse_workbook(
-            upload, request.user,
-            default_doctor=form.cleaned_data.get("doctor"),
-            create_missing_hospitals=form.cleaned_data["create_missing_hospitals"],
-        )
+        result = importer.parse_workbook(upload, request.user, default_doctor=form.cleaned_data.get("doctor"))
         if result.fatal and not result.rows:
             messages.error(request, result.fatal)
-        else:
-            request.session[IMPORT_SESSION_KEY] = {"filename": upload.name, "rows": importer.serialise(result)}
-            problem_rows = [r for r in result.rows if r.status != "ok" or r.warnings]
+        elif result.fatal or any(r.errors for r in result.rows):
+            columns = [(key, header) for key, header in importer.COLUMN_HEADERS if key in result.columns]
             context.update({
-                "result": result,
-                "counts": result.counts(),
-                "problem_rows": problem_rows,
-                "ok_rows": result.ok_rows[:200],
-                "filename": upload.name,
+                "result": result, "counts": result.counts(), "columns": columns, "filename": upload.name,
+                "error_rows": [r for r in result.rows if r.errors],
             })
+        else:
+            rows = importer.serialise(result)
+            counts = importer.commit_rows(rows, request.user, upload.name)
+            skipped = result.counts()["duplicate"]
+            msg = f"Uploaded {counts['cases']} case(s)"
+            if counts["payments"]:
+                msg += f" with {counts['payments']} payment(s)"
+            extras = []
+            if counts["hospitals"]:
+                extras.append(f"{counts['hospitals']} new hospital(s)")
+            if counts["surgeons"]:
+                extras.append(f"{counts['surgeons']} new surgeon(s)")
+            if extras:
+                msg += "; added " + " and ".join(extras)
+            if skipped:
+                msg += f". {skipped} row(s) were already in the app and were skipped"
+            messages.success(request, msg + ".")
+            return redirect("cases:list")
     return render(request, "cases/import.html", context)
-
-
-@require_doctor_profile
-@require_POST
-def import_confirm(request):
-    """Step 2: create the previewed rows."""
-    payload = request.session.pop(IMPORT_SESSION_KEY, None)
-    if not payload or not payload.get("rows"):
-        messages.error(request, "Nothing to import - please upload the file again.")
-        return redirect("cases:import")
-    rows = payload["rows"]
-    if not request.user.is_app_admin:
-        own = request.user.doctor_profile.pk
-        rows = [r for r in rows if r["data"].get("doctor_id") == own]
-    counts = importer.commit_rows(rows, request.user, payload.get("filename"))
-    msg = f"Imported {counts['cases']} case(s)"
-    if counts["payments"]:
-        msg += f" and {counts['payments']} payment(s)"
-    if counts["hospitals"]:
-        msg += f"; created {counts['hospitals']} new hospital(s)"
-    messages.success(request, msg + ".")
-    return redirect("cases:list")

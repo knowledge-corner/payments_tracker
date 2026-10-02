@@ -2,14 +2,14 @@
 Bulk import of completed cases (and optional payments) from Excel.
 
 Flow: build_template() -> doctor fills it -> parse_workbook() validates every
-row without touching the database -> doctor reviews the preview ->
-commit_rows() creates hospitals / cases / payments in one transaction.
+row without touching the database. If any row has a problem nothing is saved
+and the rows are shown highlighted; otherwise commit_rows() creates hospitals,
+surgeons, cases and payments in one transaction straight away.
 
 Column headers are matched flexibly (e.g. "Date", "Surgery Date" or "Case Date"
 all map to the case date) so doctors can also upload their existing sheets.
 """
 import datetime
-import difflib
 import io
 import re
 from dataclasses import asdict, dataclass, field
@@ -24,6 +24,7 @@ from openpyxl.utils.datetime import from_excel
 from openpyxl.worksheet.datavalidation import DataValidation
 
 from accounts.models import Doctor
+from contacts.models import Surgeon
 from hospitals.models import Hospital
 from payments.models import Payment
 
@@ -40,10 +41,14 @@ COLUMNS = [
      ["hospital", "hospital name", "hospital / clinic", "clinic", "nursing home", "centre", "center"]),
     ("fee", "Fee", True, "Amount billed for the case, e.g. 6000",
      ["fee", "fees", "amount", "charges", "bill amount", "billed", "billed amount", "professional fee"]),
+    ("patient_name", "Patient Name", False, "e.g. Sunita Patil",
+     ["patient name", "name of patient", "patient"]),
+    ("surgeon", "Surgeon", False, "Surgeon's name - a new name is added to your surgeons",
+     ["surgeon", "surgeon name", "operating surgeon", "consultant", "called by"]),
     ("procedure_type", "Procedure / Case Type", False, "e.g. LSCS - spinal",
      ["procedure", "procedure type", "case type", "surgery", "operation", "procedure / case type"]),
-    ("patient_reference", "Case / Patient Ref", False, "IP no., bill no. or initials (no clinical details)",
-     ["patient", "patient ref", "patient name", "case ref", "ip no", "ip number", "uhid", "bill no",
+    ("patient_reference", "Case / Patient Ref", False, "IP no. or bill no.",
+     ["patient ref", "case ref", "ip no", "ip number", "uhid", "bill no",
       "reference", "ref", "case / patient ref"]),
     ("notes", "Notes", False, "Anything else", ["notes", "remarks", "comment", "comments"]),
     ("amount_received", "Amount Received", False, "Leave blank if not yet paid",
@@ -93,7 +98,7 @@ def build_template(include_doctor_column=False):
         cell.font = Font(bold=True, color="FFFFFF")
         cell.fill = required_fill if required else header_fill
         cell.alignment = Alignment(vertical="center", wrap_text=True)
-        ws.column_dimensions[get_column_letter(idx)].width = 16 if key not in ("hospital", "procedure_type", "notes") else 32
+        ws.column_dimensions[get_column_letter(idx)].width = 16 if key not in ("hospital", "procedure_type", "notes", "patient_name", "surgeon") else 28
         if key in ("case_date", "payment_date"):
             for r in range(2, 1002):
                 ws.cell(row=r, column=idx).number_format = "DD/MM/YYYY"
@@ -137,9 +142,10 @@ def build_template(include_doctor_column=False):
     info.append([])
     info.append(["1.", "Enter one completed case per row in the 'Cases' sheet (row 2 onwards)."])
     info.append(["2.", "Columns marked * (orange) are required: Case Date, Hospital, Fee."])
-    info.append(["3.", "Pick the hospital from the dropdown. A new name can be typed - it can be created on upload."])
+    info.append(["3.", "Pick the hospital from the dropdown. A name that is not in the list is added as a new hospital."])
     info.append(["4.", "If the case is already paid (fully or partly), fill Amount Received, Payment Date and Mode."])
-    info.append(["5.", "Save the file and upload it on the 'Import from Excel' page. You will see a preview first."])
+    info.append(["5.", "Save the file and upload it (Add Case > Bulk upload). If every row is correct it is saved at once;"])
+    info.append(["", "otherwise nothing is saved and the rows with problems are highlighted - fix them and upload again."])
     info.append(["6.", "Uploading the same rows again is safe - exact duplicates are detected and skipped."])
     info.append([])
     info.append(["Column", "What to enter"])
@@ -147,7 +153,7 @@ def build_template(include_doctor_column=False):
     for key, header, required, help_text, _aliases in columns:
         info.append([header + (" *" if required else ""), help_text])
     info.append([])
-    info.append(["Example row", "25/09/2026 | Ruby Hall Clinic | 7500 | LSCS - spinal | IP 45821 | | 7500 | 30/09/2026 | UPI"])
+    info.append(["Example row", "25/09/2026 | Ruby Hall Clinic | 7500 | Sunita Patil | Dr. Kulkarni | LSCS - spinal | IP 45821 | | 7500 | 30/09/2026 | UPI"])
     wb.active = 0
 
     buffer = io.BytesIO()
@@ -166,7 +172,13 @@ class RowResult:
     data: dict = field(default_factory=dict)    # cleaned, JSON-serialisable
     errors: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
+    error_fields: list = field(default_factory=list)  # columns to highlight
     duplicate: bool = False
+
+    def error(self, column, message):
+        self.errors.append(message)
+        if column not in self.error_fields:
+            self.error_fields.append(column)
 
     @property
     def status(self):
@@ -196,6 +208,7 @@ class ParseResult:
             "duplicate": sum(1 for r in self.rows if r.status == "duplicate"),
             "error": sum(1 for r in self.rows if r.status == "error"),
             "new_hospitals": len({r.data.get("hospital_name", "").lower() for r in self.ok_rows if not r.data.get("hospital_id")}),
+            "has_errors": any(r.errors for r in self.rows),
             "with_payment": sum(1 for r in self.ok_rows if r.data.get("amount_received")),
         }
 
@@ -275,7 +288,7 @@ def _find_header(ws):
     return None, {}
 
 
-def parse_workbook(uploaded_file, user, default_doctor=None, create_missing_hospitals=True):
+def parse_workbook(uploaded_file, user, default_doctor=None):
     """Read and validate an uploaded .xlsx file. Never writes to the database."""
     result = ParseResult()
     try:
@@ -297,7 +310,6 @@ def parse_workbook(uploaded_file, user, default_doctor=None, create_missing_hosp
     result.columns = {k: v[1] for k, v in mapping.items()}
 
     hospitals = {_key(h.name): h for h in Hospital.objects.active()}
-    hospital_names = [h.name for h in hospitals.values()]
     doctors_by_username = {}
     if user.is_app_admin:
         doctors_by_username = {d.user.username.lower(): d for d in Doctor.objects.select_related("user")}
@@ -321,47 +333,37 @@ def parse_workbook(uploaded_file, user, default_doctor=None, create_missing_hosp
         try:
             case_date = parse_date(raw.get("case_date"))
             if case_date is None:
-                r.errors.append("Case date is missing")
+                r.error("case_date", "Case date is missing")
             elif case_date > today:
-                r.errors.append("Case date is in the future")
+                r.error("case_date", "Case date is in the future")
             else:
                 data["case_date"] = case_date.isoformat()
         except ValueError as exc:
-            r.errors.append(f"Case date: {exc}")
+            r.error("case_date", f"Case date: {exc}")
 
         # Hospital
         hospital_name = re.sub(r"\s+", " ", str(raw.get("hospital") or "")).strip()
         if not hospital_name:
-            r.errors.append("Hospital is missing")
+            r.error("hospital", "Hospital is missing")
         else:
             match = hospitals.get(_key(hospital_name))
             data["hospital_name"] = match.name if match else hospital_name
             data["hospital_id"] = match.pk if match else None
             if not match:
-                close = difflib.get_close_matches(hospital_name, hospital_names, n=1, cutoff=0.75)
-                hint = f" Did you mean '{close[0]}'?" if close else ""
-                near_identical = difflib.get_close_matches(hospital_name, hospital_names, n=1, cutoff=0.88)
-                if near_identical:
-                    # Almost certainly a typo - never create a look-alike duplicate hospital.
-                    r.errors.append(f"Hospital '{hospital_name}' looks like a typo of '{near_identical[0]}'. "
-                                    "Correct the name in Excel and upload again.")
-                elif create_missing_hospitals:
-                    r.warnings.append(f"New hospital '{hospital_name}' will be created.{hint}")
-                else:
-                    r.errors.append(f"Hospital '{hospital_name}' not found.{hint}")
+                r.warnings.append(f"New hospital '{hospital_name}' will be added")
 
         # Fee
         try:
             fee = parse_amount(raw.get("fee"))
             if fee is None:
-                r.errors.append("Fee is missing")
+                r.error("fee", "Fee is missing")
             else:
                 data["fee"] = str(fee)
         except ValueError as exc:
-            r.errors.append(f"Fee: {exc}")
+            r.error("fee", f"Fee: {exc}")
             fee = None
 
-        for name, limit in (("procedure_type", 150), ("patient_reference", 100)):
+        for name, limit in (("procedure_type", 150), ("patient_reference", 100), ("patient_name", 150), ("surgeon", 100)):
             value = _display(raw.get(name))
             if len(value) > limit:
                 r.warnings.append(f"{name.replace('_', ' ').capitalize()} shortened to {limit} characters")
@@ -373,20 +375,20 @@ def parse_workbook(uploaded_file, user, default_doctor=None, create_missing_hosp
         try:
             received = parse_amount(raw.get("amount_received"))
         except ValueError as exc:
-            r.errors.append(f"Amount received: {exc}")
+            r.error("amount_received", f"Amount received: {exc}")
             received = None
         if received:
             if fee is not None and received > fee:
-                r.errors.append("Amount received is more than the fee")
+                r.error("amount_received", "Amount received is more than the fee")
             data["amount_received"] = str(received)
             try:
                 pay_date = parse_date(raw.get("payment_date")) or (case_date if data.get("case_date") else None)
                 if pay_date and pay_date > today:
-                    r.errors.append("Payment date is in the future")
+                    r.error("payment_date", "Payment date is in the future")
                 elif pay_date:
                     data["payment_date"] = pay_date.isoformat()
             except ValueError as exc:
-                r.errors.append(f"Payment date: {exc}")
+                r.error("payment_date", f"Payment date: {exc}")
             data["payment_mode"] = parse_mode(raw.get("payment_mode"))
 
         # Doctor
@@ -396,11 +398,11 @@ def parse_workbook(uploaded_file, user, default_doctor=None, create_missing_hosp
             if username:
                 doctor = doctors_by_username.get(username)
                 if not doctor:
-                    r.errors.append(f"Doctor username '{username}' not found")
+                    r.error("doctor", f"Doctor username '{username}' not found")
             else:
                 doctor = default_doctor
                 if not doctor:
-                    r.errors.append("Choose a doctor on the upload form or fill 'Doctor Username'")
+                    r.error("doctor", "Choose a doctor on the upload form or fill 'Doctor Username'")
         else:
             doctor = user.doctor_profile
         if doctor:
@@ -423,7 +425,7 @@ def parse_workbook(uploaded_file, user, default_doctor=None, create_missing_hosp
                     existing = existing.filter(patient_reference__iexact=data["patient_reference"])
                 if existing.exists():
                     r.duplicate = True
-                    r.warnings.append("Already in the app - will be skipped")
+                    r.warnings.append("Already in the app - skipped")
 
         result.rows.append(r)
 
@@ -436,6 +438,9 @@ def serialise(result):
     return [asdict(r) for r in result.ok_rows]
 
 
+COLUMN_HEADERS = [(c[0], c[1]) for c in COLUMNS]
+
+
 # --------------------------------------------------------------------------- #
 # Commit
 # --------------------------------------------------------------------------- #
@@ -443,8 +448,8 @@ def serialise(result):
 @transaction.atomic
 def commit_rows(rows, user, filename):
     """Create hospitals, cases and payments from validated rows. Returns counts."""
-    created_cases = created_payments = created_hospitals = 0
-    new_hospitals = {}
+    created_cases = created_payments = created_hospitals = created_surgeons = 0
+    new_hospitals, surgeons = {}, {}
     label = re.sub(r"[^\w.\- ]+", "", filename or "upload")[:50]
     for row in rows:
         data = row["data"]
@@ -462,8 +467,20 @@ def commit_rows(rows, user, filename):
                 created_hospitals += 1
             new_hospitals[key] = hospital
 
+        surgeon = None
+        if data.get("surgeon"):
+            key = (data["doctor_id"], _key(data["surgeon"]))
+            surgeon = surgeons.get(key) or Surgeon.objects.filter(
+                doctor_id=data["doctor_id"], name__iexact=data["surgeon"]).first()
+            if surgeon is None:
+                surgeon = Surgeon.objects.create(doctor_id=data["doctor_id"], name=data["surgeon"])
+                created_surgeons += 1
+            surgeons[key] = surgeon
+            surgeon.link_hospital(hospital)
+
         case = Case.objects.create(
-            doctor_id=data["doctor_id"], hospital=hospital,
+            doctor_id=data["doctor_id"], hospital=hospital, surgeon=surgeon,
+            patient_name=data.get("patient_name", ""),
             case_date=datetime.date.fromisoformat(data["case_date"]),
             fee=Decimal(data["fee"]),
             procedure_type=data.get("procedure_type", ""),
@@ -484,4 +501,5 @@ def commit_rows(rows, user, filename):
                 created_by=user,
             )
             created_payments += 1
-    return {"cases": created_cases, "payments": created_payments, "hospitals": created_hospitals}
+    return {"cases": created_cases, "payments": created_payments, "hospitals": created_hospitals,
+            "surgeons": created_surgeons}

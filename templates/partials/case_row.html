@@ -4,7 +4,7 @@
     <div class="min-w-0">
       <div class="fw-semibold text-truncate">{{ case.hospital.name }}</div>
       <div class="small text-muted text-truncate">
-        {{ case.case_date|date:"d M Y" }}{% if case.department %} · {{ case.department }}{% endif %}{% if case.procedure_type %} · {{ case.procedure_type }}{% endif %}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}
+        {{ case.case_date|date:"d M Y" }}{% if case.patient_name %} · {{ case.patient_name }}{% endif %}{% if case.surgeon %} · {{ case.surgeon }}{% endif %}{% if case.procedure_type %} · {{ case.procedure_type }}{% endif %}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}
       </div>
       {% if user.is_app_admin %}<div class="small text-muted">{{ case.doctor }}</div>{% endif %}
     </div>

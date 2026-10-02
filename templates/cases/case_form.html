@@ -4,10 +4,9 @@
 {% block content %}
 <div class="d-flex align-items-center gap-2 mb-3">
   <a href="{% if case %}{{ case.get_absolute_url }}{% else %}{% url 'dashboard:home' %}{% endif %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
-  <h1 class="h5 mb-0">{% if is_new %}Add completed case{% else %}Edit case{% endif %}</h1>
+  <h1 class="h5 mb-0 flex-fill">{% if is_new %}Add completed case{% else %}Edit case{% endif %}</h1>
+  {% if is_new %}<a href="{% url 'cases:import' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-upload"></i> Bulk upload</a>{% endif %}
 </div>
-
-{% if dictation_enabled and is_new %}{% include "dictation/panel.html" %}{% endif %}
 
 <form method="post" novalidate style="max-width: 640px;" id="case-form"
       data-contacts-url="{% url 'contacts:for_hospital' %}" data-default-days="{{ default_days }}">{% csrf_token %}
@@ -29,7 +28,25 @@
         </div>
       </div>
     </div>
-    {% include "partials/field.html" with field=form.department %}
+    {% include "partials/field.html" with field=form.patient_name %}
+
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-baseline">
+        <label class="form-label" for="id_surgeon">Surgeon</label>
+        <a href="#" class="small" id="new-surgeon-toggle"><i class="bi bi-person-plus"></i> New surgeon</a>
+      </div>
+      {{ form.surgeon }}
+      {% for error in form.surgeon.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+      <div class="form-text" id="surgeon-hint">Surgeons who called you to this hospital are listed first.</div>
+      <div id="new-surgeon-fields" class="border rounded-3 p-2 mt-2 {% if not form.new_surgeon_name.value %}d-none{% endif %}">
+        <div class="small fw-semibold mb-1">New surgeon (saved for next time)</div>
+        <button type="button" class="btn btn-outline-primary btn-sm mb-2" data-contact-pick data-name="#id_new_surgeon_name" data-phone="#id_new_surgeon_phone" hidden><i class="bi bi-person-lines-fill"></i> Pick from phone contacts</button>
+        <div class="row g-2">
+          <div class="col-7">{% include "partials/field.html" with field=form.new_surgeon_name %}</div>
+          <div class="col-5">{% include "partials/field.html" with field=form.new_surgeon_phone %}</div>
+        </div>
+      </div>
+    </div>
 
     <div class="mb-3">
       <div class="d-flex justify-content-between align-items-baseline">
@@ -41,6 +58,7 @@
       <div class="form-text" id="contact-hint">Who to call about this payment. Contacts at the chosen hospital are listed first.</div>
       <div id="new-contact-fields" class="border rounded-3 p-2 mt-2 {% if not form.new_contact_name.value and not form.new_contact_phone.errors %}d-none{% endif %}">
         <div class="small fw-semibold mb-1">New contact (saved for next time)</div>
+        <button type="button" class="btn btn-outline-primary btn-sm mb-2" data-contact-pick data-name="#id_new_contact_name" data-phone="#id_new_contact_phone" hidden><i class="bi bi-person-lines-fill"></i> Pick from phone contacts</button>
         <div class="row g-2">
           <div class="col-12 col-sm-5">{% include "partials/field.html" with field=form.new_contact_name %}</div>
           <div class="col-7 col-sm-4">{% include "partials/field.html" with field=form.new_contact_phone %}</div>
@@ -98,7 +116,7 @@
   "use strict";
   var form = document.getElementById("case-form");
   var hospital = document.getElementById("id_hospital");
-  var department = document.getElementById("id_department");
+  var surgeon = document.getElementById("id_surgeon");
   var contact = document.getElementById("id_contact");
   var doctor = document.getElementById("id_doctor");
   var hint = document.getElementById("contact-hint");
@@ -114,30 +132,43 @@
     }
   });
 
-  // ---- Contacts + last department for the chosen hospital --------------------
+  // ---- New surgeon toggle ----------------------------------------------------
+  var surgeonBox = document.getElementById("new-surgeon-fields");
+  document.getElementById("new-surgeon-toggle").addEventListener("click", function (e) {
+    e.preventDefault();
+    surgeonBox.classList.toggle("d-none");
+    if (!surgeonBox.classList.contains("d-none")) {
+      surgeon.value = "";
+      document.getElementById("id_new_surgeon_name").focus();
+    }
+  });
+
+  function fillGroups(select, groups, keep, suggested) {
+    select.innerHTML = "";
+    select.appendChild(new Option("Not specified", ""));
+    groups.forEach(function (g) {
+      if (!g[1].length) return;
+      var og = document.createElement("optgroup");
+      og.label = g[0];
+      g[1].forEach(function (c) { og.appendChild(new Option(c.label, c.id)); });
+      select.appendChild(og);
+    });
+    if (keep && select.querySelector('option[value="' + keep + '"]')) select.value = keep;
+    else if (suggested) select.value = suggested;
+  }
+
+  // ---- Contacts + surgeons for the chosen hospital --------------------------
   function loadContacts(applyDefaults) {
     if (!hospital.value) return;
     var params = new URLSearchParams({ hospital: hospital.value });
-    if (department.value) params.set("department", department.value);
     if (doctor && doctor.value) params.set("doctor", doctor.value);
     fetch(form.dataset.contactsUrl + "?" + params.toString(), { credentials: "same-origin" })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        var keep = contact.value;
-        contact.innerHTML = "";
-        contact.appendChild(new Option("Not specified", ""));
-        function group(label, items) {
-          if (!items.length) return;
-          var g = document.createElement("optgroup");
-          g.label = label;
-          items.forEach(function (c) { g.appendChild(new Option(c.label, c.id)); });
-          contact.appendChild(g);
-        }
-        group("At this hospital", data.here);
-        group("Other contacts", data.others);
-        if (applyDefaults && !department.value && data.last_department) department.value = data.last_department;
-        if (keep && contact.querySelector('option[value="' + keep + '"]')) contact.value = keep;
-        else if (applyDefaults && data.suggested_contact) contact.value = data.suggested_contact;
+        fillGroups(contact, [["At this hospital", data.here], ["Other contacts", data.others]],
+                   contact.value, applyDefaults && data.suggested_contact);
+        fillGroups(surgeon, [["Called you here before", data.surgeons_here], ["Other surgeons", data.surgeons_others]],
+                   surgeon.value, applyDefaults && data.suggested_surgeon);
         hint.textContent = data.here.length
           ? data.here.length + " contact(s) at this hospital listed first."
           : "No contact saved for this hospital yet - add one with “New contact”.";
@@ -145,7 +176,6 @@
       .catch(function () {});
   }
   hospital.addEventListener("change", function () { loadContacts(true); });
-  department.addEventListener("change", function () { loadContacts(false); });
   if (doctor) doctor.addEventListener("change", function () { loadContacts(true); });
   if (hospital.value) loadContacts({{ is_new|yesno:"true,false" }});
 
@@ -180,5 +210,4 @@
   });
 })();
 </script>
-{% if dictation_enabled and is_new %}<script src="{% static 'js/dictation.js' %}?v={{ ASSET_V }}"></script>{% endif %}
 {% endblock %}

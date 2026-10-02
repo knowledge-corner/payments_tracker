@@ -20,7 +20,7 @@
       <tbody>
         {% for r in rows %}
         <tr>
-          <td><a href="{% url 'reports:month_cases' r.month.year r.month.month %}?{% if f.hospital %}hospital={{ f.hospital.pk }}&{% endif %}{% if f.department %}department={{ f.department.pk }}&{% endif %}{% if selected_doctor and user.is_app_admin %}doctor={{ selected_doctor.pk }}{% endif %}">{{ r.month|date:"M Y" }}</a></td>
+          <td><a href="{% url 'reports:month_cases' r.month.year r.month.month %}?{% if f.hospital %}hospital={{ f.hospital.pk }}&{% endif %}{% if f.surgeon %}surgeon={{ f.surgeon.pk }}&{% endif %}{% if selected_doctor and user.is_app_admin %}doctor={{ selected_doctor.pk }}{% endif %}">{{ r.month|date:"M Y" }}</a></td>
           <td class="text-end">{{ r.cases }}</td>
           <td class="text-end amount">{{ r.billed|inr }}</td>
           <td class="text-end amount text-success">{{ r.received|inr }}</td>

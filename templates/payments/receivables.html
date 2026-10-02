@@ -47,7 +47,7 @@
             <a href="{{ case.get_absolute_url }}" class="action-name text-truncate">{{ case.hospital.name }}</a>
             {% if case.call %}<a href="tel:{{ case.call.phone }}" class="call-link" title="Call {{ case.call.label }}" aria-label="Call {{ case.call.label }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}
           </div>
-          <div class="action-meta text-truncate">{{ case.case_date|date:"d M Y" }}{% if case.department %} · {{ case.department }}{% endif %}{% if case.procedure_type %} · {{ case.procedure_type }}{% endif %}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}</div>
+          <div class="action-meta text-truncate">{{ case.case_date|date:"d M Y" }}{% if case.patient_name %} · {{ case.patient_name }}{% endif %}{% if case.surgeon %} · {{ case.surgeon }}{% endif %}{% if case.procedure_type %} · {{ case.procedure_type }}{% endif %}{% if case.patient_reference %} · {{ case.patient_reference }}{% endif %}</div>
           {% if case.call %}<div class="action-meta"><i class="bi bi-person"></i> {{ case.call.label }}</div>{% endif %}
           {% if user.is_app_admin %}<div class="action-meta">{{ case.doctor }}</div>{% endif %}
         </div>

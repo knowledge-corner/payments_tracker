@@ -75,3 +75,51 @@ class ContactAffiliation(TimeStampedModel):
     @property
     def is_current(self):
         return self.end_date is None
+
+
+class SurgeonQuerySet(models.QuerySet):
+    def for_user(self, user):
+        qs = self.filter(is_active=True)
+        return qs if user.is_app_admin else qs.filter(doctor__user=user)
+
+
+class Surgeon(TimeStampedModel):
+    """A surgeon who calls this anaesthetist. Private to the anaesthetist (doctor)."""
+
+    doctor = models.ForeignKey("accounts.Doctor", on_delete=models.CASCADE, related_name="surgeons")
+    name = models.CharField(max_length=100)
+    phone = models.CharField("Mobile", max_length=20, blank=True)
+    speciality = models.CharField(max_length=80, blank=True)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    hospitals = models.ManyToManyField("hospitals.Hospital", through="SurgeonHospital", related_name="surgeons")
+
+    objects = SurgeonQuerySet.as_manager()
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return reverse("contacts:surgeon_detail", args=[self.pk])
+
+    def link_hospital(self, hospital):
+        """Record that this surgeon calls the doctor to `hospital` (one link per pair)."""
+        if hospital is not None:
+            SurgeonHospital.objects.get_or_create(surgeon=self, hospital=hospital)
+
+
+class SurgeonHospital(TimeStampedModel):
+    """Bridge table: one row per surgeon + hospital where they call the anaesthetist."""
+
+    surgeon = models.ForeignKey(Surgeon, on_delete=models.CASCADE, related_name="hospital_links")
+    hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.CASCADE, related_name="surgeon_links")
+
+    class Meta:
+        ordering = ["hospital__name"]
+        constraints = [models.UniqueConstraint(fields=["surgeon", "hospital"], name="unique_surgeon_hospital")]
+
+    def __str__(self):
+        return f"{self.surgeon} @ {self.hospital}"

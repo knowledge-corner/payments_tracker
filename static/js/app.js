@@ -68,3 +68,28 @@
     });
   });
 })();
+
+/* "Pick from phone contacts": fills name + mobile from the phone's address book.
+ * Uses the Contact Picker API (Chrome on Android, HTTPS). Where the browser does
+ * not support it (iPhone, desktop) no button is shown and fields are typed as usual.
+ * Markup: <button data-contact-pick data-name="#id_name" data-phone="#id_phone" hidden>
+ */
+(function () {
+  "use strict";
+  var supported = "contacts" in navigator && "ContactsManager" in window;
+  document.querySelectorAll("[data-contact-pick]").forEach(function (btn) {
+    if (!supported) return;
+    btn.hidden = false;
+    btn.addEventListener("click", function () {
+      navigator.contacts.select(["name", "tel"], { multiple: false }).then(function (picked) {
+        if (!picked || !picked.length) return;
+        var c = picked[0];
+        var name = document.querySelector(btn.dataset.name);
+        var phone = document.querySelector(btn.dataset.phone);
+        if (name && c.name && c.name.length) name.value = c.name[0];
+        if (phone && c.tel && c.tel.length) phone.value = c.tel[0].replace(/[^\d+]/g, "");
+        [name, phone].forEach(function (el) { if (el) el.dispatchEvent(new Event("input", { bubbles: true })); });
+      }).catch(function () {});
+    });
+  });
+})();

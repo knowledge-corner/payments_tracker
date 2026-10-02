@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load money %}
+{% block title %}Surgeon & hospital report{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-2">
+  <a href="{% url 'reports:index' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
+  <h1 class="h5 mb-0">Surgeon &amp; hospital</h1>
+</div>
+{% include "reports/_filters.html" %}
+<div class="card">
+  <div class="list-group list-group-flush">
+    {% for r in rows %}
+    <a class="list-group-item list-group-item-action py-3" href="{% url 'reports:cases' %}{% querystring_with hospital=r.hospital.pk surgeon=r.surgeon.pk|default:'' period=f.period %}">
+      <div class="d-flex justify-content-between gap-2">
+        <div class="min-w-0">
+          <div class="fw-semibold text-truncate">{{ r.surgeon|default:"Surgeon not specified" }}</div>
+          <div class="small text-muted text-truncate">{{ r.hospital.name }}</div>
+        </div>
+        <div class="text-end flex-shrink-0"><div class="fw-semibold">{{ r.cases }}</div><div class="small text-muted">case{{ r.cases|pluralize }}</div></div>
+      </div>
+      <div class="row g-1 small mt-1">
+        <div class="col-4"><div class="text-muted">Billed</div><div class="amount">{{ r.billed|inr }}</div></div>
+        <div class="col-4"><div class="text-muted">Received</div><div class="amount text-success">{{ r.received|inr }}</div></div>
+        <div class="col-4"><div class="text-muted">Outstanding</div><div class="amount {% if r.outstanding %}text-danger fw-semibold{% endif %}">{{ r.outstanding|inr }}</div></div>
+      </div>
+    </a>
+    {% empty %}<div class="p-4 text-center text-muted">No cases match these filters.</div>{% endfor %}
+  </div>
+  {% if rows %}
+  <div class="card-footer bg-white small fw-semibold d-flex justify-content-between flex-wrap gap-2">
+    <span>Total · {{ totals.cases }} cases</span><span>Billed {{ totals.billed|inr }}</span><span class="text-success">Received {{ totals.received|inr }}</span><span class="text-danger">Outstanding {{ totals.outstanding|inr }}</span>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -189,35 +189,64 @@ def _mobile_digits(value):
     return re.sub(r"\D", "", value or "")[-10:]
 
 
-class ForgotPasswordForm(forms.Form):
-    """Step 1 of 'Forgot password': username + registered mobile + registered email must all match."""
+MOBILE_WIDGET = forms.TextInput(
+    attrs={"type": "tel", "inputmode": "tel", "autocomplete": "tel", "placeholder": "+91 98xxxxxxxx"})
 
-    username = forms.CharField(max_length=150, widget=forms.TextInput(
-        attrs={"autocomplete": "username", "autocapitalize": "none", "autofocus": True}))
-    mobile = forms.CharField(label="Registered mobile number", max_length=20, widget=forms.TextInput(
-        attrs={"type": "tel", "inputmode": "tel", "autocomplete": "tel", "placeholder": "+91 98xxxxxxxx"}))
-    email = forms.EmailField(label="Registered email", widget=forms.EmailInput(attrs={"autocomplete": "email"}))
 
-    error_message = "These details don't match our records. Check the username, mobile number and email."
-
+class _MobileForm(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field in self.fields.values():
             field.widget.attrs["class"] = "form-control"
+
+    def clean_mobile(self):
+        mobile = _mobile_digits(self.cleaned_data["mobile"])
+        if len(mobile) < 10:
+            raise forms.ValidationError("Enter the 10-digit mobile number you registered with.")
+        return mobile
+
+
+class ForgotPasswordForm(_MobileForm):
+    """'Forgot password': username + registered mobile number must match."""
+
+    username = forms.CharField(label="User ID (username)", max_length=150, widget=forms.TextInput(
+        attrs={"autocomplete": "username", "autocapitalize": "none", "autofocus": True}))
+    mobile = forms.CharField(label="Registered mobile number", max_length=20, widget=MOBILE_WIDGET)
+
+    error_message = "The user ID and mobile number don't match our records."
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.user = None
 
     def clean(self):
         cleaned = super().clean()
         if self.errors:
             return cleaned
-        user = User.objects.filter(username__iexact=cleaned["username"].strip()).first()
+        user = User.objects.filter(username__iexact=cleaned["username"].strip(), is_active=True).first()
         doctor = getattr(user, "doctor_profile", None) if user else None
-        mobile = _mobile_digits(cleaned["mobile"])
-        if (
-            user is None or doctor is None or len(mobile) < 10
-            or _mobile_digits(doctor.phone) != mobile
-            or not user.email or user.email.strip().lower() != cleaned["email"].strip().lower()
-        ):
+        if doctor is None or _mobile_digits(doctor.phone) != cleaned["mobile"]:
             raise forms.ValidationError(self.error_message, code="no_match")
         self.user = user
+        return cleaned
+
+
+class ForgotUsernameForm(_MobileForm):
+    """'Forgot user ID': shows the user ID(s) registered with this mobile number."""
+
+    mobile = forms.CharField(label="Registered mobile number", max_length=20, widget=MOBILE_WIDGET)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["mobile"].widget.attrs["autofocus"] = True
+        self.users = []
+
+    def clean(self):
+        cleaned = super().clean()
+        if self.errors:
+            return cleaned
+        self.users = [d.user for d in Doctor.objects.select_related("user").filter(user__is_active=True)
+                      if _mobile_digits(d.phone) == cleaned["mobile"]]
+        if not self.users:
+            raise forms.ValidationError("No account is registered with this mobile number.", code="no_match")
         return cleaned

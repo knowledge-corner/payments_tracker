@@ -6,7 +6,7 @@
   <div class="list-group list-group-flush">
     <a href="{% url 'reports:cases' %}" class="list-group-item list-group-item-action py-3 d-flex gap-3 align-items-center">
       <span class="stat-card p-0"><span class="icon bg-warning-subtle text-warning-emphasis"><i class="bi bi-table"></i></span></span>
-      <div class="flex-fill"><div class="fw-semibold">Cases report &amp; download</div><div class="small text-muted">Filter all cases by date range, month, hospital, status or search - download to Excel</div></div>
+      <div class="flex-fill"><div class="fw-semibold">Cases report &amp; download</div><div class="small text-muted">Filter all cases by date range, month, hospital, surgeon, status or search - download to Excel</div></div>
       <i class="bi bi-chevron-right text-muted"></i>
     </a>
     <a href="{% url 'reports:monthly' %}" class="list-group-item list-group-item-action py-3 d-flex gap-3 align-items-center">
@@ -17,6 +17,11 @@
     <a href="{% url 'reports:hospitals' %}" class="list-group-item list-group-item-action py-3 d-flex gap-3 align-items-center">
       <span class="stat-card p-0"><span class="icon bg-info-subtle text-info-emphasis"><i class="bi bi-hospital"></i></span></span>
       <div class="flex-fill"><div class="fw-semibold">Hospital-wise billing &amp; outstanding</div><div class="small text-muted">Who bills the most and who owes the most</div></div>
+      <i class="bi bi-chevron-right text-muted"></i>
+    </a>
+    <a href="{% url 'reports:surgeons' %}" class="list-group-item list-group-item-action py-3 d-flex gap-3 align-items-center">
+      <span class="stat-card p-0"><span class="icon bg-secondary-subtle text-secondary-emphasis"><i class="bi bi-person-badge"></i></span></span>
+      <div class="flex-fill"><div class="fw-semibold">Surgeon &amp; hospital</div><div class="small text-muted">How many cases each surgeon called you for, at each hospital</div></div>
       <i class="bi bi-chevron-right text-muted"></i>
     </a>
     <a href="{% url 'reports:payments' %}" class="list-group-item list-group-item-action py-3 d-flex gap-3 align-items-center">
@@ -31,5 +36,5 @@
     </a>
   </div>
 </div>
-<p class="small text-muted mt-3"><i class="bi bi-download"></i> Every report has filters (this month, last month, financial year, any date range, hospital...) and downloads as an <strong>Excel</strong> file.</p>
+<p class="small text-muted mt-3"><i class="bi bi-download"></i> Every report has filters (this month, last month, financial year, any date range, hospital, surgeon...) and downloads as an <strong>Excel</strong> file.</p>
 {% endblock %}

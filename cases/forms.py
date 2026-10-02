@@ -5,10 +5,10 @@ from django import forms
 from django.utils import timezone
 
 from accounts.models import Doctor
-from contacts.models import Contact
+from contacts.models import Contact, Surgeon
 from contacts.services import ensure_affiliation
 from core.forms import StyledModelForm
-from hospitals.models import Department, Hospital
+from hospitals.models import Hospital
 from payments.models import Payment
 
 from .models import Case
@@ -39,11 +39,16 @@ class CaseForm(StyledModelForm):
     new_contact_phone = forms.CharField(required=False, max_length=20, label="Mobile",
                                         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}))
     new_contact_role = forms.ChoiceField(required=False, choices=Contact.ROLE_CHOICES, initial="billing", label="Role")
+    # Quick "new surgeon" on the case form
+    new_surgeon_name = forms.CharField(required=False, max_length=100, label="Surgeon name",
+                                       widget=forms.TextInput(attrs={"placeholder": "e.g. Dr. Kulkarni"}))
+    new_surgeon_phone = forms.CharField(required=False, max_length=20, label="Mobile (optional)",
+                                        widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}))
 
     class Meta:
         model = Case
-        fields = ["doctor", "hospital", "case_date", "department", "contact", "patient_reference", "procedure_type",
-                  "fee", "due_date", "notes"]
+        fields = ["doctor", "hospital", "case_date", "patient_name", "surgeon", "contact", "patient_reference",
+                  "procedure_type", "fee", "due_date", "notes"]
         widgets = {
             "case_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
@@ -51,6 +56,7 @@ class CaseForm(StyledModelForm):
             "notes": forms.Textarea(attrs={"rows": 2}),
             "procedure_type": forms.TextInput(attrs={"list": "procedure-options", "autocomplete": "off"}),
             "patient_reference": forms.TextInput(attrs={"autocomplete": "off", "placeholder": "e.g. IP 45821 / bill no."}),
+            "patient_name": forms.TextInput(attrs={"autocomplete": "off", "placeholder": "e.g. Sunita Patil"}),
         }
 
     def __init__(self, *args, user=None, **kwargs):
@@ -75,11 +81,13 @@ class CaseForm(StyledModelForm):
             "data-placeholder": "Type hospital name or area", "data-add-url": "/hospitals/add/?next=/cases/add/",
         })
 
-        self.fields["department"].queryset = Department.objects.filter(is_active=True)
-        self.fields["department"].empty_label = "Not specified"
-
-        # Contact: the doctor's own contacts (re-ordered in the browser once a hospital is picked).
+        # Contact and surgeon: the doctor's own lists (re-ordered in the browser once a hospital is picked).
         doctor = self._doctor()
+        surgeons = Surgeon.objects.filter(is_active=True)
+        surgeons = surgeons.filter(doctor=doctor) if doctor else (surgeons if user and user.is_app_admin else surgeons.none())
+        self.fields["surgeon"].queryset = surgeons
+        self.fields["surgeon"].empty_label = "Not specified"
+        self.fields["surgeon"].label = "Surgeon"
         contacts = Contact.objects.filter(is_active=True)
         contacts = contacts.filter(doctor=doctor) if doctor else (contacts if user and user.is_app_admin else contacts.none())
         self.fields["contact"].queryset = contacts
@@ -124,13 +132,28 @@ class CaseForm(StyledModelForm):
         contact = cleaned.get("contact")
         if contact and doctor and contact.doctor_id != doctor.pk:
             self.add_error("contact", "This contact belongs to another doctor.")
+        surgeon = cleaned.get("surgeon")
+        if surgeon and doctor and surgeon.doctor_id != doctor.pk:
+            self.add_error("surgeon", "This surgeon belongs to another doctor.")
         if cleaned.get("new_contact_name") and not cleaned.get("new_contact_phone"):
             self.add_error("new_contact_phone", "Add a mobile number for the new contact.")
         return cleaned
 
     def save_contact(self, case):
-        """Create the quick new contact and/or record that the chosen contact works at this hospital."""
+        """Create the quick new contact / surgeon and link them to this case's hospital."""
         data = self.cleaned_data
+        surgeon = case.surgeon if case.surgeon_id else None
+        if data.get("new_surgeon_name"):
+            name = re.sub(r"\s+", " ", data["new_surgeon_name"]).strip()
+            # Same name already saved by this doctor -> reuse instead of a duplicate.
+            surgeon = Surgeon.objects.filter(doctor=case.doctor, name__iexact=name).first()
+            if surgeon is None:
+                surgeon = Surgeon.objects.create(doctor=case.doctor, name=name,
+                                                 phone=(data.get("new_surgeon_phone") or "").strip())
+            case.surgeon = surgeon
+            case.save(update_fields=["surgeon", "updated_at"])
+        if surgeon:
+            surgeon.link_hospital(case.hospital)
         contact = None
         if data.get("new_contact_name"):
             phone = data["new_contact_phone"].strip()
@@ -157,9 +180,6 @@ class CaseImportForm(forms.Form):
         label="Excel file (.xlsx)",
         widget=forms.ClearableFileInput(attrs={"accept": ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
     )
-    create_missing_hospitals = forms.BooleanField(
-        required=False, initial=True, label="Create hospitals that are not in the app yet",
-    )
     doctor = forms.ModelChoiceField(
         queryset=Doctor.objects.none(), required=False,
         help_text="Used for rows without a 'Doctor Username'.",
@@ -168,7 +188,6 @@ class CaseImportForm(forms.Form):
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["file"].widget.attrs["class"] = "form-control"
-        self.fields["create_missing_hospitals"].widget.attrs["class"] = "form-check-input"
         if user is not None and user.is_app_admin:
             self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
             self.fields["doctor"].widget.attrs.update({"class": "form-select", "data-searchable": "", "data-placeholder": "Type to search doctor"})

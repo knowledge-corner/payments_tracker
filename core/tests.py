@@ -98,3 +98,47 @@ class AssetVersionTests(TestCase):
         sw = self.client.get("/sw.js").content.decode()
         self.assertIn(f"-{version}", sw)
         self.assertIn(f"searchable-select.js?v={version}", sw)
+
+
+class AdminViewTests(TestCase):
+    def setUp(self):
+        from core.testing import make_case, make_hospital
+
+        self.me = make_doctor()
+        self.other = make_doctor("dr.other", "Dr. Other")
+        make_case(self.other, make_hospital("Other's Hospital"), patient_reference="THEIRS-1")
+        self.client.force_login(self.me.user)
+
+    def test_any_doctor_can_switch_to_admin_view_and_back(self):
+        cases = reverse("cases:list")
+        self.assertNotContains(self.client.get(cases), "THEIRS-1")
+        self.assertContains(self.client.get(reverse("dashboard:home")), "View as admin")
+        self.assertEqual(self.client.get(reverse("accounts:doctor_list")).status_code, 403)
+
+        self.client.post(reverse("toggle_admin_view"))
+        self.assertContains(self.client.get(cases), "THEIRS-1")
+        self.assertEqual(self.client.get(reverse("accounts:doctor_list")).status_code, 200)
+        self.assertContains(self.client.get(reverse("dashboard:home")), "Back to my view")
+
+        self.client.post(reverse("toggle_admin_view"))
+        self.assertNotContains(self.client.get(cases), "THEIRS-1")
+
+    def test_switch_needs_post(self):
+        self.assertEqual(self.client.get(reverse("toggle_admin_view")).status_code, 405)
+
+    def test_database_admin_panel_is_developer_only(self):
+        from accounts.models import User
+
+        app_admin = make_admin()
+        app_admin.is_staff = True
+        app_admin.save()
+        for user in (self.me.user, app_admin):
+            self.client.force_login(user)
+            self.assertEqual(self.client.get("/admin/").status_code, 302, user)  # sent to the admin login
+            self.assertNotContains(self.client.get(reverse("dashboard:home")), "/admin/")
+        self.client.force_login(self.me.user)
+        self.client.post(reverse("toggle_admin_view"))
+        self.assertEqual(self.client.get("/admin/").status_code, 302)
+        developer = User.objects.create_superuser("dev", "dev@example.com", "Dev@12345")
+        self.client.force_login(developer)
+        self.assertEqual(self.client.get("/admin/").status_code, 200)

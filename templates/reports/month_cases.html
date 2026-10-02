@@ -27,10 +27,10 @@
       </select>
     </div>
     <div class="col-6 col-md-3">
-      <label class="form-label small mb-1" for="f-department">Department</label>
-      <select name="department" id="f-department" class="form-select form-select-sm">
-        <option value="">All departments</option>
-        {% for d in departments %}<option value="{{ d.pk }}" {% if f.department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>{% endfor %}
+      <label class="form-label small mb-1" for="f-surgeon">Surgeon</label>
+      <select name="surgeon" id="f-surgeon" class="form-select form-select-sm">
+        <option value="">All surgeons</option>
+        {% for s in surgeons %}<option value="{{ s.pk }}" {% if f.surgeon.pk == s.pk %}selected{% endif %}>{{ s.name }}{% if user.is_app_admin and not selected_doctor %} ({{ s.doctor }}){% endif %}</option>{% endfor %}
       </select>
     </div>
     <div class="col-6 col-md-3">
@@ -66,21 +66,22 @@
 <div class="card d-none d-md-block">
   <div class="table-responsive">
     <table class="table table-report table-hover mb-0 align-middle">
-      <thead><tr><th>Date</th>{% if user.is_app_admin %}<th>Doctor</th>{% endif %}<th>Hospital</th><th>Department</th><th>Procedure / ref</th><th class="text-end">Fee</th><th class="text-end">Received</th><th class="text-end">Outstanding</th><th>Status</th></tr></thead>
+      <thead><tr><th>Date</th>{% if user.is_app_admin %}<th>Doctor</th>{% endif %}<th>Hospital</th><th>Patient</th><th>Surgeon</th><th>Procedure / ref</th><th class="text-end">Fee</th><th class="text-end">Received</th><th class="text-end">Outstanding</th><th>Status</th></tr></thead>
       <tbody>
         {% for c in page %}
         <tr onclick="location.href='{{ c.get_absolute_url }}'" style="cursor:pointer">
           <td class="text-nowrap">{{ c.case_date|date:"d M" }}</td>
           {% if user.is_app_admin %}<td class="small">{{ c.doctor }}</td>{% endif %}
           <td>{{ c.hospital.name }}</td>
-          <td class="small">{{ c.department|default:"-" }}</td>
+          <td class="small">{{ c.patient_name|default:"-" }}</td>
+          <td class="small">{{ c.surgeon|default:"-" }}</td>
           <td class="small">{{ c.procedure_type }}{% if c.patient_reference %}<div class="text-muted">{{ c.patient_reference }}</div>{% endif %}</td>
           <td class="text-end amount">{{ c.fee|inr }}</td>
           <td class="text-end amount">{{ c.total_paid|inr }}</td>
           <td class="text-end amount {% if c.outstanding > 0 %}text-danger{% endif %}">{{ c.outstanding|inr }}</td>
           <td>{% status_badge c %}</td>
         </tr>
-        {% empty %}<tr><td colspan="9" class="text-center text-muted p-4">No cases in {{ month|date:"F Y" }} match these filters.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="10" class="text-center text-muted p-4">No cases in {{ month|date:"F Y" }} match these filters.</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>
