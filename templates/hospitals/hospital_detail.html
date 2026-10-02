@@ -28,7 +28,7 @@
     <div class="list-group-item action-item d-flex justify-content-between align-items-center gap-2">
       <div class="min-w-0">
         <a href="{{ link.contact.get_absolute_url }}" class="action-name">{{ link.contact.name }}</a>{% if link.is_primary %} <span class="combo-mine">Main</span>{% endif %}
-        <div class="action-meta">{{ link.department|default:"All departments" }} · {{ link.contact.get_role_display }}{% if user.is_app_admin %} · {{ link.contact.doctor }}{% endif %}</div>
+        <div class="action-meta">{{ link.contact.get_role_display }}{% if user.is_app_admin %} · {{ link.contact.doctor }}{% endif %}</div>
       </div>
       {% if link.contact.best_phone %}<a href="tel:{{ link.contact.best_phone }}" class="call-link" aria-label="Call {{ link.contact.name }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}
     </div>
@@ -38,7 +38,7 @@
 {% if past_links %}
 <details class="mb-3"><summary class="small text-muted">Former contacts ({{ past_links|length }})</summary>
   <div class="card mt-2"><div class="list-group list-group-flush">
-    {% for link in past_links %}<a href="{{ link.contact.get_absolute_url }}" class="list-group-item small">{{ link.contact.name }} <span class="text-muted">· {{ link.department|default:"All departments" }} · until {{ link.end_date|date:"d M Y" }}</span></a>{% endfor %}
+    {% for link in past_links %}<a href="{{ link.contact.get_absolute_url }}" class="list-group-item small">{{ link.contact.name }} <span class="text-muted">· until {{ link.end_date|date:"d M Y" }}</span></a>{% endfor %}
   </div></div>
 </details>
 {% endif %}

@@ -21,12 +21,12 @@ def make_hospital(name="Test Hospital", city="Pune", **kwargs):
     return Hospital.objects.create(name=name, city=city, **kwargs)
 
 
-def make_contact(doctor, name="Mr. Patil", phone="+91 90000 00001", hospital=None, department=None, primary=True):
+def make_contact(doctor, name="Mr. Patil", phone="+91 90000 00001", hospital=None, primary=True):
     from contacts.models import Contact, ContactAffiliation
 
     contact = Contact.objects.create(doctor=doctor, name=name, phone=phone)
     if hospital:
-        ContactAffiliation.objects.create(contact=contact, hospital=hospital, department=department, is_primary=primary)
+        ContactAffiliation.objects.create(contact=contact, hospital=hospital, is_primary=primary)
     return contact
 
 

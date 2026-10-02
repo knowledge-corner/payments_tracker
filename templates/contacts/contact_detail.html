@@ -26,7 +26,7 @@
       <div class="d-flex justify-content-between gap-2">
         <div class="min-w-0">
           <a href="{{ link.hospital.get_absolute_url }}" class="action-name">{{ link.hospital.name }}</a>{% if link.is_primary %} <span class="combo-mine">Main contact</span>{% endif %}
-          <div class="action-meta">{{ link.department|default:"All departments" }} · since {{ link.start_date|date:"d M Y" }}</div>
+          <div class="action-meta">Since {{ link.start_date|date:"d M Y" }}</div>
         </div>
         <div class="dropdown">
           <button class="btn btn-xs btn-outline-secondary" data-bs-toggle="dropdown" aria-label="Options"><i class="bi bi-three-dots"></i></button>
@@ -45,7 +45,6 @@
   <summary class="small text-primary"><i class="bi bi-plus-circle"></i> Add a hospital / moved to another hospital</summary>
   <form method="post" action="{% url 'contacts:link_add' contact.pk %}" class="card p-3 mt-2">{% csrf_token %}
     {% include "partials/field.html" with field=form.hospital %}
-    {% include "partials/field.html" with field=form.department %}
     <div class="row g-2">
       <div class="col-6">{% include "partials/field.html" with field=form.start_date %}</div>
       <div class="col-6 pt-4">{% include "partials/field.html" with field=form.is_primary %}</div>
@@ -58,7 +57,7 @@
 {% if past_links %}
 <div class="section-title">Previously worked at</div>
 <div class="card mb-3"><div class="list-group list-group-flush">
-  {% for link in past_links %}<div class="list-group-item small">{{ link.hospital.name }} <span class="text-muted">· {{ link.department|default:"All departments" }} · {{ link.start_date|date:"M Y" }} - {{ link.end_date|date:"M Y" }}</span></div>{% endfor %}
+  {% for link in past_links %}<div class="list-group-item small">{{ link.hospital.name }} <span class="text-muted">· {{ link.start_date|date:"M Y" }} - {{ link.end_date|date:"M Y" }}</span></div>{% endfor %}
 </div></div>
 {% endif %}
 

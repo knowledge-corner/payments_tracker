@@ -40,7 +40,7 @@ class Contact(TimeStampedModel):
         return self.phone or self.alt_phone
 
     def current_affiliations(self):
-        return self.affiliations.filter(end_date__isnull=True).select_related("hospital", "department")
+        return self.affiliations.filter(end_date__isnull=True).select_related("hospital")
 
 
 class AffiliationQuerySet(models.QuerySet):
@@ -49,7 +49,7 @@ class AffiliationQuerySet(models.QuerySet):
 
 
 class ContactAffiliation(TimeStampedModel):
-    """Where (hospital + department) a contact handles payments - with history.
+    """Where (which hospital) a contact handles payments - with history.
 
     When someone moves to another hospital, the old row gets an end date and a
     new row is added, so earlier cases still show who handled them.
@@ -57,8 +57,6 @@ class ContactAffiliation(TimeStampedModel):
 
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name="affiliations")
     hospital = models.ForeignKey("hospitals.Hospital", on_delete=models.CASCADE, related_name="contact_links")
-    department = models.ForeignKey("hospitals.Department", null=True, blank=True, on_delete=models.SET_NULL,
-                                   help_text="Leave empty if they handle all departments.")
     is_primary = models.BooleanField("Main contact", default=False)
     start_date = models.DateField(default=timezone.localdate)
     end_date = models.DateField(null=True, blank=True)
@@ -69,8 +67,7 @@ class ContactAffiliation(TimeStampedModel):
         ordering = ["-is_primary", "-start_date"]
 
     def __str__(self):
-        dept = f" ({self.department})" if self.department_id else ""
-        return f"{self.contact} @ {self.hospital}{dept}"
+        return f"{self.contact} @ {self.hospital}"
 
     @property
     def is_current(self):

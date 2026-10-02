@@ -4,7 +4,7 @@ Wipe all business data for a clean start - KEEPS user logins and doctor profiles
     python manage.py reset_app_data --yes
 
 Deletes: cases, payments, follow-ups, contacts, hospitals, notification history.
-Keeps:   users (admin + doctors), doctor profiles, app settings, departments,
+Keeps:   users (admin + doctors), doctor profiles, app settings,
          notification preferences / subscribed devices.
 Then reloads the starter hospital list.
 """

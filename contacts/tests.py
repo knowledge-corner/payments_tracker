@@ -4,7 +4,6 @@ from django.utils import timezone
 
 from cases.models import Case
 from core.testing import make_case, make_contact, make_doctor, make_hospital
-from hospitals.models import Department
 
 from .models import Contact, ContactAffiliation, Surgeon
 from .services import attach_call_targets
@@ -14,8 +13,6 @@ class CallTargetTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.hospital = make_hospital("Call Test Hospital", phone="020-1111111 / 020-2222222")
-        self.ortho = Department.objects.get(name="Orthopaedics")
-        self.ent = Department.objects.get(name="ENT")
 
     def call_for(self, case):
         return attach_call_targets([Case.objects.select_related("hospital").get(pk=case.pk)])[0].call
@@ -24,16 +21,15 @@ class CallTargetTests(TestCase):
         call = self.call_for(make_case(self.doctor, self.hospital))
         self.assertEqual((call.name, call.phone), ("Call Test Hospital", "020-1111111"))
 
-    def test_department_contact_beats_general_contact(self):
-        make_contact(self.doctor, "General Desk", "+91 90000 00010", self.hospital)
-        make_contact(self.doctor, "Ortho Billing", "+91 90000 00011", self.hospital, self.ortho)
-        self.assertEqual(self.call_for(make_case(self.doctor, self.hospital, department=self.ortho)).name, "Ortho Billing")
-        self.assertEqual(self.call_for(make_case(self.doctor, self.hospital, department=self.ent)).name, "General Desk")
+    def test_main_contact_beats_other_contacts(self):
+        make_contact(self.doctor, "Other Desk", "+91 90000 00010", self.hospital, primary=False)
+        make_contact(self.doctor, "Main Billing", "+91 90000 00011", self.hospital, primary=True)
+        self.assertEqual(self.call_for(make_case(self.doctor, self.hospital)).name, "Main Billing")
 
     def test_case_contact_wins(self):
-        make_contact(self.doctor, "Ortho Billing", "+91 90000 00011", self.hospital, self.ortho)
+        make_contact(self.doctor, "Main Billing", "+91 90000 00011", self.hospital)
         own = make_contact(self.doctor, "Specific Person", "+91 90000 00012")
-        case = make_case(self.doctor, self.hospital, department=self.ortho, contact=own)
+        case = make_case(self.doctor, self.hospital, contact=own)
         self.assertEqual(self.call_for(case).name, "Specific Person")
 
     def test_contacts_are_private_and_ended_links_ignored(self):

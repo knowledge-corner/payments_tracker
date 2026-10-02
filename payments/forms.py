@@ -75,7 +75,7 @@ def followup_form(case, *args, **kwargs):
     from contacts.services import contacts_for_hospital
 
     form = FollowUpForm(*args, **kwargs)
-    here, others = contacts_for_hospital(case.doctor, case.hospital_id, case.department_id)
+    here, others = contacts_for_hospital(case.doctor, case.hospital_id)
     field = form.fields["contact"]
     field.queryset = case.doctor.contacts.filter(is_active=True)
     field.label = "Spoke to"

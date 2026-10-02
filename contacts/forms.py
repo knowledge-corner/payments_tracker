@@ -2,7 +2,7 @@ from django import forms
 from django.utils import timezone
 
 from core.forms import StyledModelForm
-from hospitals.models import Department, Hospital
+from hospitals.models import Hospital
 
 from .models import Contact, ContactAffiliation, Surgeon
 
@@ -33,7 +33,7 @@ class AffiliationForm(StyledModelForm):
 
     class Meta:
         model = ContactAffiliation
-        fields = ["hospital", "department", "is_primary", "start_date"]
+        fields = ["hospital", "is_primary", "start_date"]
         widgets = {"start_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d")}
 
     def __init__(self, *args, **kwargs):
@@ -50,8 +50,6 @@ class AffiliationForm(StyledModelForm):
         hospital_field.widget.attrs.update({
             "data-searchable": "", "data-search-url": "/hospitals/search/", "data-placeholder": "Type to search hospital",
         })
-        self.fields["department"].queryset = Department.objects.filter(is_active=True)
-        self.fields["department"].empty_label = "All departments"
         self.fields["start_date"].initial = timezone.localdate()
 
 

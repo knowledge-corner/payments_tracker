@@ -37,7 +37,7 @@ def contact_list(request):
             Q(name__icontains=q) | Q(phone__icontains=q)
             | Q(affiliations__hospital__name__icontains=q, affiliations__end_date__isnull=True)
         ).distinct()
-    contacts = list(contacts.prefetch_related("affiliations__hospital", "affiliations__department"))
+    contacts = list(contacts.prefetch_related("affiliations__hospital"))
     for c in contacts:
         c.current = [a for a in c.affiliations.all() if a.is_current]
     return render(request, "contacts/contact_list.html", {"contacts": contacts, "q": q})
@@ -81,7 +81,7 @@ def contact_edit(request, pk):
 @login_required
 def contact_detail(request, pk):
     contact = _get(request, pk)
-    links = contact.affiliations.select_related("hospital", "department").order_by("end_date", "-start_date")
+    links = contact.affiliations.select_related("hospital").order_by("end_date", "-start_date")
     form = AffiliationForm(prefix="link", initial={"start_date": timezone.localdate()})
     recent_cases = (Case.objects.filter(contact=contact).with_totals()
                     .select_related("hospital").order_by("-case_date")[:10])
@@ -107,7 +107,7 @@ def link_add(request, pk):
         link.contact = contact
         if link.is_primary:
             ContactAffiliation.objects.current().filter(
-                contact__doctor=contact.doctor, hospital=link.hospital, department=link.department,
+                contact__doctor=contact.doctor, hospital=link.hospital,
             ).update(is_primary=False)
         link.save()
         messages.success(request, f"{contact} now linked to {link.hospital}.")
@@ -134,7 +134,7 @@ def link_primary(request, pk, link_pk):
     contact = _get(request, pk)
     link = get_object_or_404(ContactAffiliation, pk=link_pk, contact=contact, end_date__isnull=True)
     ContactAffiliation.objects.current().filter(
-        contact__doctor=contact.doctor, hospital=link.hospital, department=link.department,
+        contact__doctor=contact.doctor, hospital=link.hospital,
     ).update(is_primary=False)
     link.is_primary = True
     link.save(update_fields=["is_primary", "updated_at"])

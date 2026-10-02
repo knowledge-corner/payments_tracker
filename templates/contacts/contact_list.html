@@ -18,7 +18,7 @@
     <div class="list-group-item action-item d-flex justify-content-between align-items-center gap-2">
       <a href="{{ c.get_absolute_url }}" class="min-w-0 text-decoration-none text-body flex-fill">
         <div class="action-name">{{ c.name }}{% if not c.is_active %} <span class="badge text-bg-secondary">inactive</span>{% endif %}</div>
-        <div class="action-meta text-truncate">{{ c.get_role_display }}{% for a in c.current %} · {{ a.hospital.name }}{% if a.department %} ({{ a.department }}){% endif %}{% empty %} · no current hospital{% endfor %}</div>
+        <div class="action-meta text-truncate">{{ c.get_role_display }}{% for a in c.current %} · {{ a.hospital.name }}{% empty %} · no current hospital{% endfor %}</div>
         {% if user.is_app_admin %}<div class="action-meta">{{ c.doctor }}</div>{% endif %}
       </a>
       {% if c.best_phone %}<a href="tel:{{ c.best_phone }}" class="call-link" aria-label="Call {{ c.name }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}

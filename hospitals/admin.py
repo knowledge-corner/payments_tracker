@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Department, Hospital
+from .models import Hospital
 
 
 @admin.register(Hospital)
@@ -10,8 +10,3 @@ class HospitalAdmin(admin.ModelAdmin):
     search_fields = ["name", "aliases", "area", "pincode"]
     raw_id_fields = ["merged_into"]
 
-
-@admin.register(Department)
-class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ["name", "sort_order", "is_active"]
-    list_editable = ["sort_order", "is_active"]

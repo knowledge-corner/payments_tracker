@@ -171,7 +171,7 @@ class CaseForm(StyledModelForm):
         elif case.contact_id:
             contact = case.contact
         if contact:
-            ensure_affiliation(contact, case.hospital, case.department)
+            ensure_affiliation(contact, case.hospital)
         return contact
 
 

@@ -8,15 +8,14 @@ from cases.models import Case
 from core.testing import make_admin, make_case, make_contact, make_doctor, make_hospital
 
 from .directory import import_directory
-from .models import Department, Hospital
+from .models import Hospital
 
 
 class DirectorySeedTests(TestCase):
-    def test_starter_hospitals_and_departments_loaded_by_migrations(self):
+    def test_starter_hospitals_loaded_by_migrations(self):
         self.assertGreater(Hospital.objects.filter(source="starter").count(), 80)
         self.assertTrue(Hospital.objects.filter(city="Pune").exists())
         self.assertTrue(Hospital.objects.filter(city="Mumbai").exists())
-        self.assertTrue(Department.objects.filter(name="Orthopaedics").exists())
 
     def test_search_matches_every_word_and_aliases(self):
         names = set(Hospital.objects.active().search("ruby hall").values_list("name", flat=True))

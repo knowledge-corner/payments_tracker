@@ -1,8 +1,7 @@
 """Who to call about a case.
 
 Order: the case's own contact -> the doctor's main contact for that hospital
-and department -> any contact for that department -> the hospital-wide
-contact -> the hospital's main phone from the directory.
+-> the doctor's most recent contact there -> the hospital's main phone.
 """
 from dataclasses import dataclass
 
@@ -21,21 +20,16 @@ class CallTarget:
         return f"{self.name} ({self.detail})" if self.detail else self.name
 
 
-def _rank(link, department_id):
-    same_dept = link.department_id == department_id and department_id is not None
-    any_dept = link.department_id is None
-    return (
-        0 if same_dept else (1 if any_dept else 2),
-        0 if link.is_primary else 1,
-        -link.start_date.toordinal(),
-    )
+def _rank(link):
+    """Main contact first, then the most recently added."""
+    return (0 if link.is_primary else 1, -link.start_date.toordinal())
 
 
-def best_contact(links, department_id):
+def best_contact(links):
     usable = [link for link in links if link.contact.best_phone]
     if not usable:
         return None
-    return sorted(usable, key=lambda link: _rank(link, department_id))[0]
+    return sorted(usable, key=_rank)[0]
 
 
 def attach_call_targets(cases):
@@ -50,7 +44,7 @@ def attach_call_targets(cases):
     links = {}
     for link in (ContactAffiliation.objects.current()
                  .filter(contact__doctor_id__in=doctor_ids, hospital_id__in=hospital_ids)
-                 .select_related("contact", "department")):
+                 .select_related("contact")):
         links.setdefault((link.contact.doctor_id, link.hospital_id), []).append(link)
     for case in cases:
         case.call = None
@@ -58,37 +52,31 @@ def attach_call_targets(cases):
         if own and own.best_phone:
             case.call = CallTarget(own.name, own.best_phone, own.get_role_display(), own.pk)
             continue
-        link = best_contact(links.get((case.doctor_id, case.hospital_id), []), case.department_id)
+        link = best_contact(links.get((case.doctor_id, case.hospital_id), []))
         if link:
-            detail = link.department.name if link.department_id else link.contact.get_role_display()
-            case.call = CallTarget(link.contact.name, link.contact.best_phone, detail, link.contact_id)
+            case.call = CallTarget(link.contact.name, link.contact.best_phone, link.contact.get_role_display(),
+                                   link.contact_id)
         elif case.hospital.phone:
             case.call = CallTarget(case.hospital.name, case.hospital.phone.split(",")[0].split("/")[0].strip(),
                                    "hospital")
     return cases
 
 
-def contacts_for_hospital(doctor, hospital_id, department_id=None):
-    """Doctor's contacts ordered for a picker: working at this hospital (department match first), then others."""
+def contacts_for_hospital(doctor, hospital_id):
+    """Doctor's contacts ordered for a picker: working at this hospital (main contact first), then others."""
     links = list(ContactAffiliation.objects.current().filter(contact__doctor=doctor, hospital_id=hospital_id)
-                 .select_related("contact", "department"))
+                 .select_related("contact"))
     linked = {}
-    for link in sorted(links, key=lambda link: _rank(link, department_id)):
+    for link in sorted(links, key=_rank):
         linked.setdefault(link.contact_id, link)
     here = [(link.contact, link) for link in linked.values()]
     others = Contact.objects.filter(doctor=doctor, is_active=True).exclude(pk__in=linked.keys()).order_by("name")
     return here, list(others)
 
 
-def ensure_affiliation(contact, hospital, department=None):
+def ensure_affiliation(contact, hospital):
     """Make sure a contact is recorded as working at this hospital (used when picked on a case)."""
-    current = ContactAffiliation.objects.filter(contact=contact, hospital=hospital, end_date__isnull=True)
-    if department is not None and current.filter(department=department).exists():
+    if ContactAffiliation.objects.filter(contact=contact, hospital=hospital, end_date__isnull=True).exists():
         return
-    if department is None and current.exists():
-        return
-    if current.filter(department__isnull=True).exists():
-        return
-    is_first = not ContactAffiliation.objects.current().filter(
-        contact__doctor=contact.doctor, hospital=hospital, department=department).exists()
-    ContactAffiliation.objects.create(contact=contact, hospital=hospital, department=department, is_primary=is_first)
+    is_first = not ContactAffiliation.objects.current().filter(contact__doctor=contact.doctor, hospital=hospital).exists()
+    ContactAffiliation.objects.create(contact=contact, hospital=hospital, is_primary=is_first)

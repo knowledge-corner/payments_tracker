@@ -32,7 +32,7 @@ class Hospital(TimeStampedModel):
     """Shared hospital directory - one row per real hospital/clinic.
 
     Holds only facts about the place. Doctor-specific things (contacts,
-    departments, fees) live on Contact / ContactAffiliation / Case.
+    fees) live on Contact / ContactAffiliation / Case.
     """
 
     CATEGORY_CHOICES = [
@@ -91,15 +91,3 @@ class Hospital(TimeStampedModel):
 
     def get_absolute_url(self):
         return reverse("hospitals:detail", args=[self.pk])
-
-
-class Department(models.Model):
-    name = models.CharField(max_length=80, unique=True)
-    sort_order = models.PositiveSmallIntegerField(default=100)
-    is_active = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ["sort_order", "name"]
-
-    def __str__(self):
-        return self.name
