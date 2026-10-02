@@ -49,7 +49,8 @@ def filtered_cases(request, filters):
         qs = qs.filter(surgeon=filters.surgeon)
     if filters.q:
         qs = qs.filter(
-            Q(patient_reference__icontains=filters.q) | Q(procedure_type__icontains=filters.q)
+            Q(patient_reference__icontains=filters.q) | Q(patient_name__icontains=filters.q)
+            | Q(procedure_type__icontains=filters.q) | Q(surgeon__name__icontains=filters.q)
             | Q(notes__icontains=filters.q) | Q(hospital__name__icontains=filters.q)
         )
     return apply_case_status(qs.with_totals(), filters.status)

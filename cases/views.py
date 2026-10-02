@@ -50,8 +50,8 @@ def case_list(request):
     month = request.GET.get("month", "")  # YYYY-MM
     if q:
         qs = qs.filter(
-            Q(patient_reference__icontains=q) | Q(procedure_type__icontains=q)
-            | Q(hospital__name__icontains=q) | Q(notes__icontains=q)
+            Q(patient_reference__icontains=q) | Q(patient_name__icontains=q) | Q(procedure_type__icontains=q)
+            | Q(hospital__name__icontains=q) | Q(surgeon__name__icontains=q) | Q(notes__icontains=q)
         )
     if status in PaymentStatus.LABELS:
         qs = qs.filter(status=status)

@@ -1,0 +1,503 @@
+"""Builds manual.html (then printed to PDF by print.js). Content is written for doctors in plain language."""
+import html
+
+SECTIONS = []  # (id, title, blocks)
+
+
+def sec(id_, title, intro=""):
+    SECTIONS.append({"id": id_, "title": title, "intro": intro, "blocks": []})
+
+
+def topic(title, steps, img=None, tip=None, note=None, img2=None, caption=None, caption2=None):
+    SECTIONS[-1]["blocks"].append(dict(kind="topic", title=title, steps=steps, img=img, tip=tip, note=note,
+                                       img2=img2, caption=caption, caption2=caption2))
+
+
+def table(title, head, rows, after=None):
+    SECTIONS[-1]["blocks"].append(dict(kind="table", title=title, head=head, rows=rows, after=after))
+
+
+def para(text):
+    SECTIONS[-1]["blocks"].append(dict(kind="para", text=text))
+
+
+# ----------------------------------------------------------------------------- content
+sec("welcome", "Welcome", "This app keeps track of the anaesthesia work you have done, how much each hospital owes you, "
+    "and who to call when a payment is late. This manual walks you through every screen, one step at a time.")
+para("<b>Tip:</b> In the screenshots, the button or box you need to tap is marked with a <span style='color:#e11d48'><b>red outline</b></span>. "
+     "All names, patients and amounts in this manual are sample data.")
+table("What the app does for you", ["You want to...", "Go to"], [
+    ["Write down a case you have finished", "<b>Add Case</b> (yellow + button at the bottom)"],
+    ["See how much money is still to come", "<b>Dashboard</b>"],
+    ["Note a payment you received", "Open the case → <b>Record payment</b>"],
+    ["Know which hospital to call today", "Dashboard → <b>Follow-ups</b> card"],
+    ["Get Excel sheets for your CA or records", "<b>Reports</b> → any report → <b>Download Excel</b>"],
+])
+table("Words used in this manual", ["Word", "Meaning"], [
+    ["Case", "One piece of work you did (one patient, one surgery) that you will be paid for."],
+    ["Fee", "The amount you charge for that case."],
+    ["Received", "Money already paid to you for the case."],
+    ["Outstanding", "Money still to come (Fee minus Received)."],
+    ["Expected payment date", "The date by which you expect to be paid. If you leave it empty, the app assumes 30 days."],
+    ["Overdue", "The expected payment date has passed and the case is not fully paid."],
+    ["Follow-up", "A call or message to the hospital to ask about a pending payment."],
+    ["Surgeon", "The surgeon who called you for the case. Your list of surgeons is private."],
+    ["Contact", "A person at the hospital (billing, accounts, OT) whom you call about payments. Private to you."],
+])
+table("Payment status colours", ["Label", "What it means"], [
+    ["<span class='pill grey'>Pending</span>", "Nothing received yet, still within the expected date."],
+    ["<span class='pill blue'>Partially Paid</span>", "Some money received, some still due."],
+    ["<span class='pill green'>Paid</span>", "Fully paid. Nothing more to do."],
+    ["<span class='pill red'>Overdue</span>", "Expected date has passed and money is still due. Time to follow up."],
+])
+
+# --------------------------------------------------------------------------- getting started
+sec("start", "1. Getting started")
+topic("Open the app and add it to your phone", [
+    "Open the app link (shared by your admin) in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone).",
+    "<b>Android:</b> tap <b>Install app</b> on the sign-in page, or Chrome menu <b>⋮</b> → <b>Install app</b>.",
+    "<b>iPhone:</b> tap the <b>Share</b> button → <b>Add to Home Screen</b> → <b>Add</b>.",
+    "An app icon appears on your home screen. From now on open the app from this icon - it works like a normal app.",
+], tip="You need to do this only once on each phone.")
+topic("Create your account (first time only)", [
+    "On the sign-in page tap <b>Create an account</b>.",
+    "Fill in your <b>full name</b>, <b>mobile number</b> and <b>email</b>.",
+    "Choose a <b>Username</b> (your User ID, e.g. <i>dr.anjali</i>) and a <b>password</b>, then tap <b>Create account</b>.",
+], img="02-signup", tip="Enter your mobile number correctly. It is used to recover your User ID and password later.")
+topic("Sign in", [
+    "Type your <b>User ID</b> and <b>Password</b>.",
+    "Tap <b>Sign in</b>. You land on the Dashboard.",
+    "Forgot something? Use the links marked in red: <b>Forgot user ID?</b> and <b>Forgot password?</b>",
+], img="01-login")
+topic("Forgot your User ID", [
+    "On the sign-in page tap <b>Forgot user ID?</b>",
+    "Enter the <b>mobile number</b> you registered with and tap <b>Find my user ID</b>.",
+    "Your User ID is shown on the screen. Tap <b>Sign in</b> to continue.",
+], img="03-forgot-id", img2="04-forgot-id-result", caption="Enter mobile number", caption2="Your User ID is shown")
+topic("Forgot your password", [
+    "On the sign-in page tap <b>Forgot password?</b>",
+    "Enter your <b>User ID</b> and registered <b>mobile number</b>, then tap <b>Verify</b>.",
+    "If they match, type a <b>new password</b> twice and tap <b>Save new password</b>.",
+    "Sign in with the new password.",
+], img="05-forgot-password", img2="06-set-new-password", caption="Verify", caption2="Set new password",
+   note="After 5 wrong tries the form is locked for 15 minutes. Wait, or ask your admin.")
+
+# --------------------------------------------------------------------------- layout
+sec("layout", "2. Finding your way around")
+topic("The bottom bar", [
+    "<b>Dashboard</b> - your money summary and today's to-do list.",
+    "<b>Cases</b> - every case you have entered, with search.",
+    "<b>Add Case</b> (yellow + in the middle) - write down a new case.",
+    "<b>Hospitals</b> - hospitals you work with, and search for any hospital.",
+    "<b>Reports</b> - summaries and Excel downloads.",
+], img="10-dashboard")
+topic("The profile menu (round icon, top right)", [
+    "Shows who is signed in.",
+    "<b>My contacts</b> - your hospital contacts and surgeons.",
+    "<b>Notification settings</b> - payment reminders on your phone.",
+    "<b>View as admin</b> - see the admin screens (see section 13).",
+    "<b>Sign out</b> - log out of the app on this phone.",
+], img="13-profile-menu")
+
+# --------------------------------------------------------------------------- dashboard
+sec("dashboard", "3. Dashboard")
+topic("Your money at a glance", [
+    "At the top, choose the period: <b>This month</b>, <b>This FY</b> (April to March) or <b>All time</b>.",
+    "<b>Total earnings</b> - total fees of cases in that period.",
+    "<b>Received</b> - money received in that period.",
+    "<b>Outstanding</b> - all money still to come.",
+], img="10-dashboard")
+topic("Tap a card to see the cases behind it", [
+    "<b>Outstanding</b> - every case that is not fully paid.",
+    "<b>Pending</b> - unpaid cases that are not yet overdue.",
+    "<b>Overdue</b> - cases past their expected payment date.",
+    "<b>Follow-ups</b> - cases where it is time to call the hospital.",
+    "Use the <b>←</b> arrow at the top to come back.",
+], img="11-dashboard-cards")
+topic("Action required", [
+    "Lower down, <b>Action required</b> lists cases that need a call today.",
+    "Tap the green <b>phone icon</b> next to a hospital to call the right person straight away.",
+    "Tap a row to open the case.",
+], img="12-dashboard-action", tip="Check this list once a day - it is your payment to-do list.")
+
+# --------------------------------------------------------------------------- add case
+sec("addcase", "4. Adding a case", "Do this right after the case, or at the end of the day. It takes about 30 seconds.")
+topic("Step 1 - Open Add Case", [
+    "Tap the yellow <b>+ Add Case</b> button at the bottom.",
+    "Fields with a red <b>*</b> are required: <b>Hospital</b>, <b>Case date</b> and <b>Fee</b>.",
+    "Many cases to enter at once? Use <b>Bulk upload</b> (top right) - see section 5.",
+], img="20-add-case")
+topic("Step 2 - Choose the hospital", [
+    "Tap the <b>Hospital</b> box and type a few letters of the name or area, e.g. <i>ruby</i> or <i>kothrud</i>.",
+    "Pick the right hospital from the list. Hospitals you already work with show a green <b>Mine</b> tag.",
+    "Not in the list? Tap <b>Add a hospital not in the list</b> (see next step).",
+], img="21-hospital-search")
+topic("Hospital not in the list? Add it", [
+    "Type the <b>Name</b>, <b>Area</b> and <b>City</b>. Other details are optional.",
+    "Tap <b>Save hospital</b>. You return to Add Case with the new hospital already chosen.",
+], img="29-add-hospital", tip="The new hospital is saved straight away - no approval needed.")
+topic("Step 3 - Date, fee, patient and surgeon", [
+    "<b>Case date</b> is today by default. Change it if the case was on another day.",
+    "Type the <b>Fee</b> in rupees (numbers only, e.g. 9000).",
+    "Type the <b>Patient name</b> (optional).",
+    "Choose the <b>Surgeon</b> who called you. Surgeons who called you to this hospital before are shown first, "
+    "and the last one is picked for you.",
+], img="22-add-case-filled")
+topic("New surgeon?", [
+    "Tap <b>New surgeon</b> next to the Surgeon box.",
+    "Type the surgeon's name and (optionally) mobile number.",
+    "When you save the case, the surgeon is added to your list and linked to this hospital. "
+    "Next time just pick them from the list.",
+], img="23-new-surgeon", tip="The same surgeon can be linked to many hospitals - the app keeps one link for each hospital.")
+topic("Step 4 - Contact person (who to call for payment)", [
+    "Choose the <b>Contact person</b> (billing / accounts person). Contacts at this hospital are shown first.",
+    "New person? Tap <b>New contact</b> and type the name and mobile number.",
+    "<b>Android phones:</b> tap <b>Pick from phone contacts</b> to fill the name and number from your phone book in one tap.",
+], img="24-new-contact", img2="25-contact-picked", caption="Tap New contact", caption2="Picked from phone contacts",
+   note="'Pick from phone contacts' works in Chrome on Android. On iPhone the button does not appear - type the details instead.")
+topic("Step 5 - Procedure, reference, payment date", [
+    "<b>Procedure / case type</b>, e.g. <i>TKR - spinal</i> (suggestions appear as you type).",
+    "<b>Case / patient ref</b> - IP number or bill number (optional).",
+    "<b>Expected payment date</b> - when you expect to be paid. Leave empty to use 30 days.",
+    "Already paid on the spot? Switch on <b>Payment already received</b> and enter the amount and mode.",
+    "<b>Notes</b> - anything else (tap to open).",
+], img="26-add-case-lower")
+topic("Step 6 - Save", [
+    "Tap <b>Save case</b>. Or tap <b>Save &amp; add</b> to save and start the next case for the same hospital.",
+    "If you left the expected payment date empty, a small message says the app will assume <b>30 days</b>. "
+    "Tap <b>OK, save</b>, or <b>Set a date</b> to choose one.",
+    "A green message confirms the case is saved.",
+], img="27-due-date-popup", img2="28-case-saved", caption="30-day message", caption2="Case saved",
+   tip="You can change the expected payment date later by editing the case.")
+
+# --------------------------------------------------------------------------- bulk upload
+sec("bulk", "5. Bulk upload (many cases from Excel)")
+topic("Download the template, fill it, upload it", [
+    "Open <b>Add Case</b> → tap <b>Bulk upload</b> (top right).",
+    "Tap <b>Download Excel template</b> and open it in Excel or Google Sheets.",
+    "Enter one case per row. Required columns: <b>Case Date</b>, <b>Hospital</b>, <b>Fee</b>.",
+    "Save the file, come back, tap <b>Choose File</b>, pick the file and tap <b>Upload</b>.",
+    "If every row is correct, all cases are saved at once and you see a confirmation.",
+], img="30-bulk-upload")
+topic("If some rows have mistakes", [
+    "<b>Nothing is saved</b> - so you never get half an upload.",
+    "The rows with problems are shown in <b>pink</b>, and the wrong cell has a <b>red box</b>. "
+    "The <b>Problem</b> column (scroll right) says what is wrong.",
+    "Fix those cells in Excel, save, and upload the same file again.",
+], img="31-bulk-errors", tip="Uploading the same file twice is safe: rows already in the app are skipped.")
+table("Template columns", ["Column", "What to type", "Example"], [
+    ["Case Date *", "Date of the case (DD/MM/YYYY)", "25/09/2026"],
+    ["Hospital *", "Pick from the dropdown, or type a new name (it will be added)", "Ruby Hall Clinic"],
+    ["Fee *", "Amount in rupees, numbers only", "7500"],
+    ["Patient Name", "Patient's name", "Sunita Patil"],
+    ["Surgeon", "Surgeon's name (new names are added to your surgeons)", "Dr. Amit Shah"],
+    ["Procedure / Case Type", "Type of case", "LSCS - spinal"],
+    ["Case / Patient Ref", "IP no. or bill no.", "IP 45821"],
+    ["Notes", "Anything else", ""],
+    ["Amount Received", "Only if already paid (fully or partly)", "7500"],
+    ["Payment Date", "When it was paid (default: case date)", "30/09/2026"],
+    ["Payment Mode", "UPI, Bank transfer, Cheque, Cash, Card or Other", "UPI"],
+])
+
+# --------------------------------------------------------------------------- cases
+sec("cases", "6. Your cases")
+topic("Find any case", [
+    "Tap <b>Cases</b> in the bottom bar.",
+    "Type in the search box: <b>patient</b>, <b>surgeon</b>, <b>hospital</b> or <b>IP number</b>.",
+    "Use the filters below it: <b>status</b>, <b>month</b>, <b>hospital</b>, <b>surgeon</b>.",
+    "Each row shows the hospital, date, patient, surgeon, fee and status. Tap a row to open it.",
+], img="40-cases-list")
+topic("Show only unpaid cases", [
+    "In the status filter choose <b>Not fully paid</b>.",
+    "Tap <b>clear filters</b> to see everything again.",
+], img="41-cases-unpaid")
+topic("Case details", [
+    "Top: <b>Fee</b>, <b>Received</b> and <b>Outstanding</b>, with the status.",
+    "Below: date, expected payment, procedure, patient, hospital, surgeon and contact person.",
+    "Tap <b>Call ...</b> to phone the contact for this case.",
+    "<b>Edit</b> (top right) - change anything in the case.",
+], img="42-case-detail")
+topic("Payments and follow-ups of a case", [
+    "Scroll down to see <b>Record payment</b> and <b>Log follow-up</b> buttons.",
+    "Every payment received and every follow-up call is listed with its date.",
+    "The app also shows when the next follow-up reminder is due.",
+], img="43-case-detail-lower")
+topic("Edit or delete a case", [
+    "Open the case → tap <b>Edit</b> (top right).",
+    "Change what you need and tap <b>Save case</b>.",
+    "To delete a case, open it, scroll to the very bottom and tap <b>Delete case</b>, then confirm.",
+], img="46-edit-case", note="Deleting a case also deletes its payments and follow-ups. This cannot be undone.")
+
+# --------------------------------------------------------------------------- payments
+sec("payments", "7. Recording payments")
+topic("Note a payment you received", [
+    "Open the case → tap <b>Record payment</b>.",
+    "The <b>Amount</b> is filled with what is still due - change it if you received less (a part payment).",
+    "Check the <b>Payment date</b> and choose the <b>Mode</b> (UPI, bank transfer, cheque, cash...).",
+    "Optional: add the transaction / cheque number.",
+    "Tap <b>Save payment</b>. The case status updates automatically.",
+], img="44-record-payment",
+   tip="Got paid in parts? Record each part separately. The case shows Partially Paid until the full fee is received.")
+
+# --------------------------------------------------------------------------- follow-ups
+sec("followups", "8. Outstanding money and follow-ups")
+topic("Outstanding payments", [
+    "Dashboard → tap the <b>Outstanding</b> card.",
+    "Top: total outstanding, overdue amount and follow-ups due.",
+    "<b>Age of outstanding</b> shows how old the unpaid money is (0-30 days, 31-60, 61-90, 90+).",
+    "Use the tabs (<b>All</b>, <b>Follow-up due</b>, <b>Pending</b>, <b>Overdue</b>) and sort buttons to arrange the list.",
+], img="47-outstanding")
+topic("Overdue payments", [
+    "Dashboard → tap the <b>Overdue</b> card.",
+    "Each row shows how many days the payment is overdue.",
+    "Tap the green phone icon to call the right contact.",
+], img="48-overdue")
+topic("Mark a follow-up quickly", [
+    "Dashboard → tap <b>Follow-ups</b>.",
+    "Tap the <b>⋯</b> button on a case.",
+    "<b>Mark followed up today</b> - you have called; the reminder is cleared.",
+    "<b>Snooze</b> - hide the reminder for 3 days, 1 week or 2 weeks.",
+], img="49-followup-menu")
+topic("Write down what the hospital said", [
+    "Open the case → <b>Log follow-up</b>.",
+    "Choose the date, how you contacted them (call, WhatsApp...) and <b>who you spoke to</b>.",
+    "Write what they said in <b>Notes</b>.",
+    "If they promised a date, enter <b>Promised payment date</b> - reminders pause until then.",
+], img="45-follow-up")
+para("<b>How reminders work:</b> when a case is unpaid for 7, 14 and 21 days (and then every 7 days), "
+     "it appears under <b>Follow-ups</b>. Logging a follow-up or snoozing removes it until the next reminder. "
+     "Your admin can change these days in Settings.")
+
+# --------------------------------------------------------------------------- hospitals
+sec("hospitals", "9. Hospitals")
+topic("My hospitals", [
+    "Tap <b>Hospitals</b> in the bottom bar.",
+    "You see the hospitals you work with, with the amount outstanding at each.",
+    "Use the search box to find <b>any</b> hospital in the list (about 90 Pune and Mumbai hospitals are included).",
+    "Tap <b>+ Add hospital</b> if one is missing.",
+], img="50-hospitals", img2="51-hospital-search", caption="My hospitals", caption2="Search all hospitals")
+topic("Hospital page", [
+    "Address, type and main phone of the hospital.",
+    "<b>My contacts here</b> - your contacts at this hospital, with a call button.",
+    "Your number of cases and outstanding amount there, and recent cases.",
+    "<b>Add case here</b> and <b>Add contact here</b> buttons save typing.",
+], img="52-hospital-detail")
+
+# --------------------------------------------------------------------------- contacts & surgeons
+sec("people", "10. Contacts and surgeons", "Both lists are private: other doctors cannot see your contacts or surgeons.")
+topic("Your contacts", [
+    "Profile menu → <b>My contacts</b>. Use the <b>Contacts</b> / <b>Surgeons</b> tabs at the top.",
+    "Each contact shows their role and hospital. Tap the green phone icon to call.",
+    "Tap <b>+ Add contact</b> to add someone. Contacts are also added automatically when you use "
+    "<b>New contact</b> on Add Case.",
+], img="60-contacts")
+topic("Contact page - when someone changes hospital", [
+    "Open a contact to see where they work and the cases linked to them.",
+    "Moved to another hospital? Tap <b>Add a hospital / moved to another hospital</b>, pick the new hospital "
+    "and tick <b>They moved here</b>. Old cases keep the history.",
+    "<b>⋯</b> next to a hospital: make them the <b>main contact</b> there, or mark <b>no longer works here</b>.",
+], img="61-contact-detail")
+topic("Add a contact", [
+    "Fill in <b>Name</b>, <b>Role</b> and <b>Mobile</b>.",
+    "Android: <b>Pick from phone contacts</b> fills name and mobile for you.",
+    "Optionally choose the hospital they work at, then tap <b>Save contact</b>.",
+], img="62-add-contact")
+topic("Your surgeons", [
+    "Profile menu → <b>My contacts</b> → <b>Surgeons</b> tab.",
+    "Each surgeon shows how many cases they called you for, and at which hospitals.",
+    "Tap <b>+ Add surgeon</b> to add one (surgeons are also added from Add Case).",
+], img="63-surgeons")
+topic("Surgeon page", [
+    "<b>Calls you to</b> - each hospital this surgeon calls you from, with cases and amount billed there.",
+    "Add another hospital with the <b>Hospital</b> box and <b>+ Add hospital</b>; remove one with <b>×</b>.",
+    "Recent cases with this surgeon are listed below. Tap <b>Edit</b> to change name, mobile or speciality.",
+], img="64-surgeon-detail", img2="65-add-surgeon", caption="Surgeon page", caption2="Add surgeon")
+
+# --------------------------------------------------------------------------- reports
+sec("reports", "11. Reports and Excel downloads")
+topic("Choose a report", [
+    "Tap <b>Reports</b> in the bottom bar.",
+    "Every report has filters at the top and a green <b>Download Excel</b> button.",
+    "Choose a <b>Period</b>: this month, last month, last 3 months, this FY, last FY, last 12 months, all time "
+    "or <b>Custom dates</b>.",
+], img="70-reports")
+topic("Cases report", [
+    "All cases matching your filters: period, hospital, surgeon, payment status and search.",
+    "Tap <b>Apply filters</b>, then <b>Download Excel</b> for the full list with patient, surgeon, contact, "
+    "fee, received, outstanding and status.",
+], img="71-cases-report")
+topic("Monthly summary and month page", [
+    "<b>Monthly summary</b> shows cases, billed, received and outstanding for each month.",
+    "Tap a <b>month</b> to open its own page with only three filters: <b>Hospital</b>, <b>Surgeon</b>, "
+    "<b>Payment status</b>.",
+    "Use the <b>‹ ›</b> arrows to move to the previous or next month, and <b>Download Excel</b> for that month.",
+], img="72-monthly", img2="73-month-page", caption="Tap a month", caption2="Month page")
+topic("Hospital-wise billing", [
+    "Billed, received, outstanding and overdue amount for each hospital.",
+    "Sort by <b>Outstanding</b>, <b>Billed</b> or <b>Cases</b>. Tap a hospital to see its cases.",
+], img="74-hospital-wise")
+topic("Surgeon & hospital", [
+    "How many cases each surgeon called you for <b>at each hospital</b>, with billed, received and outstanding.",
+    "Filter by <b>Surgeon</b> and <b>Hospital</b> together to answer: "
+    "<i>“How many cases did Dr. Shah call me for at Ruby Hall this year?”</i>",
+], img="75-surgeon-hospital")
+topic("Payment history", [
+    "Every payment you received in the period, with total and a split by payment mode.",
+    "Filter by hospital, surgeon or mode (e.g. only cheques).",
+], img="76-payment-history", tip="Download the payment history at the end of each month for your CA.")
+
+# --------------------------------------------------------------------------- notifications
+sec("notify", "12. Reminders on your phone")
+topic("Turn on notifications", [
+    "Profile menu → <b>Notification settings</b> (or tap <b>Turn on</b> on the Dashboard).",
+    "Allow notifications when your phone asks.",
+    "Choose what you want: <b>Morning summary</b>, <b>Follow-up reminders</b>, <b>Overdue alerts</b>, <b>Weekly report</b>, <b>Payment updates</b>.",
+    "Set the time for the morning summary and tap <b>Save notification settings</b>.",
+    "Tap <b>Send a test</b> to check it works.",
+], img="80-notifications",
+   note="On iPhone, notifications work only when the app is added to the Home Screen (iOS 16.4 or later).")
+
+# --------------------------------------------------------------------------- admin
+sec("admin", "13. Admin view")
+topic("Switch to the admin view", [
+    "Profile menu → <b>View as admin</b>.",
+    "You now see the data of <b>all doctors</b>, plus extra menu items: <b>Doctors</b>, <b>Settings</b>, <b>Hospital directory</b>.",
+    "To go back, profile menu → <b>Back to my view</b>.",
+], img="90-view-as-admin", img2="91-admin-menu", caption="View as admin", caption2="Admin menu")
+topic("Admin dashboard", [
+    "A <b>doctor selector</b> appears at the top of the Dashboard, Cases and Reports.",
+    "Choose <b>All doctors</b> or one doctor to see their figures.",
+], img="95-admin-dashboard", note="In the admin view you can see and change other doctors' data. Switch back to your own view when you are done.")
+topic("Doctors", [
+    "List of all doctor accounts with mobile numbers.",
+    "Tap a doctor to edit their details, or to activate a new sign-up.",
+    "Tap <b>+ Add doctor</b> to create an account for someone.",
+], img="92-doctors")
+topic("Settings", [
+    "<b>Default payment terms</b> - days assumed when no expected payment date is entered (30).",
+    "<b>Reminder days</b> - when follow-up reminders appear (7, 14, 21) and how often they repeat.",
+    "<b>Sign-ups</b> - allow doctors to create accounts, and whether new accounts need approval.",
+], img="93-settings")
+topic("Hospital directory", [
+    "Shows how many hospitals are in the list and where they came from.",
+    "To load the full government list: download the hospital CSV from <b>data.gov.in</b> and upload it here.",
+], img="94-directory-import")
+
+# --------------------------------------------------------------------------- FAQ
+sec("faq", "14. Questions and quick help")
+table("Common questions", ["Question", "Answer"], [
+    ["I entered the wrong fee or date.", "Open the case → <b>Edit</b> → correct it → <b>Save case</b>."],
+    ["I recorded a payment twice.", "Open the case, tap the wrong payment in the Payments list, then tap the <b>bin</b> button to delete it."],
+    ["The hospital paid only part of the fee.", "Record what you received. The case stays <b>Partially Paid</b> until the rest comes in."],
+    ["The hospital promised to pay on a date.", "<b>Log follow-up</b> and enter the <b>Promised payment date</b>. Reminders pause until then."],
+    ["I can't find a hospital.", "Try fewer letters or the area name. Still missing? Tap <b>Add a hospital not in the list</b>."],
+    ["The surgeon list is empty for a hospital.", "Use <b>New surgeon</b> once; next time they appear first for that hospital."],
+    ["My bulk upload saved nothing.", "Some rows had mistakes. Fix the red cells and upload the same file again."],
+    ["I see an old version of a screen.", "Close the app fully and open it again (or pull down to refresh)."],
+    ["I changed my phone.", "Open the app link on the new phone, sign in, and add it to the home screen again. Your data is safe on the server."],
+    ["Can other doctors see my data?", "Not in their normal view. Anyone who switches to <b>View as admin</b> can see all doctors' data."],
+])
+table("Quick reference", ["Task", "Steps"], [
+    ["Add a case", "+ Add Case → Hospital → Fee → Surgeon → Save case"],
+    ["Record a payment", "Cases → open case → Record payment → Save payment"],
+    ["Call about a payment", "Dashboard → Follow-ups → phone icon"],
+    ["Mark as followed up", "Follow-ups → ⋯ → Mark followed up today"],
+    ["Excel of a month", "Reports → Monthly summary → tap month → Download Excel"],
+    ["Cases per surgeon", "Reports → Surgeon &amp; hospital"],
+    ["Forgot User ID / password", "Sign-in page → Forgot user ID? / Forgot password? → mobile number"],
+])
+
+
+# ----------------------------------------------------------------------------- render
+def img_tag(name, caption=None):
+    cap = f"<figcaption>{caption}</figcaption>" if caption else ""
+    return f"<figure><img src='img/{name}.jpg'>{cap}</figure>"
+
+
+out = []
+toc = "".join(f"<li><a href='#{s['id']}'>{s['title']}</a></li>" for s in SECTIONS)
+fig_no = 0
+for s in SECTIONS:
+    out.append(f"<section id='{s['id']}'><h1>{s['title']}</h1>")
+    if s["intro"]:
+        out.append(f"<p class='intro'>{s['intro']}</p>")
+    for b in s["blocks"]:
+        if b["kind"] == "para":
+            out.append(f"<p class='para'>{b['text']}</p>")
+        elif b["kind"] == "table":
+            head = "".join(f"<th>{h}</th>" for h in b["head"])
+            rows = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r) + "</tr>" for r in b["rows"])
+            out.append(f"<div class='tblock'><h2>{b['title']}</h2><table><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table></div>")
+        else:
+            steps = "".join(f"<li>{x}</li>" for x in b["steps"])
+            extra = ""
+            if b["tip"]:
+                extra += f"<div class='tip'><b>Tip</b> {b['tip']}</div>"
+            if b["note"]:
+                extra += f"<div class='note'><b>Note</b> {b['note']}</div>"
+            imgs = ""
+            if b["img"]:
+                imgs = img_tag(b["img"], b["caption"]) + (img_tag(b["img2"], b["caption2"]) if b["img2"] else "")
+            cls = "topic two" if b["img2"] else ("topic" if b["img"] else "topic noimg")
+            out.append(f"<div class='{cls}'><div class='text'><h2>{b['title']}</h2><ol>{steps}</ol>{extra}</div>"
+                       f"<div class='shots'>{imgs}</div></div>")
+    out.append("</section>")
+
+CSS = """
+@page { size: A4; margin: 16mm 14mm 16mm 14mm; }
+* { box-sizing: border-box; }
+body { font-family: 'Noto Sans', 'DejaVu Sans', Arial, sans-serif; color: #1f2937; font-size: 10.5pt; line-height: 1.45; margin: 0; }
+.cover { height: 260mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always;
+         background: linear-gradient(160deg, #eef0fb 0%, #fff 60%); border-radius: 10px; padding: 0 18mm; }
+.cover .logo { width: 64px; height: 64px; border-radius: 16px; background: #2e2a6e; color: #f5b83d; font-size: 38px;
+               display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.cover h1 { font-size: 32pt; color: #2e2a6e; margin: 18px 0 6px; border: 0; }
+.cover .sub { font-size: 15pt; color: #555; }
+.cover .meta { margin-top: 40px; color: #666; font-size: 10.5pt; }
+.toc { page-break-after: always; }
+.toc h1 { border: 0; }
+.toc ol { font-size: 12.5pt; line-height: 2.0; }
+.toc a { color: #2e2a6e; text-decoration: none; }
+section { page-break-before: always; }
+h1 { color: #2e2a6e; font-size: 20pt; margin: 0 0 8px; padding-bottom: 6px; border-bottom: 3px solid #f5b83d; }
+h2 { color: #2e2a6e; font-size: 12.5pt; margin: 0 0 6px; }
+.intro { font-size: 11.5pt; color: #444; margin: 4px 0 12px; }
+.para { background: #f6f7fb; border-radius: 8px; padding: 8px 12px; margin: 8px 0 12px; break-inside: avoid; }
+.topic { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0 14px; border-bottom: 1px solid #eceef3; break-inside: avoid; }
+.topic .text { flex: 1 1 auto; min-width: 0; }
+.topic .shots { flex: 0 0 62mm; display: flex; gap: 6px; justify-content: flex-end; }
+.topic.two .shots { flex-basis: 108mm; }
+.topic.noimg .shots { display: none; }
+figure { margin: 0; text-align: center; }
+figure img { max-height: 150mm; object-fit: cover; object-position: top; width: 52mm; border: 1px solid #d5d8e0; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.08); display: block; }
+.topic:not(.two) figure img { width: 60mm; }
+figcaption { font-size: 8.5pt; color: #666; margin-top: 3px; }
+ol { margin: 0; padding-left: 18px; }
+ol li { margin-bottom: 4px; }
+.tip, .note { margin-top: 8px; padding: 6px 10px; border-radius: 6px; font-size: 9.8pt; }
+.tip { background: #ecfdf3; border-left: 4px solid #2f9e62; }
+.note { background: #fff7e6; border-left: 4px solid #f5b83d; }
+.tip b, .note b { margin-right: 4px; }
+.tblock { margin: 10px 0 14px; break-inside: avoid; }
+table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+th { background: #2e2a6e; color: #fff; text-align: left; padding: 6px 8px; font-weight: 600; }
+td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+tr:nth-child(even) td { background: #f8f9fc; }
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 9pt; font-weight: 600; }
+.pill.grey { background: #eceef3; color: #475467; } .pill.blue { background: #e5edff; color: #3346a6; }
+.pill.green { background: #e3f6ea; color: #23784a; } .pill.red { background: #fde8e8; color: #b42318; }
+"""
+
+page = f"""<!doctype html><html><head><meta charset='utf-8'><title>Payments Tracker - User Manual</title><style>{CSS}</style></head><body>
+<div class='cover'>
+  <div class='logo'>₹</div>
+  <h1>Payments Tracker</h1>
+  <div class='sub'>User manual for doctors</div>
+  <div class='sub' style='font-size:12pt;margin-top:8px'>Cases · Payments · Follow-ups · Reports</div>
+  <div class='meta'>Step-by-step guide with screenshots of every screen.<br>Version: October 2026</div>
+</div>
+<div class='toc'><h1>Contents</h1><ol style='list-style:none;padding-left:0'>{toc}</ol></div>
+{''.join(out)}
+</body></html>"""
+open("manual.html", "w", encoding="utf-8").write(page)
+print("sections", len(SECTIONS), "topics", sum(1 for s in SECTIONS for b in s["blocks"] if b["kind"] == "topic"))

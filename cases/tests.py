@@ -116,3 +116,18 @@ class CaseViewTests(TestCase):
         self.assertEqual(self.client.get(reverse("cases:list")).context["page"].paginator.count, 2)
         filtered = self.client.get(reverse("cases:list") + f"?doctor={self.other.pk}")
         self.assertEqual(filtered.context["page"].paginator.count, 1)
+
+
+class CaseSearchTests(TestCase):
+    def test_search_by_patient_name_and_surgeon(self):
+        from contacts.models import Surgeon
+
+        doctor = make_doctor()
+        hospital = make_hospital()
+        surgeon = Surgeon.objects.create(doctor=doctor, name="Dr. Amit Shah")
+        a = make_case(doctor, hospital, patient_name="Sunita Patil")
+        b = make_case(doctor, hospital, surgeon=surgeon)
+        self.client.force_login(doctor.user)
+        ids = lambda q: {c.pk for c in self.client.get(reverse("cases:list"), {"q": q}).context["page"]}
+        self.assertEqual(ids("sunita"), {a.pk})
+        self.assertEqual(ids("amit shah"), {b.pk})
