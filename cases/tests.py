@@ -131,3 +131,31 @@ class CaseSearchTests(TestCase):
         ids = lambda q: {c.pk for c in self.client.get(reverse("cases:list"), {"q": q}).context["page"]}
         self.assertEqual(ids("sunita"), {a.pk})
         self.assertEqual(ids("amit shah"), {b.pk})
+
+
+class CaseDeleteTests(TestCase):
+    def setUp(self):
+        self.doctor = make_doctor()
+        self.case = make_case(self.doctor, make_hospital(), patient_name="Sunita Patil")
+        Payment.objects.create(case=self.case, amount=Decimal("100"))
+        self.client.force_login(self.doctor.user)
+        self.delete_url = reverse("cases:delete", args=[self.case.pk])
+
+    def test_delete_buttons_on_case_and_edit_pages(self):
+        self.assertContains(self.client.get(self.case.get_absolute_url()), f'href="{self.delete_url}"')
+        self.assertContains(self.client.get(reverse("cases:edit", args=[self.case.pk])), f'href="{self.delete_url}"')
+        self.assertNotContains(self.client.get(reverse("cases:add")), "Delete case")
+
+    def test_confirm_then_delete(self):
+        page = self.client.get(self.delete_url)
+        self.assertContains(page, "Delete this case?")
+        self.assertContains(page, "Sunita Patil")
+        self.assertTrue(Case.objects.filter(pk=self.case.pk).exists())  # GET only asks
+        self.assertRedirects(self.client.post(self.delete_url), reverse("cases:list"))
+        self.assertFalse(Case.objects.filter(pk=self.case.pk).exists())
+        self.assertFalse(Payment.objects.filter(case_id=self.case.pk).exists())
+
+    def test_cannot_delete_other_doctors_case(self):
+        self.client.force_login(make_doctor("dr.other", "Dr. Other").user)
+        self.assertNotEqual(self.client.post(self.delete_url).status_code, 302)
+        self.assertTrue(Case.objects.filter(pk=self.case.pk).exists())

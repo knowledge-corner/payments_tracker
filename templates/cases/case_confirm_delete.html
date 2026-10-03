@@ -4,7 +4,7 @@
 {% block content %}
 <div class="card p-4" style="max-width: 520px;">
   <h1 class="h5">Delete this case?</h1>
-  <p>{{ case.hospital.name }} · {{ case.case_date|date:"d M Y" }} · {{ case.fee|inr }}</p>
+  <p>{{ case.hospital.name }} · {{ case.case_date|date:"d M Y" }}{% if case.patient_name %} · {{ case.patient_name }}{% endif %} · {{ case.fee|inr }}</p>
   <p class="text-danger small">All payments and follow-ups recorded against it will also be deleted. This cannot be undone.</p>
   <form method="post" class="d-flex gap-2">{% csrf_token %}
     <button class="btn btn-danger">Yes, delete</button>

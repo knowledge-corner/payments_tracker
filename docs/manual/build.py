@@ -214,18 +214,23 @@ topic("Case details", [
     "Top: <b>Fee</b>, <b>Received</b> and <b>Outstanding</b>, with the status.",
     "Below: date, expected payment, procedure, patient, hospital, surgeon and contact person.",
     "Tap <b>Call ...</b> to phone the contact for this case.",
-    "<b>Edit</b> (top right) - change anything in the case.",
+    "<b>Edit</b> and <b>Delete</b> buttons are at the top right.",
 ], img="42-case-detail")
 topic("Payments and follow-ups of a case", [
     "Scroll down to see <b>Record payment</b> and <b>Log follow-up</b> buttons.",
     "Every payment received and every follow-up call is listed with its date.",
     "The app also shows when the next follow-up reminder is due.",
 ], img="43-case-detail-lower")
-topic("Edit or delete a case", [
+topic("Edit a case", [
     "Open the case → tap <b>Edit</b> (top right).",
     "Change what you need and tap <b>Save case</b>.",
-    "To delete a case, open it, scroll to the very bottom and tap <b>Delete case</b>, then confirm.",
-], img="46-edit-case", note="Deleting a case also deletes its payments and follow-ups. This cannot be undone.")
+    "The edit page also has a red <b>Delete</b> button next to Save case.",
+], img="46-edit-case")
+topic("Delete a case", [
+    "Open the case → tap the red <b>Delete</b> button (top right), or tap <b>Delete</b> on the edit page.",
+    "A page asks <b>Delete this case?</b> and shows the hospital, date, patient and fee so you can check it is the right one.",
+    "Tap <b>Yes, delete</b> to remove it, or <b>Cancel</b> to keep it.",
+], img="46b-delete-confirm", note="Deleting a case also deletes its payments and follow-ups. This cannot be undone.")
 
 # --------------------------------------------------------------------------- payments
 sec("payments", "7. Recording payments")
@@ -424,6 +429,7 @@ table("Common questions", ["Question", "Answer"], [
 table("Quick reference", ["Task", "Steps"], [
     ["Add a case", "+ Add Case → Hospital → Fee → Surgeon → Save case"],
     ["Record a payment", "Cases → open case → Record payment → Save payment"],
+    ["Delete a case", "Cases → open case → Delete → Yes, delete"],
     ["Call about a payment", "Dashboard → Follow-ups → phone icon"],
     ["Mark as followed up", "Follow-ups → ⋯ → Mark followed up today"],
     ["Excel of a month", "Reports → Monthly summary → tap month → Download Excel"],

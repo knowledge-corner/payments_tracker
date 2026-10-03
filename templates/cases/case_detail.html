@@ -6,6 +6,7 @@
   <a href="{% url 'cases:list' %}" class="btn btn-link px-0 text-body"><i class="bi bi-arrow-left fs-5"></i></a>
   <h1 class="h5 mb-0 flex-fill text-truncate">{{ case.hospital.name }}</h1>
   <a href="{% url 'cases:edit' case.pk %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+  <a href="{% url 'cases:delete' case.pk %}" class="btn btn-sm btn-outline-danger" aria-label="Delete case"><i class="bi bi-trash"></i> Delete</a>
 </div>
 
 <div class="card p-3 mb-3">
@@ -86,6 +87,5 @@
 
 <div class="text-center small text-muted mb-3">
   Added {{ case.created_at|date:"d M Y, H:i" }} · Updated {{ case.updated_at|date:"d M Y, H:i" }}
-  · <a class="text-danger" href="{% url 'cases:delete' case.pk %}">Delete case</a>
 </div>
 {% endblock %}
