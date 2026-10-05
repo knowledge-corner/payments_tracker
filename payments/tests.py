@@ -121,3 +121,35 @@ class ReminderTests(TestCase):
         self.assertEqual([c.pk for c in response.context["cases"]], [older.pk, newer.pk])
         response = self.client.get(reverse("receivables:list") + "?view=overdue")
         self.assertEqual([c.pk for c in response.context["cases"]], [older.pk])
+
+
+class ReceivedByTests(TestCase):
+    def setUp(self):
+        self.doctor = make_doctor()
+        self.case = make_case(self.doctor, make_hospital(), fee=5000)
+        self.client.force_login(self.doctor.user)
+
+    def test_record_payment_with_received_by(self):
+        url = reverse("payments:record_for_case", args=[self.case.pk])
+        self.assertContains(self.client.get(url), 'name="received_by"')
+        self.client.post(url, {"amount": "2000", "payment_date": timezone.localdate().isoformat(), "mode": "upi",
+                               "received_by": "Clinic reception"})
+        payment = Payment.objects.get()
+        self.assertEqual(payment.received_by, "Clinic reception")
+        self.assertContains(self.client.get(self.case.get_absolute_url()), "received by Clinic reception")
+        # offered as a suggestion next time
+        self.assertContains(self.client.get(url), '<option value="Clinic reception">')
+
+    def test_received_by_is_optional_and_in_excel(self):
+        import io
+
+        from openpyxl import load_workbook
+
+        url = reverse("payments:record_for_case", args=[self.case.pk])
+        self.client.post(url, {"amount": "1000", "payment_date": timezone.localdate().isoformat(), "mode": "cash"})
+        Payment.objects.create(case=self.case, amount=Decimal("500"), received_by="Dr. Mehta")
+        self.assertEqual(Payment.objects.count(), 2)
+        response = self.client.get(reverse("reports:payments") + "?period=all&export=xlsx")
+        values = [c.value for row in load_workbook(io.BytesIO(response.content)).active.iter_rows() for c in row]
+        self.assertIn("Received by", values)
+        self.assertIn("Dr. Mehta", values)

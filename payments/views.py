@@ -23,6 +23,13 @@ def _next_url(request, default):
     return default
 
 
+def received_by_suggestions(user):
+    """Names used before in 'Received by' (most recent first) for quick picking."""
+    names = (Payment.objects.filter(case__in=Case.objects.for_user(user)).exclude(received_by="")
+             .order_by("-payment_date", "-id").values_list("received_by", flat=True)[:200])
+    return list(dict.fromkeys(names))[:15]
+
+
 @login_required
 def record_payment(request, case_pk=None):
     """Record a payment - either against a chosen case or picked from the unpaid list."""
@@ -49,6 +56,7 @@ def record_payment(request, case_pk=None):
         return redirect(_next_url(request, reverse("cases:detail", args=[payment.case_id])))
     return render(request, "payments/payment_form.html", {
         "form": form, "case": fixed_case, "unpaid_count": unpaid.count(), "next": _next_url(request, ""),
+        "received_by_suggestions": received_by_suggestions(request.user),
     })
 
 
@@ -73,7 +81,10 @@ def edit_payment(request, pk):
             form.save()
             messages.success(request, "Payment updated.")
             return redirect(payment.case)
-    return render(request, "payments/payment_form.html", {"form": form, "case": payment.case, "payment": payment})
+    return render(request, "payments/payment_form.html", {
+        "form": form, "case": payment.case, "payment": payment,
+        "received_by_suggestions": received_by_suggestions(request.user),
+    })
 
 
 # --- Follow-ups --------------------------------------------------------------

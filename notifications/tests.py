@@ -62,10 +62,16 @@ class NotificationFlowTests(TestCase):
         self.sub = PushSubscription.objects.create(user=self.user, endpoint="https://fcm.googleapis.com/fcm/send/x",
                                                    p256dh=p256dh, auth=auth)
 
+    def no_weekly_report(self):
+        prefs = NotificationPreference.for_user(self.user)
+        prefs.weekly_report = False
+        prefs.save()
+
     def titles(self, send_mock):
         return [c.args[3]["title"] for c in send_mock.call_args_list]
 
     def test_morning_run_sends_overdue_followup_and_summary_once(self, send):
+        self.no_weekly_report()  # keep the test independent of the weekday it runs on
         make_case(self.doctor, self.hospital, days_ago=40, fee=4500)   # overdue + follow-up due
         make_case(self.doctor, self.hospital, days_ago=8, fee=3000)    # follow-up due
         run_for_user(self.user, at_hour(9))
@@ -80,6 +86,7 @@ class NotificationFlowTests(TestCase):
         self.assertEqual(NotifiedCase.objects.count(), 3)
 
     def test_respects_hour_and_switches(self, send):
+        self.no_weekly_report()
         make_case(self.doctor, self.hospital, days_ago=40)
         run_for_user(self.user, at_hour(7))
         self.assertEqual(send.call_count, 0)  # before the 9 AM preference

@@ -67,7 +67,8 @@ for i, (ago, h, s, proc, fee, frac) in enumerate(plan):
     if frac:
         pdate = min(today, cdate + datetime.timedelta(days=random.randint(5, 25)))
         Payment.objects.create(case=case, amount=Decimal(int(fee * frac)), payment_date=pdate,
-                               mode=modes[i % 5], reference_no=f"UTR{random.randint(10**8, 10**9)}", created_by=u)
+                               mode=modes[i % 5], reference_no=f"UTR{random.randint(10**8, 10**9)}", created_by=u,
+                               received_by=["Dr. Anjali Mehta", "Clinic reception", "Bank account"][i % 3])
     if not frac and ago > 30 and i % 2:
         PaymentFollowUp.objects.create(case=case, followup_date=today - datetime.timedelta(days=ago - 20),
                                        method="call", contact=C.get(h), contact_person=C[h].name if h in C else "",

@@ -65,7 +65,7 @@
   <div class="list-group list-group-flush">
     {% for p in payments %}
     <a href="{% url 'payments:edit' p.pk %}" class="list-group-item list-group-item-action d-flex justify-content-between">
-      <div><div>{{ p.payment_date|date:"d M Y" }} · {{ p.get_mode_display }}</div>{% if p.reference_no or p.notes %}<div class="small text-muted">{{ p.reference_no }} {{ p.notes|truncatechars:60 }}</div>{% endif %}</div>
+      <div><div>{{ p.payment_date|date:"d M Y" }} · {{ p.get_mode_display }}{% if p.received_by %} · received by {{ p.received_by }}{% endif %}</div>{% if p.reference_no or p.notes %}<div class="small text-muted">{{ p.reference_no }} {{ p.notes|truncatechars:60 }}</div>{% endif %}</div>
       <div class="fw-semibold text-success amount">{{ p.amount|inr }}</div>
     </a>
     {% empty %}<div class="p-3 text-muted small">No payments recorded yet.</div>{% endfor %}

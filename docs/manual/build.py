@@ -218,7 +218,7 @@ topic("Case details", [
 ], img="42-case-detail")
 topic("Payments and follow-ups of a case", [
     "Scroll down to see <b>Record payment</b> and <b>Log follow-up</b> buttons.",
-    "Every payment received and every follow-up call is listed with its date.",
+    "Every payment received (with who received it) and every follow-up call is listed with its date.",
     "The app also shows when the next follow-up reminder is due.",
 ], img="43-case-detail-lower")
 topic("Edit a case", [
@@ -238,6 +238,8 @@ topic("Note a payment you received", [
     "Open the case → tap <b>Record payment</b>.",
     "The <b>Amount</b> is filled with what is still due - change it if you received less (a part payment).",
     "Check the <b>Payment date</b> and choose the <b>Mode</b> (UPI, bank transfer, cheque, cash...).",
+    "<b>Received by</b> - who received the money, e.g. <i>Dr. Mehta</i> or <i>Clinic reception</i> (optional). "
+    "Names you used before are suggested as you type.",
     "Optional: add the transaction / cheque number.",
     "Tap <b>Save payment</b>. The case status updates automatically.",
 ], img="44-record-payment",
@@ -347,7 +349,8 @@ topic("Surgeon & hospital", [
 ], img="75-surgeon-hospital")
 topic("Payment history", [
     "Every payment you received in the period, with total and a split by payment mode.",
-    "Filter by hospital, surgeon or mode (e.g. only cheques).",
+    "Filter by hospital, surgeon or mode (e.g. only cheques). Search also finds <b>Received by</b> names.",
+    "The Excel download has a <b>Received by</b> column.",
 ], img="76-payment-history", tip="Download the payment history at the end of each month for your CA.")
 
 # --------------------------------------------------------------------------- notifications

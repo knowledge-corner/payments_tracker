@@ -271,7 +271,7 @@ def payment_history(request):
         payments = payments.filter(mode=filters.mode)
     if filters.q:
         payments = payments.filter(
-            Q(reference_no__icontains=filters.q) | Q(notes__icontains=filters.q)
+            Q(reference_no__icontains=filters.q) | Q(notes__icontains=filters.q) | Q(received_by__icontains=filters.q)
             | Q(case__patient_reference__icontains=filters.q)
         )
     summary = payments.aggregate(total=Sum("amount"), n=Count("id"))
@@ -284,11 +284,11 @@ def payment_history(request):
     fmt = export_format(request)
     if fmt:
         columns = [("Payment date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Case date", "date"),
-                   ("Case / patient ref", "text"), ("Amount", "money"), ("Mode", "text"), ("Reference", "text"),
-                   ("Notes", "text")]
+                   ("Case / patient ref", "text"), ("Amount", "money"), ("Mode", "text"), ("Received by", "text"),
+                   ("Reference", "text"), ("Notes", "text")]
         rows = [[p.payment_date, str(p.case.doctor), p.case.hospital.name, p.case.case_date, p.case.patient_reference,
-                 p.amount, p.get_mode_display(), p.reference_no, p.notes] for p in payments]
-        total_row = ["TOTAL", f"{summary['n']} payments", "", "", "", summary["total"] or ZERO, "", "", ""]
+                 p.amount, p.get_mode_display(), p.received_by, p.reference_no, p.notes] for p in payments]
+        total_row = ["TOTAL", f"{summary['n']} payments", "", "", "", summary["total"] or ZERO, "", "", "", ""]
         return export_response(fmt, "payment_history", "Payment history", filters.describe(), columns, rows, total_row)
 
     page = Paginator(payments, 50).get_page(request.GET.get("page"))

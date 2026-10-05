@@ -26,6 +26,8 @@
       <div class="col-6">{% include "partials/field.html" with field=form.payment_date %}</div>
     </div>
     {% include "partials/field.html" with field=form.mode %}
+    {% include "partials/field.html" with field=form.received_by %}
+    <datalist id="received-by-options">{% for name in received_by_suggestions %}<option value="{{ name }}">{% endfor %}</datalist>
     {% include "partials/field.html" with field=form.reference_no %}
     {% include "partials/field.html" with field=form.notes %}
   </div>

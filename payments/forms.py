@@ -15,11 +15,12 @@ class CaseChoiceField(forms.ModelChoiceField):
 class PaymentForm(StyledModelForm):
     class Meta:
         model = Payment
-        fields = ["case", "amount", "payment_date", "mode", "reference_no", "notes"]
+        fields = ["case", "amount", "payment_date", "mode", "received_by", "reference_no", "notes"]
         widgets = {
             "payment_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "amount": forms.NumberInput(attrs={"inputmode": "decimal", "step": "0.01"}),
             "notes": forms.Textarea(attrs={"rows": 2}),
+            "received_by": forms.TextInput(attrs={"placeholder": "e.g. Dr. Mehta / clinic reception", "list": "received-by-options"}),
         }
 
     def __init__(self, *args, case_queryset=None, fixed_case=None, **kwargs):

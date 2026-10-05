@@ -105,7 +105,7 @@ const HL = 'outline:3px solid #e11d48 !important; outline-offset:2px !important;
   });
   await step('pay', async () => {
     const id = caseUrl.match(/\d+/)[0];
-    await p.goto(B + '/payments/record/case/' + id + '/'); await shot(p, '44-record-payment');
+    await p.goto(B + '/payments/record/case/' + id + '/'); await shot(p, '44-record-payment', { hl: ['#id_received_by'] });
     await p.goto(B + '/payments/case/' + id + '/follow-up/'); await shot(p, '45-follow-up');
     await p.goto(B + '/cases/' + id + '/edit/'); await shot(p, '46-edit-case', { hl: ['.form-actions a[href$="/delete/"]'] });
     await p.goto(B + '/cases/' + id + '/delete/'); await shot(p, '46b-delete-confirm', { hl: ['button.btn-danger'] });

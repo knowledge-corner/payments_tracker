@@ -22,6 +22,8 @@ class Payment(ImportableModel):
     payment_date = models.DateField(default=timezone.localdate, db_index=True)
     mode = models.CharField(max_length=20, choices=MODE_CHOICES, default="bank")
     reference_no = models.CharField("Transaction / cheque no.", max_length=100, blank=True)
+    received_by = models.CharField(max_length=100, blank=True,
+                                   help_text="Who received the payment, e.g. Dr. Mehta, clinic staff, bank account.")
     notes = models.TextField(blank=True)
     created_by = models.ForeignKey(
         "accounts.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
