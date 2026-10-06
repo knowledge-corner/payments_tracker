@@ -46,23 +46,18 @@ def run_for_user(user, now=None):
     overdue = [c for c in cases if c.status == "overdue"]
     followups = [c for c in cases if c.reminder.due]
 
-    if prefs.wants(NotificationKind.OVERDUE) and overdue:
-        results["overdue"] = _notify_cases(
-            user, NotificationKind.OVERDUE, overdue, lambda c: f"overdue:{c.pk}",
-            lambda n: f"{n} payment{'s are' if n != 1 else ' is'} now overdue",
-            reverse("receivables:list") + "?view=overdue",
-        )
+    # One reminder per case per reminder date (expected payment date, or a date set in a follow-up).
     if prefs.wants(NotificationKind.FOLLOWUP) and followups:
         results["followup"] = _notify_cases(
             user, NotificationKind.FOLLOWUP, followups, lambda c: f"followup:{c.pk}:{c.reminder.last_trigger}",
-            lambda n: f"{n} payment{'s need' if n != 1 else ' needs'} a follow-up",
+            lambda n: f"Payment reminder: {n} case{'s' if n != 1 else ''} to follow up",
             reverse("receivables:list") + "?view=followup",
         )
     if prefs.wants(NotificationKind.DAILY_SUMMARY) and (followups or overdue):
         outstanding = sum(c.outstanding for c in cases)
         parts = []
         if followups:
-            parts.append(f"{len(followups)} follow-up{'s' if len(followups) != 1 else ''} due")
+            parts.append(f"{len(followups)} reminder{'s' if len(followups) != 1 else ''} due")
         if overdue:
             parts.append(f"{len(overdue)} overdue ({inr(sum(c.outstanding for c in overdue))})")
         parts.append(f"{inr(outstanding)} outstanding")

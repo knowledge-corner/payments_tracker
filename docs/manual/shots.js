@@ -101,12 +101,17 @@ const HL = 'outline:3px solid #e11d48 !important; outline-offset:2px !important;
   const caseUrl = await p.evaluate(async (B) => { const r = await fetch('/cases/?q=Deshmukh'); const t = await r.text(); const m = t.match(/href="(\/cases\/\d+\/)"/); return m ? m[1] : null; }, B);
   await step('detail', async () => {
     await p.goto(B + caseUrl); await shot(p, '42-case-detail', { hl: ['a[href$="/edit/"]', 'a[href$="/delete/"]'] });
-    await shot(p, '43-case-detail-lower', { scroll: 'text=Follow-ups', full: false });
+    await shot(p, '43-case-detail-lower', { scroll: 'text=Follow-ups', hl: ['.alert.small'] });
   });
   await step('pay', async () => {
     const id = caseUrl.match(/\d+/)[0];
     await p.goto(B + '/payments/record/case/' + id + '/'); await shot(p, '44-record-payment', { hl: ['#id_received_by'] });
-    await p.goto(B + '/payments/case/' + id + '/follow-up/'); await shot(p, '45-follow-up');
+    await p.goto(B + '/payments/case/' + id + '/follow-up/');
+    await p.fill('#id_notes', 'Bill is with accounts, will pay next week');
+    const d = new Date(); d.setDate(d.getDate() + 7); const iso = d.toISOString().slice(0, 10);
+    await p.fill('#id_promised_payment_date', iso); await p.fill('#id_next_reminder', iso);
+    await p.evaluate(() => { const el = document.getElementById('id_notes'); window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 120); });
+    await shot(p, '45-follow-up', { hl: ['#id_next_reminder'] });
     await p.goto(B + '/cases/' + id + '/edit/'); await shot(p, '46-edit-case', { hl: ['.form-actions a[href$="/delete/"]'] });
     await p.goto(B + '/cases/' + id + '/delete/'); await shot(p, '46b-delete-confirm', { hl: ['button.btn-danger'] });
   });

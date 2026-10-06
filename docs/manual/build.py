@@ -157,7 +157,8 @@ topic("Step 4 - Contact person (who to call for payment)", [
 topic("Step 5 - Procedure, reference, payment date", [
     "<b>Procedure / case type</b>, e.g. <i>TKR - spinal</i> (suggestions appear as you type).",
     "<b>Case / patient ref</b> - IP number or bill number (optional).",
-    "<b>Expected payment date</b> - when you expect to be paid. Leave empty to use 30 days.",
+    "<b>Expected payment date</b> - when you expect to be paid. Leave empty to use 30 days. "
+    "<b>You get a payment reminder on this date</b> if the case is not fully paid.",
     "Already paid on the spot? Switch on <b>Payment already received</b> and enter the amount and mode.",
     "<b>Notes</b> - anything else (tap to open).",
 ], img="26-add-case-lower")
@@ -219,7 +220,7 @@ topic("Case details", [
 topic("Payments and follow-ups of a case", [
     "Scroll down to see <b>Record payment</b> and <b>Log follow-up</b> buttons.",
     "Every payment received (with who received it) and every follow-up call is listed with its date.",
-    "The app also shows when the next follow-up reminder is due.",
+    "The box above the payments shows the <b>next reminder date</b>, or that a reminder is due now.",
 ], img="43-case-detail-lower")
 topic("Edit a case", [
     "Open the case → tap <b>Edit</b> (top right).",
@@ -262,17 +263,23 @@ topic("Mark a follow-up quickly", [
     "Dashboard → tap <b>Follow-ups</b>.",
     "Tap the <b>⋯</b> button on a case.",
     "<b>Mark followed up today</b> - you have called; the reminder is cleared.",
-    "<b>Snooze</b> - hide the reminder for 3 days, 1 week or 2 weeks.",
+    "<b>Remind me in 3 days / 1 week / 2 weeks</b> - the reminder disappears now and comes back on that day.",
 ], img="49-followup-menu")
 topic("Write down what the hospital said", [
     "Open the case → <b>Log follow-up</b>.",
     "Choose the date, how you contacted them (call, WhatsApp...) and <b>who you spoke to</b>.",
     "Write what they said in <b>Notes</b>.",
-    "If they promised a date, enter <b>Promised payment date</b> - reminders pause until then.",
-], img="45-follow-up")
-para("<b>How reminders work:</b> when a case is unpaid for 7, 14 and 21 days (and then every 7 days), "
-     "it appears under <b>Follow-ups</b>. Logging a follow-up or snoozing removes it until the next reminder. "
-     "Your admin can change these days in Settings.")
+    "If they promised a date, enter <b>Promised payment date</b>.",
+    "Want another reminder? Choose a date in <b>Remind me again on</b>. You get a reminder on that date. "
+    "(If you leave it empty but entered a promised date, you are reminded on the promised date.)",
+], img="45-follow-up", tip="This is how you add extra reminders for a case - as many as you need, one follow-up at a time.")
+table("How reminders work", ["You get a reminder...", "When"], [
+    ["On the <b>expected payment date</b>", "The date you entered on the case. If you left it empty: 30 days after the case date."],
+    ["On a date <b>you</b> choose", "<b>Log follow-up</b> → <b>Remind me again on</b>, or <b>⋯</b> → <b>Remind me in 3 days / 1 week / 2 weeks</b>."],
+    ["Nothing else", "No automatic 7 / 14 / 21-day reminders. A fully paid case never reminds you."],
+], after=None)
+para("A reminder arrives on your phone at your <b>notification time</b> (9:00 AM unless you changed it) and the case "
+     "shows under <b>Follow-ups</b>. Logging a follow-up clears it.")
 
 # --------------------------------------------------------------------------- hospitals
 sec("hospitals", "9. Hospitals")
@@ -358,8 +365,9 @@ sec("notify", "12. Reminders on your phone")
 topic("Turn on notifications", [
     "Profile menu → <b>Notification settings</b> (or tap <b>Turn on</b> on the Dashboard).",
     "Allow notifications when your phone asks.",
-    "Choose what you want: <b>Morning summary</b>, <b>Follow-up reminders</b>, <b>Overdue alerts</b>, <b>Weekly report</b>, <b>Payment updates</b>.",
-    "Set the time for the morning summary and tap <b>Save notification settings</b>.",
+    "Choose what you want: <b>Payment reminders</b> (expected date and your reminder dates), <b>Morning summary</b>, "
+    "<b>Weekly report</b>, <b>Payment updates</b>.",
+    "Set the <b>Notification time</b> (default 9:00 AM) and tap <b>Save notification settings</b>.",
     "Tap <b>Send a test</b> to check it works.",
 ], img="80-notifications",
    note="On iPhone, notifications work only when the app is added to the Home Screen (iOS 16.4 or later).")
@@ -382,7 +390,7 @@ topic("Administrator dashboard", [
 topic("Administrator menu", [
     "Tap the round profile icon (top right). Next to your name is an orange <b>Admin</b> label.",
     "<b>Doctors</b> - doctor accounts.",
-    "<b>Settings</b> - payment terms, reminders and sign-up rules for the whole app.",
+    "<b>Settings</b> - default payment terms and sign-up rules for the whole app.",
     "<b>Hospital directory</b> - load the government hospital list.",
 ], img="92-admin-menu")
 topic("Doctors", [
@@ -403,8 +411,8 @@ topic("Add a case for a doctor", [
 ], img="96-admin-add-case")
 topic("Settings", [
     "<b>Practice name</b> - shown in the app.",
-    "<b>Default payment terms</b> - days assumed when no expected payment date is entered (30).",
-    "<b>Reminder days</b> - when follow-up reminders appear (7, 14, 21) and how often they repeat after that.",
+    "<b>Default payment terms</b> - days assumed when no expected payment date is entered (30). "
+    "Doctors get their payment reminder on that day.",
     "<b>Sign-ups</b> - allow doctors to create their own accounts, and whether new accounts need your approval.",
     "Tap <b>Save settings</b> at the bottom.",
 ], img="97-settings")
@@ -420,7 +428,9 @@ table("Common questions", ["Question", "Answer"], [
     ["I entered the wrong fee or date.", "Open the case → <b>Edit</b> → correct it → <b>Save case</b>."],
     ["I recorded a payment twice.", "Open the case, tap the wrong payment in the Payments list, then tap the <b>bin</b> button to delete it."],
     ["The hospital paid only part of the fee.", "Record what you received. The case stays <b>Partially Paid</b> until the rest comes in."],
-    ["The hospital promised to pay on a date.", "<b>Log follow-up</b> and enter the <b>Promised payment date</b>. Reminders pause until then."],
+    ["The hospital promised to pay on a date.", "<b>Log follow-up</b> and enter the <b>Promised payment date</b>. You are reminded on that date."],
+    ["I did not get a notification.", "Reminders come only on the expected payment date (or a date you set), at your notification time. "
+     "Check <b>Notification settings</b>: notifications turned on for this phone, and <b>Send a test</b> works."],
     ["I can't find a hospital.", "Try fewer letters or the area name. Still missing? Tap <b>Add a hospital not in the list</b>."],
     ["The surgeon list is empty for a hospital.", "Use <b>New surgeon</b> once; next time they appear first for that hospital."],
     ["My bulk upload saved nothing.", "Some rows had mistakes. Fix the red cells and upload the same file again."],

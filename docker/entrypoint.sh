@@ -40,7 +40,7 @@ if [ -n "${DJANGO_SUPERUSER_USERNAME}" ] && [ -n "${DJANGO_SUPERUSER_PASSWORD}" 
   python manage.py ensure_admin
 fi
 
-# Push notifications: check hourly in the background (morning summary, follow-ups, ...).
+# Push notifications: check hourly in the background (payment reminders, morning summary, weekly report).
 if [ "${NOTIFICATIONS_SCHEDULER:-1}" = "1" ]; then
   (
     sleep 120

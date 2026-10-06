@@ -133,7 +133,8 @@ def snooze_followup(request, case_pk):
     except ValueError:
         days = 3
     services.snooze(case, days)
-    messages.info(request, f"Reminder for {case.hospital} snoozed for {days} day(s).")
+    messages.info(request, f"You will be reminded about {case.hospital} on "
+                           f"{case.followup_snoozed_until:%d %b %Y}.")
     return redirect(_next_url(request, reverse("receivables:list")))
 
 

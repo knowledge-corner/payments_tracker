@@ -89,6 +89,18 @@ if they match, a new password is set on the spot. **Forgot user ID?** shows the 
 mobile number. 5 wrong attempts lock the form for 15 minutes. Admin logins without a doctor profile
 reset with `python manage.py changepassword <username>`.
 
+## Push notifications
+
+The app container sends due notifications every hour by itself (no cron needed). Reminders go out at
+the time each doctor chose (default 9:00 AM India time) on a case's expected payment date, and on any
+"Remind me again on" date set in a follow-up. To check why someone did or did not get one:
+
+```bash
+cd /opt/payments_tracker
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.prod.yml \
+  exec web python manage.py check_notifications <username> --send-test
+```
+
 ## Backups
 
 - **Daily at 02:30** a compressed PostgreSQL dump is saved to `/var/backups/payments_tracker/` (last 14 days kept).

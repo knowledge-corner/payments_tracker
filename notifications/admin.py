@@ -11,7 +11,7 @@ class PushSubscriptionAdmin(admin.ModelAdmin):
 
 @admin.register(NotificationPreference)
 class NotificationPreferenceAdmin(admin.ModelAdmin):
-    list_display = ["user", "push_enabled", "daily_summary", "followup_reminders", "overdue_alerts",
+    list_display = ["user", "push_enabled", "daily_summary", "followup_reminders",
                     "weekly_report", "payment_updates", "summary_hour"]
 
 

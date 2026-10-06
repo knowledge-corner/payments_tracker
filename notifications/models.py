@@ -5,16 +5,16 @@ from django.db import models
 class NotificationKind:
     DAILY_SUMMARY = "daily_summary"
     FOLLOWUP = "followup_reminders"
-    OVERDUE = "overdue_alerts"
     WEEKLY = "weekly_report"
     PAYMENT = "payment_updates"
     TEST = "test"
 
     # (field on NotificationPreference, label, description)
     CHOICES = [
-        (DAILY_SUMMARY, "Morning summary", "Each morning: follow-ups due today, overdue amount and total outstanding."),
-        (FOLLOWUP, "Follow-up reminders", "When unpaid cases reach a reminder day (e.g. 7, 14, 21 days)."),
-        (OVERDUE, "Overdue alerts", "When a case passes its payment due date."),
+        (FOLLOWUP, "Payment reminders",
+         "On the expected payment date of an unpaid case (30 days after the case if no date was entered), "
+         "and on any reminder date you set in a follow-up."),
+        (DAILY_SUMMARY, "Morning summary", "Each morning when payments need attention: reminders due and total outstanding."),
         (WEEKLY, "Weekly report", "Monday morning: last week's cases, billing and payments received."),
         (PAYMENT, "Payment updates", "When someone else (e.g. the admin) records a payment on your case."),
     ]
@@ -47,12 +47,11 @@ class NotificationPreference(models.Model):
     push_enabled = models.BooleanField("Push notifications", default=True)
     daily_summary = models.BooleanField(default=True)
     followup_reminders = models.BooleanField(default=True)
-    overdue_alerts = models.BooleanField(default=True)
     weekly_report = models.BooleanField(default=True)
     payment_updates = models.BooleanField(default=True)
     summary_hour = models.PositiveSmallIntegerField(
-        "Morning summary time", choices=HOUR_CHOICES, default=9,
-        help_text="Also the time for follow-up reminders, overdue alerts and the weekly report.",
+        "Notification time", choices=HOUR_CHOICES, default=9,
+        help_text="Payment reminders, the morning summary and the weekly report are sent at this time.",
     )
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -95,7 +94,7 @@ class NotifiedCase(models.Model):
     """Remembers which case events were already notified (per reminder date / overdue)."""
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="+")
-    key = models.CharField(max_length=80)  # e.g. followup:123:2026-09-30, overdue:123
+    key = models.CharField(max_length=80)  # e.g. followup:123:2026-09-30 (case + reminder date)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

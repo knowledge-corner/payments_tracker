@@ -70,20 +70,31 @@ class NotificationFlowTests(TestCase):
     def titles(self, send_mock):
         return [c.args[3]["title"] for c in send_mock.call_args_list]
 
-    def test_morning_run_sends_overdue_followup_and_summary_once(self, send):
+    def test_reminder_on_expected_date_and_summary_once(self, send):
         self.no_weekly_report()  # keep the test independent of the weekday it runs on
-        make_case(self.doctor, self.hospital, days_ago=40, fee=4500)   # overdue + follow-up due
-        make_case(self.doctor, self.hospital, days_ago=8, fee=3000)    # follow-up due
+        today = timezone.localdate()
+        make_case(self.doctor, self.hospital, days_ago=40, fee=4500)   # default 30-day date passed
+        make_case(self.doctor, self.hospital, days_ago=1, fee=3000, due_date=today)  # expected today
+        make_case(self.doctor, self.hospital, days_ago=8, fee=2000)    # not yet: no 7-day reminder any more
         run_for_user(self.user, at_hour(9))
         titles = self.titles(send)
-        self.assertEqual(len(titles), 3)
-        self.assertIn("1 payment is now overdue", titles)
-        self.assertIn("2 payments need a follow-up", titles)
-        self.assertIn("Good morning - today's payments", titles)
+        self.assertEqual(titles, ["Payment reminder: 2 cases to follow up", "Good morning - today's payments"])
         send.reset_mock()
         run_for_user(self.user, at_hour(15))  # later the same day: nothing new
         self.assertEqual(send.call_count, 0)
-        self.assertEqual(NotifiedCase.objects.count(), 3)
+        self.assertEqual(NotifiedCase.objects.count(), 2)
+
+    def test_case_due_tomorrow_reminds_tomorrow_morning(self, send):
+        """The reported scenario: case added today, expected payment date tomorrow."""
+        self.no_weekly_report()
+        tomorrow = timezone.localdate() + datetime.timedelta(days=1)
+        make_case(self.doctor, self.hospital, fee=5000, due_date=tomorrow)
+        run_for_user(self.user, at_hour(9))
+        self.assertEqual(send.call_count, 0)
+        run_for_user(self.user, at_hour(8, tomorrow))
+        self.assertEqual(send.call_count, 0)  # before the chosen time
+        run_for_user(self.user, at_hour(9, tomorrow))
+        self.assertIn("Payment reminder: 1 case to follow up", self.titles(send))
 
     def test_respects_hour_and_switches(self, send):
         self.no_weekly_report()
@@ -91,11 +102,10 @@ class NotificationFlowTests(TestCase):
         run_for_user(self.user, at_hour(7))
         self.assertEqual(send.call_count, 0)  # before the 9 AM preference
         prefs = NotificationPreference.for_user(self.user)
-        prefs.overdue_alerts = False
         prefs.daily_summary = False
         prefs.save()
         run_for_user(self.user, at_hour(9))
-        self.assertEqual(self.titles(send), ["1 payment needs a follow-up"])
+        self.assertEqual(self.titles(send), ["Payment reminder: 1 case to follow up"])
         prefs.push_enabled = False
         prefs.save()
         send.reset_mock()
@@ -171,3 +181,20 @@ class NotificationViewTests(TestCase):
         key = self.client.get(reverse("notifications:key")).json()["publicKey"]
         self.assertEqual(len(webpush.b64url_decode(key)), 65)
         self.assertEqual(key, self.client.get(reverse("notifications:key")).json()["publicKey"])  # stable
+
+
+class CheckNotificationsCommandTests(TestCase):
+    def test_reports_problems_and_due_reminders(self):
+        import io
+
+        from django.core.management import call_command
+
+        doctor = make_doctor()
+        make_case(doctor, make_hospital("Ruby Hall Clinic"), days_ago=1, due_date=timezone.localdate())
+        out = io.StringIO()
+        call_command("check_notifications", doctor.user.username, stdout=out)
+        text = out.getvalue()
+        self.assertIn("Devices turned on: 0", text)
+        self.assertIn("PROBLEM: No device", text)
+        self.assertIn("payment reminders due today: 1", text)
+        self.assertIn("Ruby Hall Clinic", text)

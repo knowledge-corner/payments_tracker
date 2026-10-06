@@ -102,6 +102,12 @@ PythonAnywhere does not run background jobs, so add one scheduled task:
 Doctors turn notifications on in the app: account menu → **Notification settings** → *Turn on for this device*.
 On the free plan, morning summaries go out once a day at the task time (doctors choosing a later hour get them the next run).
 
+Paid accounts can run the task **hourly** instead (each doctor then gets reminders at the time they chose).
+To see why someone did or did not get a notification:
+```
+cd ~/payments_tracker && ~/.venvs/payments/bin/python manage.py check_notifications <username> --send-test
+```
+
 > Free accounts can only reach whitelisted websites. If the test notification fails with a connection error,
 > the push service for that browser is not on PythonAnywhere's whitelist - it works on a paid account or on DigitalOcean.
 

@@ -5,7 +5,7 @@ from notifications.services import run_scheduled
 
 
 class Command(BaseCommand):
-    help = "Send scheduled push notifications (morning summary, follow-ups, overdue, weekly report)."
+    help = "Send scheduled push notifications (payment reminders, morning summary, weekly report)."
 
     def add_arguments(self, parser):
         parser.add_argument("--quiet", action="store_true")

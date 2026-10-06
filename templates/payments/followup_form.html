@@ -20,7 +20,12 @@
     </div>
     {% include "partials/field.html" with field=form.contact %}
     {% include "partials/field.html" with field=form.notes %}
-    {% include "partials/field.html" with field=form.promised_payment_date %}
+    <div class="row g-2">
+      <div class="col-6">{% include "partials/field.html" with field=form.promised_payment_date %}</div>
+      <div class="col-6">{% include "partials/field.html" with field=form.next_reminder %}</div>
+    </div>
+    <div class="small text-muted mb-2"><i class="bi bi-bell"></i> You get a reminder on the date in <b>Remind me again on</b>
+      (or on the promised date if that is empty).</div>
   </div>
   <div class="form-actions"><button class="btn btn-primary btn-lg-touch w-100"><i class="bi bi-check2"></i> Save follow-up</button></div>
 </form>

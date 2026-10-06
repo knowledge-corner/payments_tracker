@@ -63,12 +63,19 @@ class PaymentForm(StyledModelForm):
 class FollowUpForm(StyledModelForm):
     class Meta:
         model = PaymentFollowUp
-        fields = ["followup_date", "method", "contact", "promised_payment_date", "notes"]
+        fields = ["followup_date", "method", "contact", "promised_payment_date", "next_reminder", "notes"]
         widgets = {
             "followup_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "promised_payment_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "next_reminder": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "notes": forms.Textarea(attrs={"rows": 3, "placeholder": "What did the hospital say?"}),
         }
+
+    def clean_next_reminder(self):
+        value = self.cleaned_data.get("next_reminder")
+        if value and value <= timezone.localdate():
+            raise forms.ValidationError("Choose a date after today.")
+        return value
 
 
 def followup_form(case, *args, **kwargs):

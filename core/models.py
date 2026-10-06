@@ -27,7 +27,7 @@ class ImportableModel(TimeStampedModel):
         abstract = True
 
 
-def validate_reminder_days(value):
+def validate_reminder_days(value):  # no longer used; kept because old migrations import it
     try:
         days = [int(d) for d in value.split(",") if d.strip()]
     except ValueError:
@@ -42,15 +42,8 @@ class AppSettings(models.Model):
     practice_name = models.CharField(max_length=120, default="Payments Tracker")
     default_payment_terms_days = models.PositiveIntegerField(
         default=30,
-        help_text="Used when a case has no expected payment date: it becomes Overdue this many days after the case date.",
-    )
-    reminder_days = models.CharField(
-        max_length=100, default="7,14,21", validators=[validate_reminder_days],
-        help_text="Follow-up reminders are raised when an unpaid case reaches these ages (days after case date).",
-    )
-    repeat_reminder_every_days = models.PositiveIntegerField(
-        default=7,
-        help_text="After the last reminder above, keep reminding at this interval. 0 = stop.",
+        help_text="Used when a case has no expected payment date. The payment reminder is sent on that date, "
+                  "and the case becomes Overdue after it.",
     )
     allow_signups = models.BooleanField(
         "Allow new doctors to sign up", default=True,
@@ -77,7 +70,3 @@ class AppSettings(models.Model):
     def load(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
-
-    @property
-    def reminder_days_list(self):
-        return sorted({int(d) for d in self.reminder_days.split(",") if d.strip()})

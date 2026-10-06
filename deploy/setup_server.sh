@@ -232,6 +232,7 @@ case "${1:-help}" in
     echo "Restored from $FILE" ;;
   createadmin) $DC exec web python manage.py createsuperuser ;;
   shell)   $DC exec web python manage.py shell ;;
+  notifycheck) shift; $DC exec web python manage.py check_notifications "$@" ;;
   *)
     cat <<'HELP'
 payments status       - show running containers
@@ -241,6 +242,7 @@ payments restart      - restart the app
 payments backup       - back up the database now
 payments restore FILE - restore the database from a backup file
 payments createadmin  - create another admin login
+payments notifycheck [USER] [--send-test] - why a doctor does / does not get notifications
 HELP
     ;;
 esac

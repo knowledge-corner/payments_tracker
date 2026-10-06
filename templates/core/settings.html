@@ -7,9 +7,9 @@
     {% include "partials/form_errors.html" %}
     {% for field in form %}{% include "partials/field.html" %}{% endfor %}
     <div class="alert alert-light border small">
-      <strong>How reminders work:</strong> a follow-up becomes due when an unpaid case reaches each reminder age
-      (e.g. 7, 14, 21 days after the case date), then repeats at the interval above. Recording a follow-up
-      clears it; snoozing hides it for a few days.
+      <strong>How reminders work:</strong> an unpaid case reminds the doctor on its <b>expected payment date</b>
+      (or the default number of days above after the case date, if no date was entered). For more reminders,
+      the doctor logs a follow-up and sets <b>Remind me again on</b>, or uses <b>Remind me in 3 days / 1 week / 2 weeks</b>.
     </div>
     <button class="btn btn-primary">Save settings</button>
   </form>

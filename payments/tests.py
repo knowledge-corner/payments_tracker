@@ -6,7 +6,6 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cases.models import Case
-from core.models import AppSettings
 from core.testing import make_case, make_doctor, make_hospital
 
 from .models import Payment, PaymentFollowUp
@@ -55,54 +54,93 @@ class PaymentViewTests(TestCase):
 
 
 class ReminderTests(TestCase):
+    """Reminders fire only on the expected payment date (default: 30 days) and on dates set in a follow-up."""
+
     def setUp(self):
         self.doctor = make_doctor()
         self.hospital = make_hospital()
-        self.settings = AppSettings.load()  # 7,14,21 then every 7 days
+        self.today = timezone.localdate()
 
-    def test_not_due_before_first_reminder(self):
-        case = make_case(self.doctor, self.hospital, days_ago=6)
-        self.assertFalse(reminder_state(case).due)
+    def day(self, n):
+        return self.today + datetime.timedelta(days=n)
 
-    def test_due_after_first_reminder_and_cleared_by_followup(self):
-        case = make_case(self.doctor, self.hospital, days_ago=8)
-        self.assertTrue(reminder_state(case).due)
-        PaymentFollowUp.objects.create(case=case, followup_date=timezone.localdate())
-        self.assertFalse(reminder_state(case).due)
-
-    def test_reminder_repeats_at_next_threshold(self):
-        case = make_case(self.doctor, self.hospital, days_ago=15)
-        PaymentFollowUp.objects.create(case=case, followup_date=case.case_date + datetime.timedelta(days=8))
-        self.assertTrue(reminder_state(case).due)  # day 14 reminder is newer than the day 8 follow-up
-
-    def test_repeat_interval_after_last_reminder(self):
-        case = make_case(self.doctor, self.hospital, days_ago=29)
-        PaymentFollowUp.objects.create(case=case, followup_date=case.case_date + datetime.timedelta(days=22))
+    def test_no_reminder_before_expected_date(self):
+        case = make_case(self.doctor, self.hospital, days_ago=10)  # default expected date = case + 30 days
         state = reminder_state(case)
-        self.assertTrue(state.due)  # 21 + 7 = day 28
-        self.assertEqual(state.last_trigger, case.case_date + datetime.timedelta(days=28))
+        self.assertFalse(state.due)
+        self.assertEqual(state.next_trigger, case.case_date + datetime.timedelta(days=30))
 
-    def test_snooze_hides_reminder(self):
-        case = make_case(self.doctor, self.hospital, days_ago=10)
+    def test_old_7_14_21_day_reminders_are_gone(self):
+        for age in (7, 8, 14, 21, 28, 29):
+            case = make_case(self.doctor, self.hospital, days_ago=age)
+            self.assertFalse(reminder_state(case).due, age)
+
+    def test_due_on_default_30_days(self):
+        self.assertTrue(reminder_state(make_case(self.doctor, self.hospital, days_ago=30)).due)
+
+    def test_due_on_expected_date_that_was_entered(self):
+        case = make_case(self.doctor, self.hospital, days_ago=1, due_date=self.day(1))
+        self.assertFalse(reminder_state(case).due)
+        self.assertTrue(reminder_state(case, today=self.day(1)).due)  # on the expected date itself
+        self.assertTrue(reminder_state(case, today=self.day(5)).due)  # still due until followed up
+
+    def test_followup_clears_and_remind_again_date_raises_it(self):
+        case = make_case(self.doctor, self.hospital, days_ago=31)
+        self.assertTrue(reminder_state(case).due)
+        self.client.force_login(self.doctor.user)
+        self.client.post(reverse("payments:followup_add", args=[case.pk]), {
+            "followup_date": self.today.isoformat(), "method": "call", "next_reminder": self.day(4).isoformat(),
+        })
+        case = Case.objects.get(pk=case.pk)
+        self.assertEqual(case.followup_snoozed_until, self.day(4))
+        self.assertFalse(reminder_state(case).due)
+        self.assertEqual(reminder_state(case).next_trigger, self.day(4))
+        self.assertTrue(reminder_state(case, today=self.day(4)).due)
+
+    def test_followup_without_date_means_no_more_reminders(self):
+        case = make_case(self.doctor, self.hospital, days_ago=31)
+        PaymentFollowUp.objects.create(case=case, followup_date=self.today)
+        state = reminder_state(case, today=self.day(60))
+        self.assertFalse(state.due)
+        self.assertIsNone(state.next_trigger)
+
+    def test_followup_before_expected_date_keeps_that_reminder(self):
+        case = make_case(self.doctor, self.hospital, days_ago=2, due_date=self.day(3))
+        PaymentFollowUp.objects.create(case=case, followup_date=self.today)
+        self.assertTrue(reminder_state(case, today=self.day(3)).due)
+
+    def test_remind_again_date_must_be_in_future(self):
+        case = make_case(self.doctor, self.hospital, days_ago=31)
+        self.client.force_login(self.doctor.user)
+        response = self.client.post(reverse("payments:followup_add", args=[case.pk]), {
+            "followup_date": self.today.isoformat(), "method": "call", "next_reminder": self.today.isoformat(),
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("next_reminder", response.context["form"].errors)
+
+    def test_remind_me_in_days(self):
+        case = make_case(self.doctor, self.hospital, days_ago=31)
         self.client.force_login(self.doctor.user)
         self.client.post(reverse("payments:followup_snooze", args=[case.pk]), {"days": "3"})
         case.refresh_from_db()
+        self.assertEqual(case.followup_snoozed_until, self.day(3))
         self.assertFalse(reminder_state(case).due)
-        self.assertEqual(case.followup_snoozed_until, timezone.localdate() + datetime.timedelta(days=3))
+        self.assertTrue(reminder_state(case, today=self.day(3)).due)
 
-    def test_promised_date_pauses_reminders(self):
-        case = make_case(self.doctor, self.hospital, days_ago=10)
+    def test_promised_date_becomes_the_reminder(self):
+        case = make_case(self.doctor, self.hospital, days_ago=31)
         self.client.force_login(self.doctor.user)
-        promised = timezone.localdate() + datetime.timedelta(days=5)
         self.client.post(reverse("payments:followup_add", args=[case.pk]), {
-            "followup_date": timezone.localdate().isoformat(), "method": "call",
-            "promised_payment_date": promised.isoformat(), "notes": "Will pay Friday",
+            "followup_date": self.today.isoformat(), "method": "call",
+            "promised_payment_date": self.day(5).isoformat(), "notes": "Will pay Friday",
         })
         case.refresh_from_db()
-        self.assertEqual(case.followup_snoozed_until, promised)
+        self.assertEqual(case.followup_snoozed_until, self.day(5))
+        self.assertTrue(reminder_state(case, today=self.day(5)).due)
 
     def test_quick_mark_followed_up(self):
-        case = make_case(self.doctor, self.hospital, days_ago=10)
+        case = make_case(self.doctor, self.hospital, days_ago=31)
+        self.assertTrue(reminder_state(case).due)
         self.client.force_login(self.doctor.user)
         self.client.post(reverse("payments:followup_quick", args=[case.pk]))
         self.assertEqual(case.followups.count(), 1)

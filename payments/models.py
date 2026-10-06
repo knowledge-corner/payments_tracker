@@ -56,7 +56,11 @@ class PaymentFollowUp(TimeStampedModel):
     contact_person = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
     promised_payment_date = models.DateField(
-        null=True, blank=True, help_text="If the hospital committed to a date, reminders pause until then."
+        null=True, blank=True, help_text="If the hospital committed to a date, you are reminded on that date."
+    )
+    next_reminder = models.DateField(
+        "Remind me again on", null=True, blank=True,
+        help_text="Get a payment reminder on this date. Leave empty for no more reminders.",
     )
     created_by = models.ForeignKey(
         "accounts.User", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"

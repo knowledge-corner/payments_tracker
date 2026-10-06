@@ -46,14 +46,13 @@
 </div>
 {% if reminder %}
 <div class="alert {% if reminder.due %}alert-warning{% else %}alert-light border{% endif %} py-2 small">
-  {% if reminder.due %}<i class="bi bi-bell-fill"></i> Payment follow-up is due.
-  {% elif reminder.snoozed_until %}<i class="bi bi-alarm"></i> Reminder snoozed until {{ reminder.snoozed_until|date:"d M Y" }}.
-  {% elif reminder.next_trigger %}<i class="bi bi-calendar-event"></i> Next follow-up reminder on {{ reminder.next_trigger|date:"d M Y" }}.
-  {% else %}No more reminders scheduled.{% endif %}
+  {% if reminder.due %}<i class="bi bi-bell-fill"></i> Payment reminder is due - follow up with the hospital.
+  {% elif reminder.next_trigger %}<i class="bi bi-calendar-event"></i> Next reminder on {{ reminder.next_trigger|date:"d M Y" }}{% if reminder.next_trigger == case.due_date %} (expected payment date){% endif %}.
+  {% else %}No reminder set. To get one, tap <b>Log follow-up</b> and choose <b>Remind me again on</b>.{% endif %}
   {% if reminder.due %}
   <form method="post" action="{% url 'payments:followup_snooze' case.pk %}" class="d-inline ms-1">{% csrf_token %}
     <input type="hidden" name="next" value="{{ request.path }}"><input type="hidden" name="days" value="3">
-    <button class="btn btn-link btn-sm p-0 align-baseline">Snooze 3 days</button>
+    <button class="btn btn-link btn-sm p-0 align-baseline">Remind me in 3 days</button>
   </form>
   {% endif %}
 </div>
@@ -80,6 +79,7 @@
       <div class="d-flex justify-content-between"><strong class="small">{{ f.followup_date|date:"d M Y" }} · {{ f.get_method_display }}</strong>{% if f.contact %}<a class="small" href="{{ f.contact.get_absolute_url }}">{{ f.contact.name }}</a>{% elif f.contact_person %}<span class="small text-muted">{{ f.contact_person }}</span>{% endif %}</div>
       {% if f.notes %}<div class="small">{{ f.notes|linebreaksbr }}</div>{% endif %}
       {% if f.promised_payment_date %}<div class="small text-primary">Promised by {{ f.promised_payment_date|date:"d M Y" }}</div>{% endif %}
+      {% if f.next_reminder %}<div class="small text-muted"><i class="bi bi-bell"></i> Reminder set for {{ f.next_reminder|date:"d M Y" }}</div>{% endif %}
     </div>
     {% empty %}<div class="p-3 text-muted small">No follow-ups logged.</div>{% endfor %}
   </div>

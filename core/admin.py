@@ -5,7 +5,7 @@ from .models import AppSettings
 
 @admin.register(AppSettings)
 class AppSettingsAdmin(admin.ModelAdmin):
-    list_display = ["practice_name", "default_payment_terms_days", "reminder_days", "repeat_reminder_every_days"]
+    list_display = ["practice_name", "default_payment_terms_days"]
 
     def has_add_permission(self, request):
         return not AppSettings.objects.exists()
