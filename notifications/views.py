@@ -1,14 +1,18 @@
+import hmac
 import json
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseBadRequest, JsonResponse
+from django.http import Http404, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from .forms import NotificationPreferenceForm
 from .models import NotificationKind, NotificationPreference, PushSubscription, SentNotification
 from .push import notify, public_key
+from .services import run_scheduled, sender_status, upcoming_reminders
 
 
 @login_required
@@ -23,7 +27,18 @@ def settings_page(request):
         "form": form,
         "devices": PushSubscription.objects.filter(user=request.user),
         "history": SentNotification.objects.filter(user=request.user)[:10],
+        "sender": dict(zip(("last_run", "healthy"), sender_status())),
+        "upcoming": upcoming_reminders(request.user),
     })
+
+
+@csrf_exempt
+def cron_run(request, token):
+    """Hourly trigger for an external scheduler: /notifications/cron/<NOTIFICATIONS_CRON_TOKEN>/"""
+    expected = getattr(settings, "NOTIFICATIONS_CRON_TOKEN", "")
+    if not expected or not hmac.compare_digest(token.encode(), expected.encode()):
+        raise Http404
+    return JsonResponse({"ok": True, **run_scheduled()})
 
 
 def _json(request):

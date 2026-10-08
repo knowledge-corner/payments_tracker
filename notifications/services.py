@@ -82,6 +82,28 @@ def run_for_user(user, now=None):
     return results
 
 
+def record_run(now=None):
+    from core.models import AppSettings
+
+    AppSettings.objects.filter(pk=AppSettings.load().pk).update(notifications_last_run=now or timezone.now())
+
+
+def sender_status(now=None):
+    """(last_run, healthy) - healthy if the automatic sender ran within the last 26 hours."""
+    from core.models import AppSettings
+
+    last = AppSettings.load().notifications_last_run
+    now = now or timezone.now()
+    return last, bool(last and now - last <= datetime.timedelta(hours=26))
+
+
+def upcoming_reminders(user, limit=3):
+    """Next reminder dates for the user's unpaid cases (for the settings page)."""
+    cases = receivables_for(user)
+    rows = sorted(((c.reminder.next_trigger, c) for c in cases if c.reminder.next_trigger), key=lambda r: r[0])
+    return [{"date": d, "case": c} for d, c in rows[:limit]], sum(1 for c in cases if c.reminder.due)
+
+
 def run_scheduled(now=None):
     """Run for every active user who has at least one device subscribed."""
     user_ids = PushSubscription.objects.filter(user__is_active=True).values_list("user_id", flat=True).distinct()
@@ -91,4 +113,5 @@ def run_scheduled(now=None):
     for user in User.objects.filter(pk__in=list(user_ids)):
         summary["users"] += 1
         summary["sent"] += sum(run_for_user(user, now).values())
+    record_run(now)
     return summary

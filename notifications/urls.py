@@ -10,4 +10,5 @@ urlpatterns = [
     path("unsubscribe/", views.unsubscribe, name="unsubscribe"),
     path("test/", views.send_test, name="test"),
     path("key/", views.vapid_public_key, name="key"),
+    path("cron/<str:token>/", views.cron_run, name="cron"),
 ]

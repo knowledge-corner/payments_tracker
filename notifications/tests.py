@@ -198,3 +198,37 @@ class CheckNotificationsCommandTests(TestCase):
         self.assertIn("PROBLEM: No device", text)
         self.assertIn("payment reminders due today: 1", text)
         self.assertIn("Ruby Hall Clinic", text)
+
+
+class SenderStatusAndCronTests(TestCase):
+    def setUp(self):
+        self.doctor = make_doctor()
+        self.client.force_login(self.doctor.user)
+
+    def test_settings_page_warns_until_sender_runs(self):
+        from notifications.services import run_scheduled
+
+        self.assertContains(self.client.get(reverse("notifications:settings")), "Reminder sender has never run")
+        run_scheduled()
+        self.assertContains(self.client.get(reverse("notifications:settings")), "Reminder sender is running")
+
+    def test_settings_page_lists_next_reminder(self):
+        tomorrow = timezone.localdate() + datetime.timedelta(days=1)
+        make_case(self.doctor, make_hospital("Ruby Hall Clinic"), due_date=tomorrow)
+        self.assertContains(self.client.get(reverse("notifications:settings")), f"{tomorrow:%d %b} - Ruby Hall Clinic")
+
+    def test_cron_url_disabled_without_token(self):
+        self.client.logout()
+        self.assertEqual(self.client.get("/notifications/cron/anything/").status_code, 404)
+
+    @mock.patch("notifications.push.webpush.send", return_value=201)
+    def test_cron_url_runs_sender_with_right_token(self, send):
+        from core.models import AppSettings
+
+        self.client.logout()
+        with self.settings(NOTIFICATIONS_CRON_TOKEN="s3cret-token-123"):
+            self.assertEqual(self.client.get("/notifications/cron/wrong/").status_code, 404)
+            response = self.client.get("/notifications/cron/s3cret-token-123/")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["ok"])
+        self.assertIsNotNone(AppSettings.load().notifications_last_run)

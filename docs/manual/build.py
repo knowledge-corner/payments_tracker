@@ -369,6 +369,8 @@ topic("Turn on notifications", [
     "<b>Weekly report</b>, <b>Payment updates</b>.",
     "Set the <b>Notification time</b> (default 9:00 AM) and tap <b>Save notification settings</b>.",
     "Tap <b>Send a test</b> to check it works.",
+    "Check the <b>Automatic reminders</b> box: it must say <b>Reminder sender is running</b>. "
+    "It also shows your next reminder dates.",
 ], img="80-notifications",
    note="On iPhone, notifications work only when the app is added to the Home Screen (iOS 16.4 or later).")
 
@@ -430,7 +432,8 @@ table("Common questions", ["Question", "Answer"], [
     ["The hospital paid only part of the fee.", "Record what you received. The case stays <b>Partially Paid</b> until the rest comes in."],
     ["The hospital promised to pay on a date.", "<b>Log follow-up</b> and enter the <b>Promised payment date</b>. You are reminded on that date."],
     ["I did not get a notification.", "Reminders come only on the expected payment date (or a date you set), at your notification time. "
-     "Check <b>Notification settings</b>: notifications turned on for this phone, and <b>Send a test</b> works."],
+     "Open <b>Notification settings</b>: <b>Send a test</b> must arrive, and the <b>Automatic reminders</b> box must say "
+     "<b>Reminder sender is running</b>. If it says it has not run, tell your administrator."],
     ["I can't find a hospital.", "Try fewer letters or the area name. Still missing? Tap <b>Add a hospital not in the list</b>."],
     ["The surgeon list is empty for a hospital.", "Use <b>New surgeon</b> once; next time they appear first for that hospital."],
     ["My bulk upload saved nothing.", "Some rows had mistakes. Fix the red cells and upload the same file again."],

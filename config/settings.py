@@ -168,6 +168,10 @@ SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 
 LANGUAGE_CODE = "en-in"
 TIME_ZONE = os.environ.get("DJANGO_TIME_ZONE", "Asia/Kolkata")
+
+# Optional secret for /notifications/cron/<token>/ - lets an external scheduler (e.g. cron-job.org)
+# trigger the reminder sender every hour on hosts without background jobs. Empty = URL disabled.
+NOTIFICATIONS_CRON_TOKEN = os.environ.get("NOTIFICATIONS_CRON_TOKEN", "")
 USE_I18N = True
 USE_TZ = True
 

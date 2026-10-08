@@ -53,6 +53,10 @@ class AppSettings(models.Model):
         "New sign-ups need admin approval", default=False,
         help_text="New accounts stay inactive until an admin ticks 'Active' on the Doctors page.",
     )
+    notifications_last_run = models.DateTimeField(
+        null=True, blank=True, editable=False,
+        help_text="When the automatic reminder sender last ran (set by send_notifications).",
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

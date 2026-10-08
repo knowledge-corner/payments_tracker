@@ -88,21 +88,30 @@ python manage.py createsuperuser    # your admin login
 
 Doctors sign up with **Create an account** on the sign-in page. The starter list of Pune / Mumbai hospitals is loaded by `migrate`; to add the full government directory, upload the data.gov.in CSV under **account menu → Hospital directory**.
 
-## 6. Push notifications (daily task)
+## 6. Push notifications (reminder sender)
 
-PythonAnywhere does not run background jobs, so add one scheduled task:
+PythonAnywhere does not run background jobs, so something must start the reminder sender.
+Without it, **Send a test** works but scheduled reminders never go out.
+**Notification settings** in the app shows "Reminder sender is running" once this is set up.
 
-1. **Tasks** tab → *Scheduled tasks* → time **03:30** (UTC = 9:00 AM India), frequency **Daily**.
+**Option A - hourly via a free online scheduler (recommended, works on every plan)**
+
+1. Make a long random token: in a Bash console run `python3 -c "import secrets; print(secrets.token_urlsafe(24))"`.
+2. Add it to `~/payments_tracker/.env`: `NOTIFICATIONS_CRON_TOKEN=<the token>` and **Reload** the web app.
+3. Create a free account at [cron-job.org](https://cron-job.org) → *Create cronjob*:
+   URL `https://<username>.pythonanywhere.com/notifications/cron/<the token>/`, schedule **every hour**, save.
+4. Open the URL once in a browser: it should show `{"ok": true, ...}`.
+
+**Option B - PythonAnywhere scheduled task**
+
+1. **Tasks** tab → *Scheduled tasks*. Paid accounts: frequency **Hourly**. Free accounts: **Daily** at **03:30**
+   (UTC = 9:00 AM India - doctors who chose a later notification time get reminders the next day).
 2. Command:
    ```
    cd ~/payments_tracker && ~/.venvs/payments/bin/python manage.py send_notifications
    ```
-3. Click **Create**.
 
 Doctors turn notifications on in the app: account menu → **Notification settings** → *Turn on for this device*.
-On the free plan, morning summaries go out once a day at the task time (doctors choosing a later hour get them the next run).
-
-Paid accounts can run the task **hourly** instead (each doctor then gets reminders at the time they chose).
 To see why someone did or did not get a notification:
 ```
 cd ~/payments_tracker && ~/.venvs/payments/bin/python manage.py check_notifications <username> --send-test

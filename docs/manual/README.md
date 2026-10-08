@@ -9,3 +9,5 @@ Rebuild after UI changes (needs Node + Playwright with Chromium, Python with Pil
 4. Resize screenshots into `img/` (600 px wide JPEG), then `python build.py` and `node print.js`.
 
 `build.py` holds all manual text - edit it there.
+# Rebuild note: before running shots.js, run `python manage.py send_notifications` once so the
+# Notification settings screenshot shows "Reminder sender is running".

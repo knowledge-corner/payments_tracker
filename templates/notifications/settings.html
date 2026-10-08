@@ -21,6 +21,27 @@
     {% if devices %}<div class="small text-muted mt-2"><i class="bi bi-phone"></i> {{ devices|length }} device{{ devices|length|pluralize }} receiving notifications for your account.</div>{% endif %}
   </div>
 
+  <div class="section-title">Automatic reminders</div>
+  <div class="card p-3 mb-3 small">
+    {% if sender.healthy %}
+      <div class="text-success"><i class="bi bi-check-circle-fill"></i> Reminder sender is running
+        <span class="text-muted">(last checked {{ sender.last_run|date:"d M, H:i" }})</span></div>
+    {% elif sender.last_run %}
+      <div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Reminder sender has not run since
+        {{ sender.last_run|date:"d M Y, H:i" }}. Reminders are not being sent - please tell your administrator.</div>
+    {% else %}
+      <div class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Reminder sender has never run, so
+        scheduled reminders are not sent yet (Send a test still works). Please tell your administrator.</div>
+    {% endif %}
+    <div class="mt-2">
+      Reminders arrive at <b>{{ form.instance.get_summary_hour_display }}</b> on a case's expected payment date
+      and on dates you set in a follow-up.
+      {% if upcoming.1 %}<div class="mt-1"><i class="bi bi-bell-fill text-warning"></i> {{ upcoming.1 }} reminder{{ upcoming.1|pluralize }} due now.</div>{% endif %}
+      {% if upcoming.0 %}<div class="mt-1 text-muted">Next:
+        {% for r in upcoming.0 %}{{ r.date|date:"d M" }} - {{ r.case.hospital.name }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+    </div>
+  </div>
+
   <form method="post">{% csrf_token %}
     <div class="section-title">What to notify me about</div>
     <div class="card p-3 mb-3">

@@ -11,6 +11,7 @@ from django.utils import timezone
 from accounts.models import User
 from notifications.models import NotificationKind, NotificationPreference, PushSubscription, SentNotification
 from notifications.push import notify
+from notifications.services import sender_status
 from payments.services import receivables_for
 
 
@@ -24,6 +25,15 @@ class Command(BaseCommand):
     def handle(self, *args, username=None, send_test=False, **options):
         now = timezone.localtime()
         self.stdout.write(f"Server time: {now:%d %b %Y %H:%M} ({settings.TIME_ZONE})")
+        last, healthy = sender_status()
+        if last is None:
+            self.stdout.write(self.style.WARNING(
+                "PROBLEM: the automatic sender has NEVER run - reminders are not sent. "
+                "DigitalOcean: run 'payments update'. PythonAnywhere: add the scheduled task (see docs)."))
+        else:
+            msg = f"Automatic sender last ran: {timezone.localtime(last):%d %b %Y %H:%M}"
+            self.stdout.write(self.style.SUCCESS(msg) if healthy else self.style.WARNING(
+                "PROBLEM: " + msg + " (more than a day ago - the scheduler is not running)"))
         if username:
             users = User.objects.filter(username__iexact=username)
             if not users:
