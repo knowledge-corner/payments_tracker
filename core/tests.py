@@ -136,3 +136,15 @@ class AdminViewTests(TestCase):
         developer = User.objects.create_superuser("dev", "dev@example.com", "Dev@12345")
         self.client.force_login(developer)
         self.assertEqual(self.client.get("/admin/").status_code, 200)
+
+
+class NotificationIconTests(TestCase):
+    def test_service_worker_uses_transparent_badge(self):
+        from PIL import Image
+        from django.contrib.staticfiles import finders
+
+        sw = self.client.get("/sw.js").content.decode()
+        self.assertIn('badge: "/static/icons/badge-96.png"', sw)
+        badge = Image.open(finders.find("icons/badge-96.png"))
+        self.assertEqual(badge.mode, "RGBA")
+        self.assertEqual(badge.getpixel((0, 0))[3], 0)  # transparent background -> not a white square

@@ -76,20 +76,44 @@
  */
 (function () {
   "use strict";
-  var supported = "contacts" in navigator && "ContactsManager" in window;
+  var supported = "contacts" in navigator && "ContactsManager" in window &&
+                  typeof navigator.contacts.select === "function";
+  var PERMISSION_HELP = "Your phone did not let the app read contacts.\n\n" +
+    "Allow it: phone Settings > Apps > Chrome > Permissions > Contacts > Allow.\n" +
+    "Then close the app fully, open it again and tap 'Pick from phone contacts'.\n\n" +
+    "You can also type the name and number.";
   document.querySelectorAll("[data-contact-pick]").forEach(function (btn) {
     if (!supported) return;
     btn.hidden = false;
     btn.addEventListener("click", function () {
-      navigator.contacts.select(["name", "tel"], { multiple: false }).then(function (picked) {
-        if (!picked || !picked.length) return;
+      var busy = btn.innerHTML;
+      btn.disabled = true;
+      var done = function () { btn.disabled = false; btn.innerHTML = busy; };
+      var picking;
+      try {
+        picking = navigator.contacts.select(["name", "tel"], { multiple: false });
+      } catch (err) {
+        done();
+        alert(PERMISSION_HELP);
+        return;
+      }
+      picking.then(function (picked) {
+        done();
+        if (!picked || !picked.length) return;  // closed without choosing
         var c = picked[0];
         var name = document.querySelector(btn.dataset.name);
         var phone = document.querySelector(btn.dataset.phone);
         if (name && c.name && c.name.length) name.value = c.name[0];
-        if (phone && c.tel && c.tel.length) phone.value = c.tel[0].replace(/[^\d+]/g, "");
+        if (phone) {
+          if (c.tel && c.tel.length) phone.value = c.tel[0].replace(/[^\d+]/g, "").slice(0, 20);
+          else alert("This contact has no phone number saved. Please type the number.");
+        }
         [name, phone].forEach(function (el) { if (el) el.dispatchEvent(new Event("input", { bubbles: true })); });
-      }).catch(function () {});
+      }).catch(function (err) {
+        done();
+        if (err && err.name === "InvalidStateError") return;  // picker already open
+        alert(PERMISSION_HELP);
+      });
     });
   });
 })();

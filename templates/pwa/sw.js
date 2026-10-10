@@ -47,7 +47,7 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || "",
     icon: "{{ icon }}",
-    badge: "{{ icon }}",
+    badge: "{{ badge }}",  // white-on-transparent: Android paints the status-bar icon from its shape only
     tag: data.tag || undefined,
     renotify: !!data.tag,
     data: { url: data.url || "/" },
