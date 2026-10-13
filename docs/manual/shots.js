@@ -27,42 +27,42 @@ const HL = 'outline:3px solid #e11d48 !important; outline-offset:2px !important;
       await p.screenshot({ path: OUT + name + '.png', fullPage: full });
     } catch (e) { errors.push(name + ': ' + e.message.split('\n')[0]); }
   }
-  async function enterPractice(p, who = 'Dr. Anjali Mehta') {
-    await p.goto(B + '/'); await p.fill('#id_code', '482913');
-    await Promise.all([p.waitForURL(/\/practice\/who\//), p.click('form button.btn-primary')]);
-    await p.locator('label', { hasText: who }).locator('input').check();
-    await Promise.all([p.waitForURL(x => !x.pathname.startsWith('/practice')), p.click('form button.btn-primary')]);
+  async function login(p, u, pw = 'Demo@12345') {
+    await p.goto(B + '/login/'); await p.fill('#id_username', u); await p.fill('#id_password', pw);
+    await Promise.all([p.waitForURL(x => !x.pathname.startsWith('/login')), p.click('form button.btn-primary')]);
   }
   const step = async (name, fn) => { try { await fn(); } catch (e) { errors.push(name + ': ' + e.message.split('\n')[0]); } };
 
-  // ---------- First time on a phone ----------
+  // ---------- Signed out ----------
   let c = await ctx(); let p = await c.newPage();
-  await step('code', async () => {
-    await p.goto(B + '/'); await p.fill('#id_code', '482913'); await shot(p, '01-practice-code', { hl: ['#id_code'] });
-    await Promise.all([p.waitForURL(/\/practice\/who\//), p.click('form button.btn-primary')]);
-    await p.locator('label', { hasText: 'Dr. Anjali Mehta' }).locator('input').check();
-    await shot(p, '02-who', { hl: ['label:has(input[name=doctor]:checked)'] });
-    await p.click('summary'); await p.fill('input[name=new_name]', 'Meera Kulkarni');
-    await shot(p, '03-who-new', { hl: ['input[name=new_name]'] });
+  await step('login', async () => { await p.goto(B + '/login/'); await shot(p, '01-login', { hl: ['a[href="/forgot-user-id/"]', 'a[href="/password-reset/"]', 'a[href="/signup/"]'] }); });
+  await step('signup', async () => { await p.goto(B + '/signup/'); await shot(p, '02-signup', { full: true }); });
+  await step('forgotid', async () => {
+    await p.goto(B + '/forgot-user-id/'); await p.fill('#id_mobile', '98220 12345'); await shot(p, '03-forgot-id');
+    await p.click('form button.btn-primary'); await p.waitForLoadState(); await shot(p, '04-forgot-id-result');
+  });
+  await step('forgotpw', async () => {
+    await p.goto(B + '/password-reset/'); await p.fill('#id_username', 'dr.anjali'); await p.fill('#id_mobile', '9822012345');
+    await shot(p, '05-forgot-password');
+    await p.click('form button.btn-primary'); await p.waitForLoadState(); await shot(p, '06-set-new-password');
   });
   await c.close();
 
   // ---------- Doctor ----------
   c = await ctx(); p = await c.newPage();
-  await enterPractice(p);
+  await login(p, 'dr.anjali');
   await step('dash', async () => {
     await p.goto(B + '/'); await shot(p, '10-dashboard', { hl: ['.chips, .period-chips'] });
     await shot(p, '11-dashboard-cards', { scroll: 'a.stat-link >> nth=1', hl: ['a.stat-link'] });
     await shot(p, '12-dashboard-action', { scroll: 'text=Action required' });
-    await p.click('.account-btn'); await shot(p, '13-profile-menu', { hl: ['a[href="/practice/who/"]', '.dropdown-menu button.text-danger'] });
+    await p.click('.account-btn'); await shot(p, '13-profile-menu', { hl: ['a[href="/password/"]'] });
+    await p.goto(B + '/password/'); await shot(p, '14-change-password');
   });
   // Add case
   await step('add', async () => {
     await p.goto(B + '/cases/add/'); await shot(p, '20-add-case', { hl: ['#id_doctor', 'a[href="/cases/import/"]'] });
-    await p.click('#new-doctor-toggle'); await p.fill('#id_new_doctor_name', 'Meera Kulkarni');
-    await shot(p, '20b-new-anaesthetist', { hl: ['#new-doctor-fields'] });
-    await p.fill('#id_new_doctor_name', ''); await p.click('#new-doctor-toggle');
-    await p.selectOption('#id_doctor', { label: 'Dr. Anjali Mehta' });
+    await p.selectOption('#id_doctor', { label: 'Dr. Vikram Rao' }); await shot(p, '20b-colleague', { hl: ['#id_doctor'] });
+    await p.selectOption('#id_doctor', { index: 0 });
     await p.click('#id_hospital_search'); await p.fill('#id_hospital_search', 'ruby'); await p.waitForTimeout(900);
     await shot(p, '21-hospital-search', { hl: ['.combo-add'] });
     await p.click('.combo-item >> nth=0'); await p.waitForTimeout(900);
@@ -152,22 +152,22 @@ const HL = 'outline:3px solid #e11d48 !important; outline-offset:2px !important;
     await p.goto(B + '/reports/payments/?period=last_3'); await shot(p, '76-payment-history', { scroll: '.stat-card' });
   });
   await step('notif', async () => { await p.goto(B + '/notifications/'); await shot(p, '80-notifications', { full: true, hl: ['form[action="/notifications/scope/"] select'] }); });
-  await step('practice', async () => {
-    await p.goto(B + '/settings/practice/'); await shot(p, '90-practice-settings', { hl: ['.display-6, .practice-code, h2 + .fs-1, strong.fs-2'] });
-    await p.goto(B + '/doctors/'); await shot(p, '93-doctors', { hl: ['a[href="/doctors/add/"]'] });
-    await p.click('.list-group a >> nth=0'); await p.waitForLoadState(); await shot(p, '94-doctor-edit');
-    await p.goto(B + '/settings/'); await shot(p, '97-settings');
-    await p.goto(B + '/hospitals/directory/import/'); await shot(p, '98-directory-import');
-  });
   await c.close();
 
   // ---------- Administrator login ----------
   c = await ctx(); p = await c.newPage();
   await step('admin', async () => {
-    await p.goto(B + '/practice/admin/'); await p.fill('#id_username', 'admin'); await p.fill('#id_password', 'Admin@12345');
-    await shot(p, '91-admin-login', { hl: ['#id_username', '#id_password'] });
-    await Promise.all([p.waitForURL(/settings\/practice/), p.click('form button.btn-primary')]);
-    await shot(p, '92-admin-practice-settings', { hl: ['input[name=new_code]', 'input[name=confirm_code]'] });
+    await p.goto(B + '/login/'); await p.fill('#id_username', 'admin'); await p.fill('#id_password', 'Admin@12345');
+    await shot(p, '90-admin-login', { hl: ['#id_username', '#id_password'] });
+    await Promise.all([p.waitForURL(x => !x.pathname.startsWith('/login')), p.click('form button.btn-primary')]);
+    await shot(p, '91-admin-dashboard');
+    await p.click('.account-btn'); await shot(p, '92-admin-menu', { hl: ['a[href="/doctors/"]', 'a[href="/settings/"]', 'a[href="/hospitals/directory/import/"]'] });
+    await p.goto(B + '/doctors/'); await shot(p, '93-doctors', { hl: ['a[href="/doctors/add/"]'] });
+    await p.click('.list-group a >> nth=0'); await p.waitForLoadState(); await shot(p, '94-doctor-edit');
+    await p.goto(B + '/cases/'); await shot(p, '95-admin-cases', { hl: ['select[name="doctor"]'] });
+    await p.goto(B + '/cases/add/'); await shot(p, '96-admin-add-case', { hl: ['#id_doctor, #id_doctor_search'] });
+    await p.goto(B + '/settings/'); await shot(p, '97-settings');
+    await p.goto(B + '/hospitals/directory/import/'); await shot(p, '98-directory-import');
   });
   console.log('ERRORS:\n' + errors.join('\n'));
   await browser.close();

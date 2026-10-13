@@ -16,9 +16,8 @@ User.objects.create_user("admin", password="Admin@12345", role=User.ROLE_ADMIN, 
                          first_name="Admin")
 u2 = User.objects.create_user("dr.rao", password="Demo@12345", role=User.ROLE_DOCTOR, email="rao@example.com")
 d2 = Doctor.objects.create(user=u2, display_name="Dr. Vikram Rao", phone="9822054321")
-Doctor.objects.create(display_name="Dr. Kiran Bhide", phone="9822077777")
-from core.models import AppSettings
-_s = AppSettings.load(); _s.practice_code = "482913"; _s.practice_name = "Pune Anaesthesia Associates"; _s.save()
+u3 = User.objects.create_user("dr.bhide", password="Demo@12345", role=User.ROLE_DOCTOR, email="bhide@example.com")
+Doctor.objects.create(user=u3, display_name="Dr. Kiran Bhide", phone="9822077777")
 
 H = {k: Hospital.objects.get(name=n) for k, n in [
     ("ruby", "Ruby Hall Clinic"), ("jeh", "Jehangir Hospital"), ("sah", "Sahyadri Hospital Kothrud"),

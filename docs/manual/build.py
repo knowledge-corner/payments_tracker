@@ -1,4 +1,4 @@
-"""Builds manual.html (then printed to PDF by print.js). Content is written for the practice in plain language."""
+"""Builds manual.html (then printed to PDF by print.js). Content is written for doctors in plain language."""
 import html
 
 SECTIONS = []  # (id, title, blocks)
@@ -22,8 +22,9 @@ def para(text):
 
 
 # ----------------------------------------------------------------------------- content
-sec("welcome", "Welcome", "This app keeps track of the anaesthesia work done by everyone in your practice, how much each hospital owes, "
-    "and who to call when a payment is late. Everyone in the practice sees the same cases, so anyone can add, update or follow up a case. This manual walks you through every screen, one step at a time.")
+sec("welcome", "Welcome", "This app keeps track of the anaesthesia work done in your practice, how much each hospital owes, "
+    "and who to call when a payment is late. Everyone signs in with their own login and sees all cases of the practice, "
+    "so anyone can add, update or follow up a case. This manual walks you through every screen, one step at a time.")
 para("<b>Tip:</b> In the screenshots, the button or box you need to tap is marked with a <span style='color:#e11d48'><b>red outline</b></span>. "
      "All names, patients and amounts in this manual are sample data.")
 table("What the app does for you", ["You want to...", "Go to"], [
@@ -41,8 +42,7 @@ table("Words used in this manual", ["Word", "Meaning"], [
     ["Expected payment date", "The date by which you expect to be paid. If you leave it empty, the app assumes 30 days."],
     ["Overdue", "The expected payment date has passed and the case is not fully paid."],
     ["Follow-up", "A call or message to the hospital to ask about a pending payment."],
-    ["Anaesthetist", "The anaesthetist who did the case. Every case shows it, and every list can be filtered by it."],
-    ["Practice code", "The code (e.g. 482913) that opens the app. Each phone enters it once."],
+    ["Anaesthetist", "The anaesthetist who did the case. Empty on Add Case = yourself (Self). Every list can be filtered by it."],
     ["Surgeon", "The surgeon who called you for the case. The list is shared by the practice."],
     ["Contact", "A person at the hospital (billing, accounts, OT) whom you call about payments. Shared by the practice."],
 ])
@@ -56,23 +56,41 @@ table("Payment status colours", ["Label", "What it means"], [
 # --------------------------------------------------------------------------- getting started
 sec("start", "1. Getting started")
 topic("Open the app and add it to your phone", [
-    "Open the app link (shared by your practice) in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone).",
-    "<b>Android:</b> tap <b>Install app</b> on the practice code screen, or Chrome menu <b>⋮</b> → <b>Install app</b>.",
+    "Open the app link (shared by your admin) in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone).",
+    "<b>Android:</b> tap <b>Install app</b> on the sign-in page, or Chrome menu <b>⋮</b> → <b>Install app</b>.",
     "<b>iPhone:</b> tap the <b>Share</b> button → <b>Add to Home Screen</b> → <b>Add</b>.",
     "An app icon appears on your home screen. From now on open the app from this icon - it works like a normal app.",
 ], tip="You need to do this only once on each phone.")
-topic("Open the app with the practice code", [
-    "Type the <b>practice code</b> your colleagues gave you and tap <b>Open</b>.",
-    "The phone remembers the code - you do <b>not</b> enter it again, and it does not expire.",
-    "No user ID or password is needed.",
-], img="01-practice-code", tip="Forgot the code? Ask a colleague - it is shown in the profile menu → <b>Practice settings</b>.")
-topic("Who is using this phone?", [
-    "Pick <b>your name</b> and tap <b>Continue</b>.",
-    "Your name is then filled in as the <b>Anaesthetist</b> on new cases, and this phone gets reminders for your cases.",
-    "Name not in the list? Tap <b>My name is not in the list</b> and type it.",
-    "Staff or admin (not an anaesthetist)? Choose <b>I am not an anaesthetist</b> - the phone then gets reminders for the whole practice.",
-], img="02-who", img2="03-who-new", caption="Pick your name", caption2="Name not in the list",
-   note="You can change this any time: profile menu → <b>Change who uses this phone</b>.")
+topic("Create your account (first time only)", [
+    "On the sign-in page tap <b>Create an account</b>.",
+    "Fill in your <b>full name</b>, <b>mobile number</b> and <b>email</b>.",
+    "Choose a <b>Username</b> (your User ID, e.g. <i>dr.anjali</i>) and a <b>password</b>, then tap <b>Create account</b>.",
+], img="02-signup", tip="Enter your mobile number correctly. It is used to recover your User ID and password later. "
+   "Once you have signed up, your name appears in everyone's <b>Anaesthetist</b> list on Add Case.")
+topic("Sign in", [
+    "Type your <b>User ID</b> and <b>Password</b>.",
+    "Tap <b>Sign in</b>. You land on the Dashboard.",
+    "You stay signed in on your phone for <b>30 days</b>. After that the app signs you out automatically - just sign in again. "
+    "This protects everyone's data if a phone is lost.",
+    "Forgot something? Use the links marked in red: <b>Forgot user ID?</b> and <b>Forgot password?</b>",
+], img="01-login")
+topic("Forgot your User ID", [
+    "On the sign-in page tap <b>Forgot user ID?</b>",
+    "Enter the <b>mobile number</b> you registered with and tap <b>Find my user ID</b>.",
+    "Your User ID is shown on the screen. Tap <b>Sign in</b> to continue.",
+], img="03-forgot-id", img2="04-forgot-id-result", caption="Enter mobile number", caption2="Your User ID is shown")
+topic("Forgot your password", [
+    "On the sign-in page tap <b>Forgot password?</b>",
+    "Enter your <b>User ID</b> and registered <b>mobile number</b>, then tap <b>Verify</b>.",
+    "If they match, type a <b>new password</b> twice and tap <b>Save new password</b>.",
+    "Sign in with the new password.",
+], img="05-forgot-password", img2="06-set-new-password", caption="Verify", caption2="Set new password",
+   note="After 5 wrong tries the form is locked for 15 minutes. Wait, or ask your admin.")
+topic("Change your password", [
+    "Profile menu (round icon, top right) → <b>Change password</b>.",
+    "Type your <b>old password</b>, then the <b>new password</b> twice.",
+    "Tap <b>Save new password</b>. You stay signed in.",
+], img="14-change-password")
 
 # --------------------------------------------------------------------------- layout
 sec("layout", "2. Finding your way around")
@@ -84,9 +102,11 @@ topic("The bottom bar", [
     "<b>Reports</b> - summaries and Excel downloads.",
 ], img="10-dashboard")
 topic("The profile menu (round icon, top right)", [
-    "<b>This phone</b> - who uses this phone. <b>Change who uses this phone</b> to switch.",
-    "<b>Contacts &amp; surgeons</b>, <b>Notification settings</b>, <b>Anaesthetists</b>, <b>Practice settings</b>, <b>Settings</b>, <b>Hospital directory</b>.",
-    "<b>Lock this phone</b> - the practice code is needed again to open the app (use it before giving the phone to someone else).",
+    "Shows who is signed in.",
+    "<b>Contacts &amp; surgeons</b> - the practice's hospital contacts and surgeons.",
+    "<b>Notification settings</b> - payment reminders on your phone.",
+    "<b>Change password</b> (marked in red).",
+    "<b>Sign out</b> - log out of the app on this phone.",
 ], img="13-profile-menu")
 
 # --------------------------------------------------------------------------- dashboard
@@ -115,15 +135,16 @@ topic("Action required", [
 sec("addcase", "4. Adding a case", "Do this right after the case, or at the end of the day. It takes about 30 seconds.")
 topic("Step 1 - Open Add Case", [
     "Tap the yellow <b>+ Add Case</b> button at the bottom.",
-    "<b>Anaesthetist</b> is filled with the name chosen for this phone. Change it if you are entering a colleague's case.",
-    "Fields with a red <b>*</b> are required: <b>Anaesthetist</b>, <b>Hospital</b>, <b>Case date</b> and <b>Fee</b>.",
+    "<b>Anaesthetist</b> shows <b>Self</b> - leave it for your own case.",
+    "Fields with a red <b>*</b> are required: <b>Hospital</b>, <b>Case date</b> and <b>Fee</b>.",
     "Many cases to enter at once? Use <b>Bulk upload</b> (top right) - see section 5.",
 ], img="20-add-case")
-topic("New anaesthetist?", [
-    "Tap <b>New anaesthetist</b> next to the Anaesthetist box.",
-    "Type the name (and mobile, optional). <i>Dr.</i> is added automatically.",
-    "When you save the case, the name is added to the practice list for everyone.",
-], img="20b-new-anaesthetist")
+topic("Adding a case for a colleague", [
+    "Tap the <b>Anaesthetist</b> box and pick the colleague's name.",
+    "Everyone who has signed up is listed - you never type a name.",
+    "Colleague not in the list? Ask them to <b>Create an account</b> first.",
+    "<b>Save &amp; add</b> keeps the same colleague for the next case.",
+], img="20b-colleague")
 topic("Step 2 - Choose the hospital", [
     "Tap the <b>Hospital</b> box and type a few letters of the name or area, e.g. <i>ruby</i> or <i>kothrud</i>.",
     "Pick the right hospital from the list. Hospitals the practice already works with show a green <b>Mine</b> tag.",
@@ -174,7 +195,7 @@ topic("Download the template, fill it, upload it", [
     "Open <b>Add Case</b> → tap <b>Bulk upload</b> (top right).",
     "Tap <b>Download Excel template</b> and open it in Excel or Google Sheets.",
     "Enter one case per row. Required columns: <b>Case Date</b>, <b>Hospital</b>, <b>Fee</b>. "
-    "Fill the <b>Anaesthetist</b> column, or choose the anaesthetist on the upload page for rows left empty.",
+    "<b>Anaesthetist</b>: leave empty for your own cases, or pick a colleague from the drop-down.",
     "Save the file, come back, tap <b>Choose File</b>, pick the file and tap <b>Upload</b>.",
     "If every row is correct, all cases are saved at once and you see a confirmation.",
 ], img="30-bulk-upload")
@@ -187,7 +208,7 @@ topic("If some rows have mistakes", [
 table("Template columns", ["Column", "What to type", "Example"], [
     ["Case Date *", "Date of the case (DD/MM/YYYY)", "25/09/2026"],
     ["Hospital *", "Pick from the dropdown, or type a new name (it will be added)", "Ruby Hall Clinic"],
-    ["Anaesthetist", "Name of the anaesthetist (new names are added). Empty: the one chosen on the upload page", "Dr. Anjali Mehta"],
+    ["Anaesthetist", "Empty = you. Or pick a colleague who has signed up (drop-down)", "Dr. Vikram Rao"],
     ["Fee *", "Amount in rupees, numbers only", "7500"],
     ["Patient Name", "Patient's name", "Sunita Patil"],
     ["Surgeon", "Surgeon's name (new names are added to the practice list)", "Dr. Amit Shah"],
@@ -204,7 +225,7 @@ sec("cases", "6. Cases of the practice")
 topic("Find any case", [
     "Tap <b>Cases</b> in the bottom bar.",
     "Type in the search box: <b>patient</b>, <b>surgeon</b>, <b>hospital</b> or <b>IP number</b>.",
-    "At the top choose <b>All anaesthetists</b> or one name (marked in red).",
+    "At the top choose <b>All anaesthetists</b> or one name (marked in red) - e.g. your own name to see only your cases.",
     "Use the filters below it: <b>status</b>, <b>month</b>, <b>hospital</b>, <b>surgeon</b>.",
     "Each row shows the hospital, date, patient, surgeon, anaesthetist, fee and status. Tap a row to open it.",
 ], img="40-cases-list")
@@ -232,7 +253,7 @@ topic("Delete a case", [
     "Open the case → tap the red <b>Delete</b> button (top right), or tap <b>Delete</b> on the edit page.",
     "A page asks <b>Delete this case?</b> and shows the hospital, date, patient and fee so you can check it is the right one.",
     "Tap <b>Yes, delete</b> to remove it, or <b>Cancel</b> to keep it.",
-], img="46b-delete-confirm", note="Anyone in the practice can delete a case. Deleting a case also deletes its payments and follow-ups. This cannot be undone.")
+], img="46b-delete-confirm", note="Anyone in the practice can edit or delete a case. Deleting a case also deletes its payments and follow-ups. This cannot be undone.")
 
 # --------------------------------------------------------------------------- payments
 sec("payments", "7. Recording payments")
@@ -368,10 +389,8 @@ topic("Turn on notifications", [
     "Allow notifications when your phone asks.",
     "Choose what you want: <b>Payment reminders</b> (expected date and your reminder dates), <b>Morning summary</b>, "
     "<b>Weekly report</b>, <b>Payment updates</b>.",
-    "<b>Remind this phone about</b> (marked in red): <b>All cases of the practice</b>, or <b>Only Dr. ...'s cases</b>. "
-    "Each phone chooses for itself; it starts with the person chosen for this phone.",
-    "Set the <b>Notification time</b> (default 9:00 AM) and tap <b>Save notification settings</b>. "
-    "These switches and the time are the same for all phones of the practice.",
+    "<b>Remind me about</b> (marked in red): <b>Only my cases</b> (default), a colleague's cases, or <b>All cases of the practice</b>.",
+    "Set the <b>Notification time</b> (default 9:00 AM) and tap <b>Save notification settings</b>.",
     "Tap <b>Send a test</b> to check it works.",
     "Check the <b>Automatic reminders</b> box: it must say <b>Reminder sender is running</b>. "
     "It also shows your next reminder dates.",
@@ -379,28 +398,42 @@ topic("Turn on notifications", [
    note="On iPhone, notifications work only when the app is added to the Home Screen (iOS 16.4 or later).")
 
 # --------------------------------------------------------------------------- admin
-sec("admin", "13. Practice settings and administrator", "Everyone with the practice code can use these screens. "
-    "The administrator login is only a backup, for example when the code must be changed and no phone is open.")
-topic("Practice code - see it or change it", [
-    "Profile menu → <b>Practice settings</b>. The current code is shown at the top - read it out to a colleague who forgot it.",
-    "To change it, type the new code twice and tap <b>Save code</b>.",
-    "After a change, <b>every other phone asks for the new code</b>. Do this when a phone is lost or someone leaves the practice.",
-], img="90-practice-settings")
-topic("Administrator sign-in (backup)", [
-    "On the practice code screen tap <b>Administrator sign-in</b> (bottom).",
-    "Type the administrator <b>User ID</b> and <b>password</b> and tap <b>Sign in</b>.",
-    "You land on <b>Practice settings</b>: see the code, or set a new one.",
-], img="91-admin-login", img2="92-admin-practice-settings", caption="Administrator sign-in", caption2="Reset the code",
-   note="Keep the administrator password private. If it is lost, ask your technical support person.")
+sec("admin", "13. For the administrator", "This section is only for the person who manages the app for the practice. "
+    "The administrator has a separate login (for example <i>admin</i>) and manages logins, settings and the hospital list. "
+    "Anaesthetists never see these screens.")
+topic("Sign in as administrator", [
+    "On the sign-in page type the <b>administrator User ID</b> and <b>password</b> given to you.",
+    "Tap <b>Sign in</b>.",
+    "Keep this login private - it can manage every account.",
+], img="90-admin-login", note="The administrator password cannot be recovered with 'Forgot password' (that needs a doctor's mobile number). "
+   "If it is lost, ask your technical support person to reset it.")
+topic("Administrator dashboard", [
+    "Works like everyone's dashboard, with the <b>anaesthetist filter</b> at the top.",
+    "The same filter appears on Cases, Outstanding and Reports.",
+], img="91-admin-dashboard")
+topic("Administrator menu", [
+    "Tap the round profile icon (top right). Next to your name is an orange <b>Admin</b> label.",
+    "<b>Anaesthetists</b> - everyone's login.",
+    "<b>Settings</b> - default payment terms and sign-up rules for the whole app.",
+    "<b>Hospital directory</b> - load the government hospital list.",
+], img="92-admin-menu")
 topic("Anaesthetists", [
-    "Profile menu → <b>Anaesthetists</b> lists everyone in the practice with their number of cases.",
-    "Tap <b>+ Add anaesthetist</b> to add a name (also possible from Add Case).",
-    "Tap a name to correct it, change the mobile number, or switch <b>Active</b> off for someone who left (their old cases stay).",
-], img="93-doctors", img2="94-doctor-edit", caption="Anaesthetists", caption2="Edit")
+    "Lists every anaesthetist with User ID and mobile number.",
+    "Tap <b>+ Add anaesthetist</b> to create a login for someone (or let them sign up themselves).",
+    "Tap a name to change it, the mobile number or email, set a <b>new password</b> for someone who is locked out, "
+    "or switch the account <b>Active</b> off for someone who left (their old cases stay).",
+], img="93-doctors", img2="94-doctor-edit", caption="Anaesthetists", caption2="Edit",
+   tip="New sign-ups that need approval appear here. Switch on Active to let them sign in.")
+topic("Add a case as administrator", [
+    "The administrator login is not an anaesthetist, so there is no <b>Self</b>: choose the <b>Anaesthetist</b> first.",
+    "The rest of the form is the same as in section 4.",
+    "<b>Bulk upload</b> works too: choose the anaesthetist on the upload page, or fill the <b>Anaesthetist</b> column.",
+], img="96-admin-add-case")
 topic("Settings", [
-    "<b>Practice name</b> - shown at the top of the app.",
+    "<b>Practice name</b> - shown in the app.",
     "<b>Default payment terms</b> - days assumed when no expected payment date is entered (30). "
     "The payment reminder comes on that day.",
+    "<b>Sign-ups</b> - allow doctors to create their own accounts, and whether new accounts need your approval.",
     "Tap <b>Save settings</b> at the bottom.",
 ], img="97-settings")
 topic("Hospital directory", [
@@ -423,22 +456,24 @@ table("Common questions", ["Question", "Answer"], [
     ["The surgeon list is empty for a hospital.", "Use <b>New surgeon</b> once; next time they appear first for that hospital."],
     ["My bulk upload saved nothing.", "Some rows had mistakes. Fix the red cells and upload the same file again."],
     ["I see an old version of a screen.", "Close the app fully and open it again (or pull down to refresh)."],
-    ["I changed my phone.", "Open the app link on the new phone, enter the practice code, pick your name, and add it to the home screen again. Your data is safe on the server."],
-    ["I forgot the practice code.", "Ask a colleague: it is shown in profile menu → <b>Practice settings</b>. If no phone is open, use <b>Administrator sign-in</b>."],
-    ["A phone was lost / someone left.", "<b>Practice settings</b> → change the code. All other phones ask for the new code."],
+    ["I changed my phone.", "Open the app link on the new phone, sign in, and add it to the home screen again. Your data is safe on the server."],
     ["Can my colleagues see my cases?", "Yes. The whole practice shares one list of cases, contacts and surgeons. Use the <b>anaesthetist</b> filter to see only your own."],
     ["I entered a case under the wrong anaesthetist.", "Open the case → <b>Edit</b> → change <b>Anaesthetist</b> → <b>Save case</b>."],
+    ["A colleague's name is not in the Anaesthetist list.", "They must sign up first (<b>Create an account</b> on the sign-in page). Then their name appears for everyone."],
+    ["The app asked me to sign in again.", "For safety everyone is signed out 30 days after signing in. Sign in again - nothing is lost."],
+    ["The administrator forgot the password.", "Ask your technical support person to reset it (Forgot password works only for doctor accounts)."],
 ])
 table("Quick reference", ["Task", "Steps"], [
-    ["Add a case", "+ Add Case → Anaesthetist → Hospital → Fee → Surgeon → Save case"],
+    ["Add a case", "+ Add Case → (Anaesthetist: Self) → Hospital → Fee → Surgeon → Save case"],
+    ["Case for a colleague", "+ Add Case → Anaesthetist → pick name → ..."],
     ["Record a payment", "Cases → open case → Record payment → Save payment"],
     ["Delete a case", "Cases → open case → Delete → Yes, delete"],
     ["Call about a payment", "Dashboard → Follow-ups → phone icon"],
     ["Mark as followed up", "Follow-ups → ⋯ → Mark followed up today"],
     ["Excel of a month", "Reports → Monthly summary → tap month → Download Excel"],
     ["Cases per surgeon", "Reports → Surgeon &amp; hospital"],
-    ["Forgot the practice code", "Ask a colleague → Practice settings"],
-    ["My cases only", "Any list → anaesthetist filter → your name"],
+    ["Forgot User ID / password", "Sign-in page → Forgot user ID? / Forgot password? → mobile number"],
+    ["Change password", "Profile menu → Change password"],
 ])
 
 
