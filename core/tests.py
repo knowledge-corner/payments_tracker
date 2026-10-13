@@ -4,7 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.templatetags.money import inr
-from core.testing import make_admin, make_doctor
+from core.testing import enter_practice, make_admin, make_doctor
 
 
 class CoreTests(TestCase):
@@ -22,39 +22,25 @@ class CoreTests(TestCase):
         self.assertEqual(sw["Service-Worker-Allowed"], "/")
         self.assertEqual(self.client.get(reverse("health")).content, b"payments-tracker ok")
 
-    def test_settings_admin_only(self):
-        self.client.force_login(make_doctor().user)
-        self.assertEqual(self.client.get(reverse("app_settings")).status_code, 403)
-        self.client.force_login(make_admin())
+    def test_settings_open_to_everyone_inside(self):
+        enter_practice(self.client, make_doctor())
         self.assertEqual(self.client.get(reverse("app_settings")).status_code, 200)
 
 
-class DoctorManagementTests(TestCase):
-    def test_admin_creates_doctor_with_login(self):
-        self.client.force_login(make_admin())
-        response = self.client.post(reverse("accounts:doctor_add"), {
-            "display_name": "Dr. Neha Joshi", "username": "dr.joshi", "password": "Str0ng!Pass99",
-            "specialisation": "Anaesthesiology", "is_active": "on",
-        })
-        self.assertRedirects(response, reverse("accounts:doctor_list"))
-        self.assertTrue(self.client.login(username="dr.joshi", password="Str0ng!Pass99"))
-
-
 class CsrfFailureTests(TestCase):
-    def test_expired_login_page_redirects_back_with_message(self):
+    def test_expired_code_page_redirects_back_with_message(self):
         from django.test import Client
 
-        make_doctor()
         client = Client(enforce_csrf_checks=True)
-        response = client.post(reverse("login"), {"username": "dr.test", "password": "Pass@12345"}, follow=True)
-        self.assertRedirects(response, reverse("login"))
-        self.assertContains(response, "sign-in page had expired")
+        response = client.post(reverse("practice_enter"), {"code": "1234"}, follow=True)
+        self.assertRedirects(response, reverse("practice_enter"))
+        self.assertContains(response, "This page had expired")
 
     def test_other_pages_show_friendly_page(self):
         from django.test import Client
 
         client = Client(enforce_csrf_checks=True)
-        client.force_login(make_doctor().user)
+        enter_practice(client, make_doctor())
         response = client.post(reverse("cases:add"), {})
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, "This page expired", status_code=403)
@@ -93,35 +79,16 @@ class AssetVersionTests(TestCase):
 
         version = asset_version()
         self.assertEqual(len(version), 10)
-        response = self.client.get(reverse("login"))
+        response = self.client.get(reverse("practice_enter"))
         self.assertContains(response, f"js/searchable-select.js?v={version}")
         sw = self.client.get("/sw.js").content.decode()
         self.assertIn(f"-{version}", sw)
         self.assertIn(f"searchable-select.js?v={version}", sw)
 
 
-class AdminViewTests(TestCase):
+class AdminPanelTests(TestCase):
     def setUp(self):
-        from core.testing import make_case, make_hospital
-
         self.me = make_doctor()
-        self.other = make_doctor("dr.other", "Dr. Other")
-        make_case(self.other, make_hospital("Other's Hospital"), patient_reference="THEIRS-1")
-        self.client.force_login(self.me.user)
-
-    def test_doctor_sees_only_own_data_and_no_admin_menu(self):
-        response = self.client.get(reverse("cases:list"))
-        self.assertNotContains(response, "THEIRS-1")
-        home = self.client.get(reverse("dashboard:home"))
-        self.assertNotContains(home, "View as admin")
-        self.assertNotContains(home, reverse("accounts:doctor_list"))
-        self.assertEqual(self.client.get(reverse("accounts:doctor_list")).status_code, 403)
-        self.assertEqual(self.client.get("/view-as-admin/").status_code, 404)
-
-    def test_administrator_login_sees_all_doctors(self):
-        self.client.force_login(make_admin())
-        self.assertContains(self.client.get(reverse("cases:list")), "THEIRS-1")
-        self.assertEqual(self.client.get(reverse("accounts:doctor_list")).status_code, 200)
 
     def test_database_admin_panel_is_developer_only(self):
         from accounts.models import User
@@ -129,10 +96,11 @@ class AdminViewTests(TestCase):
         app_admin = make_admin()
         app_admin.is_staff = True
         app_admin.save()
-        for user in (self.me.user, app_admin):
-            self.client.force_login(user)
-            self.assertEqual(self.client.get("/admin/").status_code, 302, user)  # sent to the admin login
-            self.assertNotContains(self.client.get(reverse("dashboard:home")), "/admin/")
+        enter_practice(self.client, self.me)
+        self.assertEqual(self.client.get("/admin/").status_code, 302)  # practice users never get in
+        self.assertNotContains(self.client.get(reverse("dashboard:home")), "/admin/")
+        self.client.force_login(app_admin)
+        self.assertEqual(self.client.get("/admin/").status_code, 302)
         developer = User.objects.create_superuser("dev", "dev@example.com", "Dev@12345")
         self.client.force_login(developer)
         self.assertEqual(self.client.get("/admin/").status_code, 200)

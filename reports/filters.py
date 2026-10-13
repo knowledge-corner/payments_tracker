@@ -86,7 +86,7 @@ class ReportFilters:
         """Human readable summary for export headers."""
         parts = [f"Period: {self.label}"]
         if self.doctor:
-            parts.append(f"Doctor: {self.doctor}")
+            parts.append(f"Anaesthetist: {self.doctor}")
         if self.hospital:
             parts.append(f"Hospital: {self.hospital.name}")
         if self.surgeon:

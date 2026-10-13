@@ -1,15 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from accounts.models import Doctor
 from cases.models import Case
 from core.permissions import require_doctor_profile
+from core.practice import device_doctor
 
 from .forms import AffiliationForm, ContactForm, SurgeonForm, SurgeonHospitalForm
 from .models import Contact, ContactAffiliation, Surgeon, SurgeonHospital
@@ -17,15 +16,12 @@ from .services import contacts_for_hospital
 
 
 def _scope(user):
-    qs = Contact.objects.select_related("doctor")
-    return qs if user.is_app_admin else qs.filter(doctor__user=user)
+    """Contacts are shared by the whole practice."""
+    return Contact.objects.select_related("doctor")
 
 
 def _get(request, pk):
-    contact = get_object_or_404(Contact.objects.select_related("doctor"), pk=pk)
-    if not request.user.is_app_admin and contact.doctor.user_id != request.user.id:
-        raise PermissionDenied
-    return contact
+    return get_object_or_404(Contact.objects.select_related("doctor"), pk=pk)
 
 
 @login_required
@@ -50,10 +46,7 @@ def contact_add(request):
     link_form.fields["hospital"].required = False
     if request.method == "POST" and form.is_valid() and link_form.is_valid():
         contact = form.save(commit=False)
-        contact.doctor = request.user.doctor_profile or Doctor.objects.filter(pk=request.POST.get("doctor") or 0).first()
-        if contact.doctor is None:
-            messages.error(request, "Choose the doctor this contact belongs to.")
-            return redirect(request.get_full_path())
+        contact.doctor = device_doctor(request) or request.user.doctor_profile  # "added by" only
         contact.save()
         if link_form.cleaned_data.get("hospital"):
             link = link_form.save(commit=False)
@@ -63,7 +56,6 @@ def contact_add(request):
         return redirect(request.GET.get("next") or contact.get_absolute_url())
     return render(request, "contacts/contact_form.html", {
         "form": form, "link_form": link_form, "contact": None,
-        "doctors": Doctor.objects.filter(is_active=True) if request.user.is_app_admin and not request.user.doctor_profile else None,
     })
 
 
@@ -107,7 +99,7 @@ def link_add(request, pk):
         link.contact = contact
         if link.is_primary:
             ContactAffiliation.objects.current().filter(
-                contact__doctor=contact.doctor, hospital=link.hospital,
+                hospital=link.hospital,
             ).update(is_primary=False)
         link.save()
         messages.success(request, f"{contact} now linked to {link.hospital}.")
@@ -134,7 +126,7 @@ def link_primary(request, pk, link_pk):
     contact = _get(request, pk)
     link = get_object_or_404(ContactAffiliation, pk=link_pk, contact=contact, end_date__isnull=True)
     ContactAffiliation.objects.current().filter(
-        contact__doctor=contact.doctor, hospital=link.hospital,
+        hospital=link.hospital,
     ).update(is_primary=False)
     link.is_primary = True
     link.save(update_fields=["is_primary", "updated_at"])
@@ -144,18 +136,19 @@ def link_primary(request, pk, link_pk):
 
 @login_required
 def for_hospital(request):
-    """JSON for the Add Case form: contacts and surgeons ordered for this hospital."""
-    doctor = request.user.doctor_profile
-    if request.user.is_app_admin and request.GET.get("doctor", "").isdigit():
-        doctor = Doctor.objects.filter(pk=request.GET["doctor"]).first()
+    """JSON for the Add Case form: practice contacts and surgeons, this hospital's first."""
     hospital_id = request.GET.get("hospital", "")
     empty = {"here": [], "others": [], "suggested_contact": None,
              "surgeons_here": [], "surgeons_others": [], "suggested_surgeon": None}
-    if doctor is None or not hospital_id.isdigit():
+    if not hospital_id.isdigit():
         return JsonResponse(empty)
-    last = (Case.objects.filter(doctor=doctor, hospital_id=hospital_id)
-            .order_by("-case_date", "-id").values("contact_id", "surgeon_id").first()) or {}
-    here, others = contacts_for_hospital(doctor, int(hospital_id))
+    hospital_id = int(hospital_id)
+    recent = Case.objects.filter(hospital_id=hospital_id)
+    if request.GET.get("doctor", "").isdigit():  # prefer what this anaesthetist used here last time
+        recent = recent.filter(doctor_id=int(request.GET["doctor"])) if recent.filter(
+            doctor_id=int(request.GET["doctor"])).exists() else recent
+    last = recent.order_by("-case_date", "-id").values("contact_id", "surgeon_id").first() or {}
+    here, others = contacts_for_hospital(hospital_id)
 
     def item(contact):
         return {"id": contact.pk, "label": f"{contact.name} - {contact.get_role_display()}", "phone": contact.best_phone}
@@ -163,8 +156,8 @@ def for_hospital(request):
     here_ids = {c.pk for c, _ in here}
     suggested = last.get("contact_id") if last.get("contact_id") in here_ids else (here[0][0].pk if here else None)
 
-    surgeons = list(Surgeon.objects.filter(doctor=doctor, is_active=True).prefetch_related("hospital_links"))
-    s_here = [s for s in surgeons if any(link.hospital_id == int(hospital_id) for link in s.hospital_links.all())]
+    surgeons = list(Surgeon.objects.filter(is_active=True).prefetch_related("hospital_links"))
+    s_here = [s for s in surgeons if any(link.hospital_id == hospital_id for link in s.hospital_links.all())]
     s_others = [s for s in surgeons if s not in s_here]
     return JsonResponse({
         "here": [item(c) for c, _link in here],
@@ -177,22 +170,17 @@ def for_hospital(request):
 
 
 # --------------------------------------------------------------------------- #
-# Surgeons (private to each anaesthetist; linked to hospitals via SurgeonHospital)
+# Surgeons (shared by the practice; linked to hospitals via SurgeonHospital)
 # --------------------------------------------------------------------------- #
 
 def _get_surgeon(request, pk):
-    surgeon = get_object_or_404(Surgeon.objects.select_related("doctor"), pk=pk)
-    if not request.user.is_app_admin and surgeon.doctor.user_id != request.user.id:
-        raise PermissionDenied
-    return surgeon
+    return get_object_or_404(Surgeon.objects.select_related("doctor"), pk=pk)
 
 
 @login_required
 def surgeon_list(request):
     q = request.GET.get("q", "").strip()
     surgeons = Surgeon.objects.select_related("doctor")
-    if not request.user.is_app_admin:
-        surgeons = surgeons.filter(doctor__user=request.user)
     if q:
         surgeons = surgeons.filter(Q(name__icontains=q) | Q(phone__icontains=q)
                                    | Q(hospital_links__hospital__name__icontains=q)).distinct()
@@ -207,17 +195,13 @@ def surgeon_add(request):
     link_form.fields["hospital"].required = False
     if request.method == "POST" and form.is_valid() and link_form.is_valid():
         surgeon = form.save(commit=False)
-        surgeon.doctor = request.user.doctor_profile or Doctor.objects.filter(pk=request.POST.get("doctor") or 0).first()
-        if surgeon.doctor is None:
-            messages.error(request, "Choose the doctor this surgeon belongs to.")
-            return redirect(request.get_full_path())
+        surgeon.doctor = device_doctor(request) or request.user.doctor_profile  # "added by" only
         surgeon.save()
         surgeon.link_hospital(link_form.cleaned_data.get("hospital"))
         messages.success(request, f"{surgeon} saved.")
         return redirect(surgeon)
     return render(request, "contacts/surgeon_form.html", {
         "form": form, "link_form": link_form, "surgeon": None,
-        "doctors": Doctor.objects.filter(is_active=True) if request.user.is_app_admin and not request.user.doctor_profile else None,
     })
 
 

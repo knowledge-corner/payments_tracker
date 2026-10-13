@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cases.models import Case
-from core.testing import make_case, make_contact, make_doctor, make_hospital
+from core.testing import enter_practice, make_case, make_contact, make_doctor, make_hospital
 
 from .models import Contact, ContactAffiliation, Surgeon
 from .services import attach_call_targets
@@ -32,12 +32,13 @@ class CallTargetTests(TestCase):
         case = make_case(self.doctor, self.hospital, contact=own)
         self.assertEqual(self.call_for(case).name, "Specific Person")
 
-    def test_contacts_are_private_and_ended_links_ignored(self):
-        other = make_doctor("dr.other", "Dr. Other")
-        make_contact(other, "Someone Else's", "+91 90000 00013", self.hospital)
+    def test_contacts_are_shared_and_ended_links_ignored(self):
         old = make_contact(self.doctor, "Left the job", "+91 90000 00014", self.hospital)
         old.affiliations.update(end_date=timezone.localdate())
         self.assertEqual(self.call_for(make_case(self.doctor, self.hospital)).name, "Call Test Hospital")
+        other = make_doctor("dr.other", "Dr. Other")
+        make_contact(other, "Added By Colleague", "+91 90000 00013", self.hospital)
+        self.assertEqual(self.call_for(make_case(self.doctor, self.hospital)).name, "Added By Colleague")
 
 
 class ContactViewTests(TestCase):
@@ -45,7 +46,7 @@ class ContactViewTests(TestCase):
         self.doctor = make_doctor()
         self.other = make_doctor("dr.other", "Dr. Other")
         self.hospital = make_hospital("Contact View Hospital")
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def test_add_contact_with_hospital_link(self):
         response = self.client.post(reverse("contacts:add"), {
@@ -58,10 +59,10 @@ class ContactViewTests(TestCase):
         self.assertEqual(contact.doctor, self.doctor)
         self.assertEqual(contact.affiliations.get().hospital, self.hospital)
 
-    def test_cannot_see_other_doctors_contacts(self):
-        theirs = make_contact(self.other, "Private Person")
-        self.assertEqual(self.client.get(theirs.get_absolute_url()).status_code, 403)
-        self.assertNotContains(self.client.get(reverse("contacts:list")), "Private Person")
+    def test_contacts_are_shared_across_the_practice(self):
+        theirs = make_contact(self.other, "Colleague Contact")
+        self.assertEqual(self.client.get(theirs.get_absolute_url()).status_code, 200)
+        self.assertContains(self.client.get(reverse("contacts:list")), "Colleague Contact")
 
     def test_contact_moves_hospital(self):
         contact = make_contact(self.doctor, hospital=self.hospital)
@@ -82,13 +83,13 @@ class ContactViewTests(TestCase):
     def test_for_hospital_json(self):
         here = make_contact(self.doctor, "At Hospital", hospital=self.hospital)
         make_contact(self.doctor, "Elsewhere")
-        make_contact(self.other, "Not Mine", hospital=self.hospital)
+        colleague = make_contact(self.other, "Colleague Added", hospital=self.hospital)
         surgeon = Surgeon.objects.create(doctor=self.doctor, name="Dr. Kulkarni")
         surgeon.link_hospital(self.hospital)
         Surgeon.objects.create(doctor=self.doctor, name="Dr. Elsewhere")
         make_case(self.doctor, self.hospital, contact=here, surgeon=surgeon)
         data = self.client.get(reverse("contacts:for_hospital"), {"hospital": self.hospital.pk}).json()
-        self.assertEqual([c["id"] for c in data["here"]], [here.pk])
+        self.assertEqual(sorted(c["id"] for c in data["here"]), sorted([here.pk, colleague.pk]))
         self.assertEqual([c["label"].split(" - ")[0] for c in data["others"]], ["Elsewhere"])
         self.assertEqual([s["label"] for s in data["surgeons_here"]], ["Dr. Kulkarni"])
         self.assertEqual([s["label"] for s in data["surgeons_others"]], ["Dr. Elsewhere"])
@@ -100,10 +101,11 @@ class CaseContactTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.hospital = make_hospital("Case Contact Hospital")
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def post_case(self, **extra):
-        data = {"hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000"}
+        data = {"hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000",
+                "doctor": self.doctor.pk}
         data.update(extra)
         return self.client.post(reverse("cases:add"), data)
 
@@ -127,11 +129,10 @@ class CaseContactTests(TestCase):
         self.assertIn("new_contact_phone", response.context["form"].errors)
         self.assertFalse(Case.objects.exists())
 
-    def test_cannot_use_other_doctors_contact(self):
-        theirs = make_contact(make_doctor("dr.other", "Dr. Other"), "Not Mine")
-        response = self.post_case(contact=theirs.pk)
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Case.objects.exists())
+    def test_can_use_colleagues_contact(self):
+        theirs = make_contact(make_doctor("dr.other", "Dr. Other"), "Colleague's")
+        self.post_case(contact=theirs.pk)
+        self.assertEqual(Case.objects.get().contact, theirs)
 
     def test_missing_due_date_defaults_with_message(self):
         response = self.post_case()
@@ -151,17 +152,18 @@ class SurgeonTests(TestCase):
         self.doctor = make_doctor()
         self.criticare = make_hospital("Criticare Test")
         self.hinduja = make_hospital("Hinduja Test")
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def post_case(self, hospital, **extra):
-        data = {"hospital": hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000"}
+        data = {"hospital": hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000",
+                "doctor": self.doctor.pk}
         data.update(extra)
         return self.client.post(reverse("cases:add"), data)
 
     def test_patient_name_and_new_surgeon_linked_per_hospital(self):
         self.post_case(self.criticare, patient_name="Sunita Patil", new_surgeon_name="Dr. A Shah")
         self.post_case(self.hinduja, new_surgeon_name="dr. a  shah")  # same surgeon, other hospital
-        surgeons = Surgeon.objects.filter(doctor=self.doctor)
+        surgeons = Surgeon.objects.all()
         self.assertEqual(surgeons.count(), 1)
         surgeon = surgeons.get()
         self.assertEqual(set(surgeon.hospitals.all()), {self.criticare, self.hinduja})
@@ -174,13 +176,14 @@ class SurgeonTests(TestCase):
         self.post_case(self.criticare, surgeon=surgeon.pk)
         self.assertEqual(surgeon.hospital_links.count(), 1)
 
-    def test_surgeons_are_private(self):
+    def test_surgeons_are_shared(self):
         theirs = Surgeon.objects.create(doctor=make_doctor("dr.other", "Dr. Other"), name="Dr. Theirs")
-        self.assertEqual(self.client.get(theirs.get_absolute_url()).status_code, 403)
-        self.assertNotContains(self.client.get(reverse("contacts:surgeon_list")), "Dr. Theirs")
-        response = self.post_case(self.criticare, surgeon=theirs.pk)
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Case.objects.exists())
+        self.assertEqual(self.client.get(theirs.get_absolute_url()).status_code, 200)
+        self.assertContains(self.client.get(reverse("contacts:surgeon_list")), "Dr. Theirs")
+        self.post_case(self.criticare, surgeon=theirs.pk)
+        self.assertEqual(Case.objects.get().surgeon, theirs)
+        self.post_case(self.hinduja, new_surgeon_name="Dr Theirs")  # same name -> same shared surgeon
+        self.assertEqual(Surgeon.objects.count(), 1)
 
     def test_surgeon_pages(self):
         response = self.client.post(reverse("contacts:surgeon_add"), {

@@ -24,7 +24,7 @@
   <dl class="row small mb-0 mt-3">
     <dt class="col-5 text-muted fw-normal">Case date</dt><dd class="col-7">{{ case.case_date|date:"d M Y" }} <span class="age-pill">{{ case.age_days }} days ago</span></dd>
     <dt class="col-5 text-muted fw-normal">Expected payment</dt><dd class="col-7">{{ case.due_date|date:"d M Y"|default:"-" }}{% if case.status == 'overdue' %} <span class="text-danger">({{ case.days_overdue }} days overdue)</span>{% endif %}</dd>
-    {% if user.is_app_admin %}<dt class="col-5 text-muted fw-normal">Doctor</dt><dd class="col-7">{{ case.doctor }}</dd>{% endif %}
+    <dt class="col-5 text-muted fw-normal">Anaesthetist</dt><dd class="col-7 fw-semibold">{{ case.doctor }}</dd>
     <dt class="col-5 text-muted fw-normal">Procedure</dt><dd class="col-7">{{ case.procedure_type|default:"-" }}</dd>
     <dt class="col-5 text-muted fw-normal">Patient name</dt><dd class="col-7">{{ case.patient_name|default:"-" }}</dd>
     <dt class="col-5 text-muted fw-normal">Case / patient ref</dt><dd class="col-7">{{ case.patient_reference|default:"-" }}</dd>

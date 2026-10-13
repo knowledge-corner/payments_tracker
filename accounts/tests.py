@@ -1,156 +1,131 @@
 from django.test import TestCase
 from django.urls import reverse
 
+from cases.models import Case
 from core.models import AppSettings
-from core.testing import make_admin
+from core.practice import CODE_COOKIE, WHO_COOKIE
+from core.testing import enter_practice, make_admin, make_case, make_doctor, make_hospital
 
 from .forms import doctor_title
-from .models import Doctor, User
-
-VALID = {
-    "full_name": "anjali  mehta", "phone": "+91 98220 10001", "email": "Anjali@Example.com",
-    "registration_no": "MMC-1", "username": "dr.anjali", "password1": "Str0ng!Pass99",
-    "password2": "Str0ng!Pass99", "agree": "on", "website": "",
-}
+from .models import Doctor
 
 
-class SignupTests(TestCase):
-    def post(self, **changes):
-        data = {**VALID, **changes}
-        return self.client.post(reverse("signup"), data)
-
+class DoctorTitleTests(TestCase):
     def test_doctor_title(self):
         self.assertEqual(doctor_title("anjali mehta"), "Dr. Anjali Mehta")
         self.assertEqual(doctor_title("Dr. Vikram Rao"), "Dr. Vikram Rao")
         self.assertEqual(doctor_title("dr vikram"), "Dr. Vikram")
 
-    def test_signup_creates_doctor_and_logs_in(self):
-        response = self.post()
-        self.assertRedirects(response, reverse("dashboard:home"))
-        doctor = Doctor.objects.get()
-        self.assertEqual(doctor.display_name, "Dr. Anjali Mehta")
-        self.assertEqual(doctor.user.email, "anjali@example.com")
-        self.assertEqual(doctor.user.role, User.ROLE_DOCTOR)
-        self.assertFalse(doctor.user.is_staff)
-        self.assertEqual(int(self.client.session["_auth_user_id"]), doctor.user.pk)
-        # New doctor sees an empty dashboard, not anyone else's data
-        self.assertEqual(self.client.get(reverse("dashboard:home")).context["outstanding"], 0)
 
-    def test_login_page_links_to_signup(self):
-        self.assertContains(self.client.get(reverse("login")), reverse("signup"))
+class PracticeAccessTests(TestCase):
+    """Organisation-level access: practice code once per phone, everyone sees and edits everything."""
 
-    def test_validation_errors(self):
-        User.objects.create_user("dr.anjali", "other@example.com", "x")
-        response = self.post(password2="different")
-        form = response.context["form"]
-        self.assertIn("username", form.errors)
-        self.assertIn("password2", form.errors)
-        self.assertIn("agree", self.post(agree="").context["form"].errors)
-        self.assertIn("password1", self.post(username="dr.new", password1="12345678", password2="12345678").context["form"].errors)
-        self.assertEqual(Doctor.objects.count(), 0)
-
-    def test_honeypot_blocks_bots(self):
-        response = self.post(website="http://spam.example")
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(User.objects.filter(username="dr.anjali").exists())
-
-    def test_signups_can_be_closed(self):
-        s = AppSettings.load()
-        s.allow_signups = False
-        s.save()
-        self.assertRedirects(self.client.get(reverse("signup")), reverse("login"))
-        self.assertNotContains(self.client.get(reverse("login")), reverse("signup"))
-
-    def test_approval_flow(self):
-        s = AppSettings.load()
-        s.signup_requires_approval = True
-        s.save()
-        self.assertRedirects(self.post(), reverse("login"))
-        user = User.objects.get(username="dr.anjali")
-        self.assertFalse(user.is_active)
-
-        response = self.client.post(reverse("login"), {"username": "dr.anjali", "password": "Str0ng!Pass99"})
-        self.assertContains(response, "waiting for admin approval")
-        wrong = self.client.post(reverse("login"), {"username": "dr.anjali", "password": "nope"})
-        self.assertContains(wrong, "incorrect")
-
-        admin = make_admin()
-        self.client.force_login(admin)
-        self.assertContains(self.client.get(reverse("accounts:doctor_list")), "Awaiting approval")
-        doctor = user.doctor
-        self.client.post(reverse("accounts:doctor_edit", args=[doctor.pk]), {
-            "display_name": doctor.display_name, "username": "dr.anjali", "email": user.email,
-            "phone": doctor.phone, "registration_no": "", "specialisation": "Anaesthesiology", "is_active": "on",
-        })
-        self.client.logout()
-        response = self.client.post(reverse("login"), {"username": "dr.anjali", "password": "Str0ng!Pass99"})
-        self.assertRedirects(response, reverse("dashboard:home"))
-
-
-class PasswordResetTests(TestCase):
     def setUp(self):
         from django.core.cache import cache
 
-        cache.clear()
-        self.user = User.objects.create_user("dr.reset", "reset@example.com", "OldPass!2026", role=User.ROLE_DOCTOR)
-        Doctor.objects.create(user=self.user, display_name="Reset", phone="+91 98220 12345")
-        self.url = reverse("password_reset")
-        self.good = {"username": "Dr.Reset", "mobile": "098220-12345"}
+        cache.clear()  # wrong-code attempt counters
+        settings_obj = AppSettings.load()
+        settings_obj.practice_code = "482913"
+        settings_obj.save()
+        self.mehta = make_doctor("dr.mehta", "Dr. Anjali Mehta")
+        self.rao = make_doctor("dr.rao", "Dr. Vikram Rao")
 
-    def test_login_page_has_forgot_password_and_install(self):
-        page = self.client.get(reverse("login"))
-        self.assertContains(page, self.url)
-        self.assertContains(page, "data-install-app")
+    def test_everything_asks_for_the_code_first(self):
+        for url in ("/", "/cases/", "/reports/", "/cases/add/"):
+            response = self.client.get(url)
+            self.assertEqual(response.status_code, 302, url)
+            self.assertTrue(response["Location"].startswith(reverse("practice_enter")), url)
+        self.assertContains(self.client.get(reverse("practice_enter")), "Practice code")
 
-    def test_full_reset_flow_without_email(self):
-        from django.core import mail
+    def test_wrong_code_then_right_code_then_who(self):
+        response = self.client.post(reverse("practice_enter"), {"code": "000000"})
+        self.assertContains(response, "not right")
+        response = self.client.post(reverse("practice_enter"), {"code": "482913"})
+        self.assertTrue(response["Location"].startswith(reverse("practice_who")))
+        self.assertIn(CODE_COOKIE, response.cookies)
+        self.assertGreater(int(response.cookies[CODE_COOKIE]["max-age"]), 60 * 60 * 24 * 365)  # remembered
+        response = self.client.post(reverse("practice_who"), {"doctor": self.rao.pk})
+        self.assertEqual(response.cookies[WHO_COOKIE].value, str(self.rao.pk))
+        self.assertContains(self.client.get("/"), "Dr. Vikram Rao")
+        # later visits: straight in
+        self.assertEqual(self.client.get("/cases/").status_code, 200)
 
-        response = self.client.post(self.url, self.good)
-        self.assertRedirects(response, reverse("password_reset_new"))
-        self.assertContains(self.client.get(reverse("password_reset_new")), "dr.reset")
-        response = self.client.post(reverse("password_reset_new"), {
-            "new_password1": "BrandNew!2026", "new_password2": "BrandNew!2026",
+    def test_who_can_add_a_new_name(self):
+        enter_practice(self.client)
+        self.client.post(reverse("practice_who"), {"new_name": "neha joshi", "new_phone": "9822000000"})
+        self.assertTrue(Doctor.objects.filter(display_name="Dr. Neha Joshi", user__isnull=True).exists())
+
+    def test_everyone_sees_and_edits_all_cases(self):
+        hospital = make_hospital()
+        theirs = make_case(self.rao, hospital, patient_reference="RAO-1")
+        enter_practice(self.client, self.mehta)
+        self.assertContains(self.client.get(reverse("cases:list")), "RAO-1")
+        response = self.client.post(reverse("cases:edit", args=[theirs.pk]), {
+            "doctor": self.rao.pk, "hospital": hospital.pk, "case_date": theirs.case_date.isoformat(),
+            "fee": "7777", "due_date": theirs.due_date.isoformat(),
         })
-        self.assertRedirects(response, reverse("login"))
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password("BrandNew!2026"))
-        self.assertEqual(len(mail.outbox), 0)
-        # the verification can't be reused
-        self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Case.objects.get(pk=theirs.pk).fee, 7777)
+        self.client.post(reverse("cases:delete", args=[theirs.pk]))
+        self.assertFalse(Case.objects.filter(pk=theirs.pk).exists())
 
-    def test_passwords_must_match(self):
-        self.client.post(self.url, self.good)
-        response = self.client.post(reverse("password_reset_new"), {
-            "new_password1": "BrandNew!2026", "new_password2": "Different!2026",
+    def test_changing_code_locks_other_phones_but_not_this_one(self):
+        other = self.client_class()
+        enter_practice(other, self.rao)
+        enter_practice(self.client, self.mehta)
+        response = self.client.post(reverse("practice_settings"), {"new_code": "777888", "confirm_code": "777888"})
+        self.assertEqual(AppSettings.load().practice_code, "777888")
+        self.client.cookies[CODE_COOKIE] = response.cookies[CODE_COOKIE].value
+        self.assertEqual(self.client.get("/").status_code, 200)
+        self.assertEqual(other.get("/").status_code, 302)  # old code -> asked again
+
+    def test_practice_settings_shows_code_to_everyone_inside(self):
+        enter_practice(self.client, self.mehta)
+        self.assertContains(self.client.get(reverse("practice_settings")), "482913")
+
+    def test_lock_this_phone(self):
+        enter_practice(self.client, self.mehta)
+        self.client.post(reverse("practice_lock"))
+        self.assertEqual(self.client.get("/").status_code, 302)
+
+    def test_admin_sign_in_without_code_can_reset_it(self):
+        admin = make_admin()
+        response = self.client.post(reverse("practice_admin_login"), {"username": admin.username, "password": "Pass@12345"})
+        self.assertRedirects(response, reverse("practice_settings"))
+        self.assertContains(self.client.get(reverse("practice_settings")), "482913")
+        self.client.post(reverse("practice_settings"), {"new_code": "ABCD12", "confirm_code": "ABCD12"})
+        self.assertEqual(AppSettings.load().practice_code, "ABCD12")
+
+    def test_doctor_login_cannot_use_admin_sign_in(self):
+        response = self.client.post(reverse("practice_admin_login"), {"username": "dr.mehta", "password": "Pass@12345"})
+        self.assertContains(response, "not right")
+
+    def test_code_not_set_yet(self):
+        AppSettings.objects.update(practice_code="")
+        self.assertContains(self.client.get(reverse("practice_enter")), "has not been set yet")
+
+    def test_too_many_wrong_codes(self):
+        for _ in range(8):
+            self.client.post(reverse("practice_enter"), {"code": "111111"})
+        response = self.client.post(reverse("practice_enter"), {"code": "482913"})
+        self.assertContains(response, "Too many wrong tries")
+
+    def test_set_practice_code_command(self):
+        import io
+
+        from django.core.management import call_command
+
+        call_command("set_practice_code", "555444", stdout=io.StringIO())
+        self.assertEqual(AppSettings.load().practice_code, "555444")
+
+
+class AnaesthetistManagementTests(TestCase):
+    def test_add_anaesthetist_without_login(self):
+        enter_practice(self.client)
+        response = self.client.post(reverse("accounts:doctor_add"), {
+            "display_name": "neha joshi", "phone": "9822000000", "specialisation": "Anaesthesiology", "is_active": "on",
         })
-        self.assertEqual(response.status_code, 200)
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password("OldPass!2026"))
-
-    def test_every_detail_must_match(self):
-        for field, wrong in (("username", "dr.other"), ("mobile", "9822099999")):
-            data = dict(self.good, **{field: wrong})
-            response = self.client.post(self.url, data)
-            self.assertEqual(response.status_code, 200, field)
-            self.assertContains(response, "don&#x27;t match our records")
-        self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)
-
-    def test_forgot_user_id_by_mobile(self):
-        url = reverse("forgot_username")
-        self.assertContains(self.client.get(reverse("login")), url)
-        response = self.client.post(url, {"mobile": "+91 98220 12345"})
-        self.assertContains(response, "dr.reset")
-        response = self.client.post(url, {"mobile": "9000000000"})
-        self.assertContains(response, "No account is registered")
-        self.assertNotContains(response, "dr.reset")
-
-    def test_cannot_jump_to_new_password_page(self):
-        self.assertRedirects(self.client.get(reverse("password_reset_new")), self.url)
-
-    def test_locked_after_too_many_attempts(self):
-        bad = dict(self.good, mobile="9000000000")
-        for _ in range(5):
-            self.client.post(self.url, bad)
-        response = self.client.post(self.url, self.good)
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Too many attempts")
+        self.assertRedirects(response, reverse("accounts:doctor_list"))
+        doctor = Doctor.objects.get(display_name="Dr. Neha Joshi")
+        self.assertIsNone(doctor.user)
+        self.assertContains(self.client.get(reverse("accounts:doctor_list")), "Dr. Neha Joshi")

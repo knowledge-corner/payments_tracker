@@ -24,8 +24,10 @@ class User(AbstractUser):
 
 
 class Doctor(TimeStampedModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="doctor")
-    display_name = models.CharField(max_length=120, help_text="Name shown in the app, e.g. Dr. Anjali Mehta")
+    """An anaesthetist of the practice. A login of their own is optional (shared practice access)."""
+
+    user = models.OneToOneField(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="doctor")
+    display_name = models.CharField("Name", max_length=120, help_text="Name shown in the app, e.g. Dr. Anjali Mehta")
     phone = models.CharField(max_length=20, blank=True)
     registration_no = models.CharField("Medical registration no.", max_length=50, blank=True)
     specialisation = models.CharField(max_length=100, default="Anaesthesiology")

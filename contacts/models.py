@@ -17,7 +17,9 @@ class Contact(TimeStampedModel):
         ("other", "Other"),
     ]
 
-    doctor = models.ForeignKey("accounts.Doctor", on_delete=models.CASCADE, related_name="contacts")
+    # Contacts are shared by the whole practice; this only records which anaesthetist added them.
+    doctor = models.ForeignKey("accounts.Doctor", null=True, blank=True, on_delete=models.SET_NULL,
+                               related_name="contacts", verbose_name="Added by")
     name = models.CharField(max_length=100)
     phone = models.CharField("Mobile", max_length=20, blank=True)
     alt_phone = models.CharField("Other phone", max_length=20, blank=True)
@@ -76,14 +78,16 @@ class ContactAffiliation(TimeStampedModel):
 
 class SurgeonQuerySet(models.QuerySet):
     def for_user(self, user):
-        qs = self.filter(is_active=True)
-        return qs if user.is_app_admin else qs.filter(doctor__user=user)
+        """Shared practice list: everyone sees every active surgeon."""
+        return self.filter(is_active=True)
 
 
 class Surgeon(TimeStampedModel):
     """A surgeon who calls this anaesthetist. Private to the anaesthetist (doctor)."""
 
-    doctor = models.ForeignKey("accounts.Doctor", on_delete=models.CASCADE, related_name="surgeons")
+    # Surgeons are shared by the whole practice; this only records which anaesthetist added them.
+    doctor = models.ForeignKey("accounts.Doctor", null=True, blank=True, on_delete=models.SET_NULL,
+                               related_name="surgeons", verbose_name="Added by")
     name = models.CharField(max_length=100)
     phone = models.CharField("Mobile", max_length=20, blank=True)
     speciality = models.CharField(max_length=80, blank=True)

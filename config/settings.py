@@ -79,6 +79,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "core.practice.PracticeAccessMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -159,9 +160,9 @@ EMAIL_BACKEND = (
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "Payments Tracker <noreply@localhost>"
 PASSWORD_RESET_TIMEOUT = 60 * 60 * 3  # reset links work for 3 hours
 
-LOGIN_URL = "login"
+LOGIN_URL = "practice_enter"
 LOGIN_REDIRECT_URL = "dashboard:home"
-LOGOUT_REDIRECT_URL = "login"
+LOGOUT_REDIRECT_URL = "practice_enter"
 
 # Doctors stay signed in on their phone for 30 days.
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30

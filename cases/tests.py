@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from core.models import AppSettings
-from core.testing import make_admin, make_case, make_doctor, make_hospital
+from core.testing import enter_practice, make_admin, make_case, make_doctor, make_hospital
 from payments.models import Payment
 
 from .models import Case, PaymentStatus, compute_status
@@ -69,7 +69,7 @@ class CaseViewTests(TestCase):
         self.doctor = make_doctor()
         self.other = make_doctor("dr.other", "Dr. Other")
         self.hospital = make_hospital()
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def test_add_case_does_not_prefill_fee(self):
         response = self.client.get(reverse("cases:add") + f"?hospital={self.hospital.pk}")
@@ -85,8 +85,9 @@ class CaseViewTests(TestCase):
         self.assertFalse(Case.objects.exists())
 
     def test_add_case_with_custom_fee_and_payment(self):
+        self.assertEqual(self.client.get(reverse("cases:add")).context["form"].initial["doctor"], self.doctor.pk)
         response = self.client.post(reverse("cases:add"), {
-            "hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(),
+            "doctor": self.doctor.pk, "hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(),
             "fee": "7000", "procedure_type": "Spinal", "paid_now": "on", "paid_amount": "7000", "paid_mode": "upi",
         })
         self.assertRedirects(response, reverse("dashboard:home"))
@@ -103,11 +104,44 @@ class CaseViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Case.objects.exists())
 
-    def test_doctor_cannot_see_other_doctors_case(self):
+    def test_everyone_sees_all_cases_and_can_filter_by_anaesthetist(self):
+        make_case(self.doctor, self.hospital)
         case = make_case(self.other, self.hospital)
-        self.assertEqual(self.client.get(reverse("cases:detail", args=[case.pk])).status_code, 403)
-        listing = self.client.get(reverse("cases:list"))
-        self.assertEqual(listing.context["page"].paginator.count, 0)
+        self.assertEqual(self.client.get(reverse("cases:detail", args=[case.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("cases:list")).context["page"].paginator.count, 2)
+        filtered = self.client.get(reverse("cases:list") + f"?doctor={self.other.pk}")
+        self.assertEqual(filtered.context["page"].paginator.count, 1)
+
+    def test_anaesthetist_required(self):
+        response = self.client.post(reverse("cases:add"), {
+            "hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000",
+        })
+        self.assertIn("doctor", response.context["form"].errors)
+        self.assertFalse(Case.objects.exists())
+
+    def test_new_anaesthetist_from_case_form(self):
+        self.client.post(reverse("cases:add"), {
+            "hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000",
+            "new_doctor_name": "neha joshi", "new_doctor_phone": "9822000000",
+        })
+        case = Case.objects.get()
+        self.assertEqual(case.doctor.display_name, "Dr. Neha Joshi")
+        self.assertIsNone(case.doctor.user)
+        # typing the same name again reuses the anaesthetist
+        self.client.post(reverse("cases:add"), {
+            "hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "6000",
+            "new_doctor_name": "Dr. Neha Joshi",
+        })
+        self.assertEqual(Case.objects.filter(doctor=case.doctor).count(), 2)
+
+    def test_new_anaesthetist_not_created_when_form_has_errors(self):
+        from accounts.models import Doctor
+
+        self.client.post(reverse("cases:add"), {
+            "hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "",
+            "new_doctor_name": "Ghost Doctor",
+        })
+        self.assertFalse(Doctor.objects.filter(display_name="Dr. Ghost Doctor").exists())
 
     def test_admin_sees_all_and_can_filter_by_doctor(self):
         make_case(self.doctor, self.hospital)
@@ -127,7 +161,7 @@ class CaseSearchTests(TestCase):
         surgeon = Surgeon.objects.create(doctor=doctor, name="Dr. Amit Shah")
         a = make_case(doctor, hospital, patient_name="Sunita Patil")
         b = make_case(doctor, hospital, surgeon=surgeon)
-        self.client.force_login(doctor.user)
+        enter_practice(self.client, doctor)
         ids = lambda q: {c.pk for c in self.client.get(reverse("cases:list"), {"q": q}).context["page"]}
         self.assertEqual(ids("sunita"), {a.pk})
         self.assertEqual(ids("amit shah"), {b.pk})
@@ -138,7 +172,7 @@ class CaseDeleteTests(TestCase):
         self.doctor = make_doctor()
         self.case = make_case(self.doctor, make_hospital(), patient_name="Sunita Patil")
         Payment.objects.create(case=self.case, amount=Decimal("100"))
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
         self.delete_url = reverse("cases:delete", args=[self.case.pk])
 
     def test_delete_buttons_on_case_and_edit_pages(self):
@@ -155,7 +189,7 @@ class CaseDeleteTests(TestCase):
         self.assertFalse(Case.objects.filter(pk=self.case.pk).exists())
         self.assertFalse(Payment.objects.filter(case_id=self.case.pk).exists())
 
-    def test_cannot_delete_other_doctors_case(self):
-        self.client.force_login(make_doctor("dr.other", "Dr. Other").user)
-        self.assertNotEqual(self.client.post(self.delete_url).status_code, 302)
-        self.assertTrue(Case.objects.filter(pk=self.case.pk).exists())
+    def test_anyone_can_delete_any_case(self):
+        enter_practice(self.client, make_doctor("dr.other", "Dr. Other"))
+        self.assertRedirects(self.client.post(self.delete_url), reverse("cases:list"))
+        self.assertFalse(Case.objects.filter(pk=self.case.pk).exists())

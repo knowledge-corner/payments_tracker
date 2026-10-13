@@ -24,12 +24,12 @@
 <div class="card d-none d-md-block">
   <div class="table-responsive">
     <table class="table table-report table-hover mb-0 align-middle">
-      <thead><tr><th>Date</th>{% if user.is_app_admin %}<th>Doctor</th>{% endif %}<th>Hospital</th><th>Procedure / ref</th><th class="text-end">Fee</th><th class="text-end">Received</th><th class="text-end">Outstanding</th><th>Status</th></tr></thead>
+      <thead><tr><th>Date</th><th>Anaesthetist</th><th>Hospital</th><th>Procedure / ref</th><th class="text-end">Fee</th><th class="text-end">Received</th><th class="text-end">Outstanding</th><th>Status</th></tr></thead>
       <tbody>
         {% for c in page %}
         <tr onclick="location.href='{{ c.get_absolute_url }}'" style="cursor:pointer">
           <td class="text-nowrap">{{ c.case_date|date:"d M Y" }}</td>
-          {% if user.is_app_admin %}<td class="small">{{ c.doctor }}</td>{% endif %}
+          <td class="small">{{ c.doctor }}</td>
           <td>{{ c.hospital.name }}</td>
           <td class="small">{{ c.procedure_type }}{% if c.patient_reference %}<div class="text-muted">{{ c.patient_reference }}</div>{% endif %}</td>
           <td class="text-end amount">{{ c.fee|inr }}</td>
@@ -37,7 +37,7 @@
           <td class="text-end amount {% if c.outstanding > 0 %}text-danger{% endif %}">{{ c.outstanding|inr }}</td>
           <td>{% status_badge c %}</td>
         </tr>
-        {% empty %}<tr><td colspan="8" class="text-center text-muted p-4">No cases match these filters.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="9" class="text-center text-muted p-4">No cases match these filters.</td></tr>{% endfor %}
       </tbody>
     </table>
   </div>

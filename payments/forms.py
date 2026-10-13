@@ -1,6 +1,7 @@
 from django import forms
 from django.utils import timezone
 
+from contacts.models import Contact
 from core.forms import StyledModelForm
 
 from .models import Payment, PaymentFollowUp
@@ -83,9 +84,9 @@ def followup_form(case, *args, **kwargs):
     from contacts.services import contacts_for_hospital
 
     form = FollowUpForm(*args, **kwargs)
-    here, others = contacts_for_hospital(case.doctor, case.hospital_id)
+    here, others = contacts_for_hospital(case.hospital_id)
     field = form.fields["contact"]
-    field.queryset = case.doctor.contacts.filter(is_active=True)
+    field.queryset = Contact.objects.filter(is_active=True)
     field.label = "Spoke to"
     choices = [("", "Not specified")]
     if here:

@@ -11,7 +11,7 @@
     <dt class="col-4 text-muted fw-normal">Mobile</dt><dd class="col-8">{% if surgeon.phone %}<a href="tel:{{ surgeon.phone }}">{{ surgeon.phone }}</a>{% else %}-{% endif %}</dd>
     {% if surgeon.speciality %}<dt class="col-4 text-muted fw-normal">Speciality</dt><dd class="col-8">{{ surgeon.speciality }}</dd>{% endif %}
     {% if surgeon.notes %}<dt class="col-4 text-muted fw-normal">Notes</dt><dd class="col-8">{{ surgeon.notes|linebreaksbr }}</dd>{% endif %}
-    {% if user.is_app_admin %}<dt class="col-4 text-muted fw-normal">Anaesthetist</dt><dd class="col-8">{{ surgeon.doctor }}</dd>{% endif %}
+    {% if surgeon.doctor %}<dt class="col-4 text-muted fw-normal">Added by</dt><dd class="col-8">{{ surgeon.doctor }}</dd>{% endif %}
   </dl>
 </div>
 

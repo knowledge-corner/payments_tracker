@@ -3,7 +3,7 @@
 {% block content %}
 {% include "contacts/_tabs.html" with tab="surgeons" %}
 <div class="d-flex justify-content-between align-items-center mb-2">
-  <h1 class="h5 mb-0">{% if user.is_app_admin %}Surgeons{% else %}My surgeons{% endif %}</h1>
+  <h1 class="h5 mb-0">Surgeons</h1>
   <a href="{% url 'contacts:surgeon_add' %}" class="btn btn-primary btn-sm"><i class="bi bi-person-plus"></i> Add surgeon</a>
 </div>
 <form method="get" class="mb-2">
@@ -19,7 +19,6 @@
       <a href="{{ s.get_absolute_url }}" class="min-w-0 text-decoration-none text-body flex-fill">
         <div class="action-name">{{ s.name }}{% if not s.is_active %} <span class="badge text-bg-secondary">inactive</span>{% endif %}</div>
         <div class="action-meta text-truncate">{{ s.case_count }} case{{ s.case_count|pluralize }}{% for link in s.hospital_links.all %} · {{ link.hospital.name }}{% empty %} · no hospital yet{% endfor %}</div>
-        {% if user.is_app_admin %}<div class="action-meta">{{ s.doctor }}</div>{% endif %}
       </a>
       {% if s.phone %}<a href="tel:{{ s.phone }}" class="call-link" aria-label="Call {{ s.name }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}
     </div>

@@ -59,7 +59,8 @@ DJANGO_SECURE=0
 ```bash
 python manage.py migrate
 python manage.py collectstatic --noinput
-python manage.py createsuperuser    # your admin login
+python manage.py createsuperuser    # your admin login (optional, for the developer / owner)
+python manage.py set_practice_code 482913    # the code every phone enters once - choose your own
 ```
 
 ## 5. Create the web app (Web tab)
@@ -86,7 +87,9 @@ python manage.py createsuperuser    # your admin login
 6. **Security:** turn on **Force HTTPS**.
 7. Click the green **Reload** button and open `https://<username>.pythonanywhere.com`.
 
-Doctors sign up with **Create an account** on the sign-in page. The starter list of Pune / Mumbai hospitals is loaded by `migrate`; to add the full government directory, upload the data.gov.in CSV under **account menu → Hospital directory**.
+Share the practice code with the team. Each phone enters it once (it is remembered - no 90-day reset),
+then picks **who is using this phone**. Everyone sees and can add or edit every case; each case records
+its **Anaesthetist**. The starter list of Pune / Mumbai hospitals is loaded by `migrate`; to add the full government directory, upload the data.gov.in CSV under **account menu → Hospital directory**.
 
 ## 6. Push notifications (reminder sender)
 
@@ -120,12 +123,16 @@ cd ~/payments_tracker && ~/.venvs/payments/bin/python manage.py check_notificati
 > Free accounts can only reach whitelisted websites. If the test notification fails with a connection error,
 > the push service for that browser is not on PythonAnywhere's whitelist - it works on a paid account or on DigitalOcean.
 
-## 6b. "Forgot password"
+## 6b. Practice code, forgotten code, administrator
 
-No email setup is needed. **Forgot password?** asks for the user ID and the registered mobile number;
-if they match, a new password is set on the spot. **Forgot user ID?** shows the user ID for a registered
-mobile number. 5 wrong attempts lock the form for 15 minutes. Admin logins without a doctor profile
-reset with `python manage.py changepassword <username>`.
+| Situation | What to do |
+|---|---|
+| Someone forgot the code | Ask a colleague: it is shown in **account menu → Practice settings** on any phone that is open |
+| Change the code (phone lost, someone left) | **Practice settings → Change the code**. All other phones ask for the new code |
+| No phone is open any more | **Administrator sign-in** link on the code screen (`/practice/admin/`) with the admin login, then **Practice settings** |
+| Console | `python manage.py set_practice_code NEWCODE` or `python manage.py set_practice_code --show` |
+
+Existing user logins are kept untouched; the admin login still works through **Administrator sign-in**.
 
 ## 7. Updating after new code is pushed
 

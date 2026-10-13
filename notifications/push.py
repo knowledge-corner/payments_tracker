@@ -38,8 +38,8 @@ def public_key():
     return vapid_keys()[1]
 
 
-def notify(user, kind, title, body, url="/", key=None):
-    """Send to all of the user's devices if their preferences allow it.
+def notify(user, kind, title, body, url="/", key=None, subscriptions=None):
+    """Send to the user's devices (or only `subscriptions`) if their preferences allow it.
 
     `key` makes the notification one-off (e.g. one morning summary per day).
     Returns the number of devices reached.
@@ -47,7 +47,9 @@ def notify(user, kind, title, body, url="/", key=None):
     prefs = NotificationPreference.for_user(user)
     if not prefs.wants(kind):
         return 0
-    subscriptions = list(PushSubscription.objects.filter(user=user))
+    if subscriptions is None:
+        subscriptions = PushSubscription.objects.filter(user=user)
+    subscriptions = [s for s in subscriptions if s.pk]  # skip phones removed earlier in this run
     if not subscriptions:
         return 0
     if key and SentNotification.objects.filter(user=user, key=key).exists():

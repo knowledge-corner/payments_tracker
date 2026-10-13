@@ -13,7 +13,7 @@
     {% if contact.alt_phone %}<dt class="col-4 text-muted fw-normal">Other phone</dt><dd class="col-8"><a href="tel:{{ contact.alt_phone }}">{{ contact.alt_phone }}</a></dd>{% endif %}
     {% if contact.email %}<dt class="col-4 text-muted fw-normal">Email</dt><dd class="col-8"><a href="mailto:{{ contact.email }}">{{ contact.email }}</a></dd>{% endif %}
     {% if contact.notes %}<dt class="col-4 text-muted fw-normal">Notes</dt><dd class="col-8">{{ contact.notes|linebreaksbr }}</dd>{% endif %}
-    {% if user.is_app_admin %}<dt class="col-4 text-muted fw-normal">Doctor</dt><dd class="col-8">{{ contact.doctor }}</dd>{% endif %}
+    {% if contact.doctor %}<dt class="col-4 text-muted fw-normal">Added by</dt><dd class="col-8">{{ contact.doctor }}</dd>{% endif %}
   </dl>
   {% if contact.best_phone %}<a href="tel:{{ contact.best_phone }}" class="btn btn-outline-success btn-sm mt-2 align-self-start"><i class="bi bi-telephone-fill"></i> Call {{ contact.name }}</a>{% endif %}
 </div>

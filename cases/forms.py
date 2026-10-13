@@ -2,11 +2,13 @@ import re
 from decimal import Decimal
 
 from django import forms
+from django.db import models
 from django.utils import timezone
 
+from accounts.forms import doctor_title
 from accounts.models import Doctor
 from contacts.models import Contact, Surgeon
-from contacts.services import ensure_affiliation
+from contacts.services import ensure_affiliation, find_surgeon
 from core.forms import StyledModelForm
 from hospitals.models import Hospital
 from payments.models import Payment
@@ -39,6 +41,11 @@ class CaseForm(StyledModelForm):
     new_contact_phone = forms.CharField(required=False, max_length=20, label="Mobile",
                                         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}))
     new_contact_role = forms.ChoiceField(required=False, choices=Contact.ROLE_CHOICES, initial="billing", label="Role")
+    # Quick "new anaesthetist" on the case form
+    new_doctor_name = forms.CharField(required=False, max_length=120, label="Anaesthetist name",
+                                      widget=forms.TextInput(attrs={"placeholder": "e.g. Dr. Anjali Mehta"}))
+    new_doctor_phone = forms.CharField(required=False, max_length=20, label="Mobile (optional)",
+                                       widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}))
     # Quick "new surgeon" on the case form
     new_surgeon_name = forms.CharField(required=False, max_length=100, label="Surgeon name",
                                        widget=forms.TextInput(attrs={"placeholder": "e.g. Dr. Kulkarni"}))
@@ -81,36 +88,27 @@ class CaseForm(StyledModelForm):
             "data-placeholder": "Type hospital name or area", "data-add-url": "/hospitals/add/?next=/cases/add/",
         })
 
-        # Contact and surgeon: the doctor's own lists (re-ordered in the browser once a hospital is picked).
-        doctor = self._doctor()
-        surgeons = Surgeon.objects.filter(is_active=True)
-        surgeons = surgeons.filter(doctor=doctor) if doctor else (surgeons if user and user.is_app_admin else surgeons.none())
-        self.fields["surgeon"].queryset = surgeons
+        # Surgeons and contacts are shared by the whole practice
+        # (re-ordered in the browser once a hospital is picked).
+        self.fields["surgeon"].queryset = Surgeon.objects.filter(is_active=True)
         self.fields["surgeon"].empty_label = "Not specified"
         self.fields["surgeon"].label = "Surgeon"
-        contacts = Contact.objects.filter(is_active=True)
-        contacts = contacts.filter(doctor=doctor) if doctor else (contacts if user and user.is_app_admin else contacts.none())
-        self.fields["contact"].queryset = contacts
+        self.fields["contact"].queryset = Contact.objects.filter(is_active=True)
         self.fields["contact"].empty_label = "Not specified"
         self.fields["contact"].label = "Contact person"
 
-        if user is not None and user.is_app_admin:
-            self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
-        else:
-            self.fields.pop("doctor")
+        # Anaesthetist who did the case: any active anaesthetist (plus the current one when editing).
+        doctors = Doctor.objects.filter(is_active=True)
+        if self.instance.pk:
+            doctors = Doctor.objects.filter(models.Q(is_active=True) | models.Q(pk=self.instance.doctor_id))
+        self.fields["doctor"].queryset = doctors
+        self.fields["doctor"].label = "Anaesthetist"
+        self.fields["doctor"].empty_label = "Choose anaesthetist"
+        self.fields["doctor"].required = False  # or "+ New anaesthetist" (checked in clean)
 
         if self.instance.pk:
             for name in ("paid_now", "paid_amount", "paid_mode"):
                 self.fields.pop(name)
-
-    def _doctor(self):
-        if self.user is None:
-            return None
-        if self.user.is_app_admin:
-            doctor_id = self.data.get(self.add_prefix("doctor")) or self.initial.get("doctor") or (
-                self.instance.doctor_id if self.instance.pk else None)
-            return Doctor.objects.filter(pk=doctor_id).first() if doctor_id else self.user.doctor_profile
-        return self.user.doctor_profile
 
     def clean(self):
         cleaned = super().clean()
@@ -128,15 +126,18 @@ class CaseForm(StyledModelForm):
         due = cleaned.get("due_date")
         if due and case_date and due < case_date:
             self.add_error("due_date", "Expected payment date cannot be before the case date.")
-        doctor = cleaned.get("doctor") or self._doctor()
-        contact = cleaned.get("contact")
-        if contact and doctor and contact.doctor_id != doctor.pk:
-            self.add_error("contact", "This contact belongs to another doctor.")
-        surgeon = cleaned.get("surgeon")
-        if surgeon and doctor and surgeon.doctor_id != doctor.pk:
-            self.add_error("surgeon", "This surgeon belongs to another doctor.")
         if cleaned.get("new_contact_name") and not cleaned.get("new_contact_phone"):
             self.add_error("new_contact_phone", "Add a mobile number for the new contact.")
+        new_doctor = " ".join((cleaned.get("new_doctor_name") or "").split())
+        if new_doctor:
+            if not self.errors:
+                # Reuse an anaesthetist with the same name, else add them to the practice list.
+                title = doctor_title(new_doctor)
+                cleaned["doctor"] = Doctor.objects.filter(display_name__iexact=title).first() or Doctor.objects.create(
+                    display_name=title, phone=(cleaned.get("new_doctor_phone") or "").strip())
+                self.instance.doctor = cleaned["doctor"]
+        elif not cleaned.get("doctor"):
+            self.add_error("doctor", "Choose the anaesthetist, or add a new one.")
         return cleaned
 
     def save_contact(self, case):
@@ -145,8 +146,8 @@ class CaseForm(StyledModelForm):
         surgeon = case.surgeon if case.surgeon_id else None
         if data.get("new_surgeon_name"):
             name = re.sub(r"\s+", " ", data["new_surgeon_name"]).strip()
-            # Same name already saved by this doctor -> reuse instead of a duplicate.
-            surgeon = Surgeon.objects.filter(doctor=case.doctor, name__iexact=name).first()
+            # Same name already in the practice list -> reuse instead of a duplicate.
+            surgeon = find_surgeon(name)
             if surgeon is None:
                 surgeon = Surgeon.objects.create(doctor=case.doctor, name=name,
                                                  phone=(data.get("new_surgeon_phone") or "").strip())
@@ -157,9 +158,9 @@ class CaseForm(StyledModelForm):
         contact = None
         if data.get("new_contact_name"):
             phone = data["new_contact_phone"].strip()
-            # Same mobile already saved by this doctor -> reuse that contact instead of a duplicate.
+            # Same mobile already in the practice list -> reuse that contact instead of a duplicate.
             digits = re.sub(r"\D", "", phone)[-10:]
-            contact = next((c for c in Contact.objects.filter(doctor=case.doctor)
+            contact = next((c for c in Contact.objects.all()
                             if digits and re.sub(r"\D", "", c.phone)[-10:] == digits), None)
             if contact is None:
                 contact = Contact.objects.create(
@@ -181,18 +182,16 @@ class CaseImportForm(forms.Form):
         widget=forms.ClearableFileInput(attrs={"accept": ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
     )
     doctor = forms.ModelChoiceField(
-        queryset=Doctor.objects.none(), required=False,
-        help_text="Used for rows without a 'Doctor Username'.",
+        queryset=Doctor.objects.none(), required=False, label="Anaesthetist",
+        help_text="Used for rows where the Anaesthetist column is empty.",
     )
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["file"].widget.attrs["class"] = "form-control"
-        if user is not None and user.is_app_admin:
-            self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
-            self.fields["doctor"].widget.attrs.update({"class": "form-select", "data-searchable": "", "data-placeholder": "Type to search doctor"})
-        else:
-            self.fields.pop("doctor")
+        self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
+        self.fields["doctor"].empty_label = "Anaesthetist for rows without one"
+        self.fields["doctor"].widget.attrs.update({"class": "form-select"})
 
     def clean_file(self):
         from .importer import MAX_FILE_BYTES

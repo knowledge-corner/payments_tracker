@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from openpyxl import Workbook, load_workbook
 
-from core.testing import make_admin, make_case, make_doctor, make_hospital
+from core.testing import enter_practice, make_admin, make_case, make_doctor, make_hospital
 from hospitals.models import Hospital
 from payments.models import Payment
 
@@ -49,7 +49,7 @@ class ImportFlowTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.hospital = make_hospital("Ruby Hall Clinic")
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
         self.day = timezone.localdate() - datetime.timedelta(days=10)
 
     def upload(self, file, **extra):

@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 from cases.models import Case
 from cases.views import get_case_for_user
 from contacts.services import attach_call_targets
+from core.practice import device_key
 from core.permissions import selected_doctor, visible_doctors
 
 from . import services
@@ -51,6 +52,7 @@ def record_payment(request, case_pk=None):
         if fixed_case is not None:
             payment.case = fixed_case
         payment.created_by = request.user
+        payment._device_key = device_key(request)  # this phone is not notified about its own entry
         payment.save()
         messages.success(request, f"Payment of {payment.amount:,.0f} recorded.")
         return redirect(_next_url(request, reverse("cases:detail", args=[payment.case_id])))

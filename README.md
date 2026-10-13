@@ -77,8 +77,10 @@ starts the version already on your computer.
 The app starts empty apart from the **hospital directory** (about 90 well-known Pune and Mumbai
 hospitals).
 
-1. Doctors tap **Create an account** on the sign-in page.
-2. For an admin login run `docker compose exec web python manage.py createsuperuser`.
+1. Set the practice code: `docker compose exec web python manage.py set_practice_code 482913` (choose your own)
+   and share it with the team. Each phone enters it once and picks who is using it.
+2. Optional admin login (for **Administrator sign-in** on the code screen, used to reset the code if no phone is open):
+   `docker compose exec web python manage.py createsuperuser`.
 3. *(Admin, optional)* Load the full government list: download the CSV of the
    [Hospital Directory (National Health Portal)](https://data.gov.in/catalog/hospital-directory-national-health-portal)
    from data.gov.in, then **account menu → Hospital directory → Import**
@@ -90,12 +92,13 @@ How the data fits together:
 | Item | Shared or private | Notes |
 |---|---|---|
 | Hospitals | Shared directory | Any doctor can add a hospital; it is saved straight away (no approval, no merging) |
-| Surgeons | **Private per doctor** | Picked on each case; one surgeon can be linked to many hospitals (one link per surgeon + hospital) |
+| Cases, payments, follow-ups | **Shared by the practice** | Every case records its **Anaesthetist**; filter any screen by anaesthetist |
+| Surgeons | Shared by the practice | Picked on each case; one surgeon can be linked to many hospitals (one link per surgeon + hospital) |
 | Patient name | Per case | Optional |
-| Contacts | **Private per doctor** | One person can be linked to several hospitals; the call button picks the best match |
+| Contacts | Shared by the practice | One person can be linked to several hospitals; the call button picks the best match |
 | Fee, expected payment date | Per case | Nothing is pre-filled; if no date is given the app assumes 30 days (Settings) |
 
-The raw database panel (`/admin/`) is for the developer only: it accepts superuser logins (`createsuperuser`) and is not linked anywhere in the app. Administrators (sign in with an admin login) manage doctors, settings and the hospital directory from the account menu.
+The raw database panel (`/admin/`) is for the developer only: it accepts superuser logins (`createsuperuser`) and is not linked anywhere in the app. Everyone with the practice code can manage anaesthetists, settings and the hospital directory from the account menu.
 
 ---
 
@@ -150,17 +153,18 @@ docker compose down -v                                         # stop and DELETE
 | **Receivables** | Total outstanding, overdue amount, follow-ups due and an ageing breakdown (0-30 / 31-60 / 61-90 / 90+ days). Sort by oldest first (default), highest amount or hospital. Mark as followed up, snooze (3 days / 1 week / 2 weeks), or log a follow-up with date, method, contact, notes and promised payment date. |
 | **Hospitals** | Master data: name, city/address, contact person and number, default fee, payment terms, active/inactive. Shows outstanding per hospital. |
 | **Reports** | Monthly summary (cases, earnings, received, outstanding), hospital-wise billing and outstanding, payment history. Every report downloads as CSV for Excel. |
-| **Admin** | Manage doctors (with logins), hospitals and settings (payment terms, reminder days). Filter every screen by doctor. |
+| **Practice access** | One practice code per organisation, entered once per phone (remembered). Everyone sees and edits all cases; each phone says who uses it (pre-fills the Anaesthetist and chooses its reminders). Admin sign-in kept as a backup for resetting the code. |
 | **PWA** | Manifest, icons, service worker, offline page, iOS home-screen support. |
 
-### Roles
+### Access
 
-| | Admin | Doctor |
+| | Anyone with the practice code | Administrator sign-in (optional) |
 |---|---|---|
-| See data | All doctors (with a doctor filter) | Own cases, payments and follow-ups only |
-| Cases / payments / follow-ups | Yes (chooses the doctor) | Yes (own) |
-| Hospitals | Add, edit, deactivate | Add and edit |
-| Doctors and settings | Yes | No |
+| See data | All cases of the practice (filter by anaesthetist) | Same |
+| Cases / payments / follow-ups | Add, edit, delete (with confirmation) | Same |
+| Anaesthetists, hospitals, settings | Yes | Yes |
+| Practice code | See and change it | See and change it - works even when no phone is open |
+| `/admin/` database panel | No | Superusers only (developer) |
 
 ---
 

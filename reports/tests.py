@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from core.testing import make_case, make_doctor, make_hospital
+from core.testing import enter_practice, make_case, make_doctor, make_hospital
 from payments.models import Payment
 
 
@@ -15,7 +15,7 @@ class ReportTests(TestCase):
         case = make_case(self.doctor, self.a, fee=1000)
         Payment.objects.create(case=case, amount=Decimal("400"), mode="upi")
         make_case(self.doctor, self.b, fee=2000)
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def test_monthly(self):
         ctx = self.client.get(reverse("reports:monthly")).context
@@ -51,16 +51,19 @@ class CasesReportTests(TestCase):
         Payment.objects.create(case=self.recent, amount=Decimal("1000"))
         self.old = make_case(self.doctor, self.b, days_ago=120, fee=2000, patient_reference="IP 55")
         other = make_doctor("dr.x", "Dr. X")
-        make_case(other, self.a, fee=99999)  # never visible to self.doctor
-        self.client.force_login(self.doctor.user)
+        self.colleague = make_case(other, self.a, fee=99999)  # shown unless filtered to one anaesthetist
+        enter_practice(self.client, self.doctor)
         self.url = reverse("reports:cases")
         self.datetime = datetime
 
     def ids(self, query=""):
+        query = (query + "&" if query else "?") + f"doctor={self.doctor.pk}"
         return {c.pk for c in self.client.get(self.url + query).context["page"]}
 
     def test_default_this_month(self):
         self.assertEqual(self.ids(), {self.recent.pk})
+        whole_practice = {c.pk for c in self.client.get(self.url).context["page"]}
+        self.assertEqual(whole_practice, {self.recent.pk, self.colleague.pk})
 
     def test_custom_date_range_hospital_status_and_search(self):
         start = (self.today - self.datetime.timedelta(days=200)).isoformat()
@@ -78,13 +81,16 @@ class CasesReportTests(TestCase):
         from openpyxl import load_workbook
 
         ctx = self.client.get(self.url + "?period=all").context
+        self.assertEqual(ctx["summary"]["n"], 3)
+        mine = f"?period=all&doctor={self.doctor.pk}"
+        ctx = self.client.get(self.url + mine).context
         self.assertEqual((ctx["summary"]["n"], ctx["summary"]["billed"], ctx["summary"]["outstanding"]),
                          (2, Decimal("3000"), Decimal("2000")))
-        response = self.client.get(self.url + "?period=all&export=xlsx")
+        response = self.client.get(self.url + mine + "&export=xlsx")
         self.assertIn("spreadsheetml", response["Content-Type"])
         ws = load_workbook(io.BytesIO(response.content)).active
         values = [[c.value for c in row] for row in ws.iter_rows()]
-        self.assertEqual(values[4][:3], ["Case date", "Doctor", "Hospital"])
+        self.assertEqual(values[4][:3], ["Case date", "Anaesthetist", "Hospital"])
         self.assertEqual(len(values), 5 + 2 + 1)  # 4 header lines + column row + 2 cases + total
         self.assertEqual(values[-1][0], "TOTAL")
         self.assertNotIn(99999, [v for row in values for v in row])
@@ -117,17 +123,19 @@ class MonthCasesTests(TestCase):
         Payment.objects.create(case=self.paid, amount=Decimal("1000"))
         self.unpaid = make_case(self.doctor, self.b, days_ago=0, fee=2000)
         self.last_month = make_case(self.doctor, self.a, days_ago=today.day + 3, fee=500)
-        make_case(make_doctor("dr.x", "Dr. X"), self.a, fee=99999)
-        self.client.force_login(self.doctor.user)
+        self.colleague = make_case(make_doctor("dr.x", "Dr. X"), self.a, fee=99999)
+        enter_practice(self.client, self.doctor)
         self.url = reverse("reports:month_cases", args=[self.month.year, self.month.month])
         self.datetime = datetime
 
     def ids(self, query=""):
+        query = (query + "&" if query else "?") + f"doctor={self.doctor.pk}"
         return {c.pk for c in self.client.get(self.url + query).context["page"]}
 
-    def test_only_that_month_and_own_cases(self):
+    def test_only_that_month_and_anaesthetist_filter(self):
         response = self.client.get(self.url)
         self.assertContains(response, self.month.strftime("%B %Y"))
+        self.assertEqual({c.pk for c in response.context["page"]}, {self.paid.pk, self.unpaid.pk, self.colleague.pk})
         self.assertEqual(self.ids(), {self.paid.pk, self.unpaid.pk})
         self.assertNotContains(response, 'name="period"')
         self.assertNotContains(response, 'name="q"')
@@ -145,7 +153,7 @@ class MonthCasesTests(TestCase):
 
         from openpyxl import load_workbook
 
-        response = self.client.get(self.url + "?export=xlsx&status=unpaid")
+        response = self.client.get(self.url + f"?export=xlsx&status=unpaid&doctor={self.doctor.pk}")
         self.assertIn(f"cases_{self.month:%Y_%m}", response["Content-Disposition"])
         ws = load_workbook(io.BytesIO(response.content)).active
         values = [str(c.value) for row in ws.iter_rows() for c in row if c.value is not None]
@@ -174,10 +182,12 @@ class SurgeonReportTests(TestCase):
         rao = Surgeon.objects.create(doctor=doctor, name="Dr. Rao")
         for hospital, surgeon in ((a, shah), (a, shah), (b, shah), (a, rao)):
             make_case(doctor, hospital, fee=1000, surgeon=surgeon)
-        make_case(make_doctor("dr.x", "Dr. X"), a, fee=5000)
-        self.client.force_login(doctor.user)
+        make_case(make_doctor("dr.x", "Dr. X"), a, fee=5000, surgeon=rao)  # a colleague's case with Dr. Rao
+        enter_practice(self.client, doctor)
         url = reverse("reports:surgeons")
         rows = self.client.get(url + "?period=all").context["rows"]
+        self.assertEqual({(str(r["surgeon"]), r["hospital"].name): r["cases"] for r in rows}[("Dr. Rao", "Criticare R")], 2)
+        rows = self.client.get(url + f"?period=all&doctor={doctor.pk}").context["rows"]
         got = {(str(r["surgeon"]), r["hospital"].name): r["cases"] for r in rows}
         self.assertEqual(got, {("Dr. Shah", "Criticare R"): 2, ("Dr. Shah", "Hinduja R"): 1, ("Dr. Rao", "Criticare R"): 1})
         rows = self.client.get(url + f"?period=all&surgeon={shah.pk}&hospital={a.pk}").context["rows"]

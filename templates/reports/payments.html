@@ -20,7 +20,7 @@
       <div class="min-w-0">
         <div class="text-truncate">{{ p.case.hospital.name }}</div>
         <div class="small text-muted text-truncate">{{ p.payment_date|date:"d M Y" }} · {{ p.get_mode_display }}{% if p.received_by %} · by {{ p.received_by }}{% endif %}{% if p.reference_no %} · {{ p.reference_no }}{% endif %}</div>
-        <div class="small text-muted">For case of {{ p.case.case_date|date:"d M Y" }}{% if user.is_app_admin %} · {{ p.case.doctor }}{% endif %}</div>
+        <div class="small text-muted">For case of {{ p.case.case_date|date:"d M Y" }} · {{ p.case.doctor }}</div>
       </div>
       <div class="fw-semibold text-success amount">{{ p.amount|inr }}</div>
     </a>

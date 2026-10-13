@@ -95,12 +95,12 @@ def csrf_failure(request, reason=""):
     time, or when the link was opened inside WhatsApp/Gmail's built-in browser.
     """
     logger.warning("CSRF failure on %s: %s (UA: %s)", request.path, reason, request.META.get("HTTP_USER_AGENT", "")[:120])
-    if request.path == reverse("login"):
+    if request.path in (reverse("practice_enter"), reverse("practice_admin_login")):
         messages.warning(
             request,
-            "Your sign-in page had expired - please sign in again. If this keeps happening, open the "
+            "This page had expired - please try again. If this keeps happening, open the "
             "link in Chrome or Safari (not inside WhatsApp/Gmail) and make sure cookies are allowed.",
         )
-        return redirect("login")
+        return redirect(request.path)
     return render(request, "403_csrf.html", {"retry_url": request.path}, status=403)
 

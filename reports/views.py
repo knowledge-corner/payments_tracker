@@ -73,7 +73,7 @@ def export_cases(fmt, qs, summary, filters, filename, title):
         for c in qs.annotate(last_payment=Subquery(last_pay))
     ]
     columns = [
-        ("Case date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Area / city", "text"),
+        ("Case date", "date"), ("Anaesthetist", "text"), ("Hospital", "text"), ("Area / city", "text"),
         ("Patient name", "text"), ("Surgeon", "text"), ("Contact person", "text"), ("Contact phone", "text"), ("Procedure", "text"),
         ("Case / patient ref", "text"), ("Fee", "money"), ("Received", "money"), ("Outstanding", "money"),
         ("Status", "text"), ("Due date", "date"), ("Days overdue", "int"), ("Last payment", "date"), ("Notes", "text"),
@@ -283,7 +283,7 @@ def payment_history(request):
 
     fmt = export_format(request)
     if fmt:
-        columns = [("Payment date", "date"), ("Doctor", "text"), ("Hospital", "text"), ("Case date", "date"),
+        columns = [("Payment date", "date"), ("Anaesthetist", "text"), ("Hospital", "text"), ("Case date", "date"),
                    ("Case / patient ref", "text"), ("Amount", "money"), ("Mode", "text"), ("Received by", "text"),
                    ("Reference", "text"), ("Notes", "text")]
         rows = [[p.payment_date, str(p.case.doctor), p.case.hospital.name, p.case.case_date, p.case.patient_reference,

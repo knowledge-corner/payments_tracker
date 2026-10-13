@@ -11,6 +11,9 @@ from django.views.decorators.http import require_POST
 
 from .forms import NotificationPreferenceForm
 from .models import NotificationKind, NotificationPreference, PushSubscription, SentNotification
+from accounts.models import Doctor
+from core.practice import device_doctor, device_key
+
 from .push import notify, public_key
 from .services import run_scheduled, sender_status, upcoming_reminders
 
@@ -23,13 +26,33 @@ def settings_page(request):
         form.save()
         messages.success(request, "Notification settings saved.")
         return redirect("notifications:settings")
+    this_phone = list(PushSubscription.objects.filter(user=request.user, device_key=device_key(request))
+                      .exclude(device_key="").select_related("doctor"))
+    this_scope = this_phone[0].doctor if this_phone else device_doctor(request)
     return render(request, "notifications/settings.html", {
         "form": form,
         "devices": PushSubscription.objects.filter(user=request.user),
         "history": SentNotification.objects.filter(user=request.user)[:10],
         "sender": dict(zip(("last_run", "healthy"), sender_status())),
-        "upcoming": upcoming_reminders(request.user),
+        "upcoming": upcoming_reminders(request.user, doctor=this_scope),
+        "this_phone": this_phone, "this_scope": this_scope,
+        "doctors": Doctor.objects.filter(is_active=True),
     })
+
+
+@login_required
+@require_POST
+def set_scope(request):
+    """'Remind this phone about': all cases, or only one anaesthetist's cases."""
+    value = request.POST.get("doctor", "")
+    doctor = Doctor.objects.filter(pk=value).first() if value.isdigit() else None
+    updated = PushSubscription.objects.filter(user=request.user, device_key=device_key(request)).exclude(
+        device_key="").update(doctor=doctor)
+    if updated:
+        messages.success(request, f"This phone will get reminders for {doctor or 'all cases of the practice'}.")
+    else:
+        messages.warning(request, "Turn on notifications for this phone first.")
+    return redirect("notifications:settings")
 
 
 @csrf_exempt
@@ -56,13 +79,19 @@ def subscribe(request):
     keys = data.get("keys") or {}
     if not endpoint.startswith("https://") or not keys.get("p256dh") or not keys.get("auth"):
         return HttpResponseBadRequest("Invalid subscription")
-    PushSubscription.objects.update_or_create(
+    sub, created = PushSubscription.objects.update_or_create(
         endpoint=endpoint,
         defaults={
             "user": request.user, "p256dh": str(keys["p256dh"])[:200], "auth": str(keys["auth"])[:100],
             "device": request.META.get("HTTP_USER_AGENT", "")[:200], "failure_count": 0,
+            "device_key": device_key(request),
         },
     )
+    if created:  # default: reminders for whoever uses this phone (all cases for staff phones)
+        other = PushSubscription.objects.filter(device_key=sub.device_key).exclude(pk=sub.pk).first() \
+            if sub.device_key else None
+        sub.doctor = other.doctor if other else device_doctor(request)
+        sub.save(update_fields=["doctor"])
     return JsonResponse({"ok": True, "devices": PushSubscription.objects.filter(user=request.user).count()})
 
 
@@ -77,8 +106,9 @@ def unsubscribe(request):
 @login_required
 @require_POST
 def send_test(request):
+    mine = PushSubscription.objects.filter(user=request.user, device_key=device_key(request)).exclude(device_key="")
     sent = notify(request.user, NotificationKind.TEST, "Test notification",
-                  "Notifications are working on this device.", url="/notifications/")
+                  "Notifications are working on this device.", url="/notifications/", subscriptions=mine)
     if sent:
         messages.success(request, f"Test notification sent to {sent} device(s).")
     else:

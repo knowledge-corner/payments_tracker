@@ -10,7 +10,8 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from core.testing import make_admin, make_case, make_doctor, make_hospital
+from core.practice import practice_user
+from core.testing import enter_practice, make_admin, make_case, make_doctor, make_hospital
 from payments.models import Payment
 
 from . import webpush
@@ -119,14 +120,18 @@ class NotificationFlowTests(TestCase):
         run_for_user(self.user, at_hour(9, monday))
         self.assertTrue(any(t.startswith("Last week") for t in self.titles(send)))
 
-    def test_payment_by_admin_notifies_doctor_but_own_payment_does_not(self, send):
+    def test_payment_notifies_other_phones_but_not_the_one_that_recorded_it(self, send):
+        self.sub.device_key = "phone-a"
+        self.sub.save()
         case = make_case(self.doctor, self.hospital, fee=5000)
+        payment = Payment(case=case, amount=Decimal("1000"))
+        payment._device_key = "phone-a"
         with self.captureOnCommitCallbacks(execute=True):
-            Payment.objects.create(case=case, amount=Decimal("1000"), created_by=self.user)
+            payment.save()
         self.assertEqual(send.call_count, 0)
         with self.captureOnCommitCallbacks(execute=True):
             Payment.objects.create(case=case, amount=Decimal("2000"), created_by=make_admin())
-        self.assertEqual(self.titles(send), ["Payment recorded"])
+        self.assertEqual(self.titles(send), ["Payment recorded (Dr. Test)"])
         self.assertIn("₹2,000", send.call_args.args[3]["body"])
 
     def test_gone_subscription_is_removed(self, send):
@@ -147,7 +152,7 @@ class NotificationFlowTests(TestCase):
 class NotificationViewTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def test_subscribe_unsubscribe_and_test(self, send):
         p256dh, auth = subscription_keys()
@@ -161,6 +166,32 @@ class NotificationViewTests(TestCase):
                          content_type="application/json")
         self.assertFalse(PushSubscription.objects.exists())
 
+    def test_each_phone_chooses_whose_reminders(self, send):
+        other = make_doctor("dr.other", "Dr. Other")
+        hospital = make_hospital("Scope Hospital")
+        make_case(self.doctor, hospital, days_ago=40)
+        make_case(other, hospital, days_ago=40)
+        p256dh, auth = subscription_keys()
+        data = {"endpoint": "https://fcm.googleapis.com/fcm/send/mine", "keys": {"p256dh": p256dh, "auth": auth}}
+        self.client.post(reverse("notifications:subscribe"), json.dumps(data), content_type="application/json")
+        mine = PushSubscription.objects.get()
+        self.assertEqual(mine.doctor, self.doctor)  # defaults to whoever uses this phone
+        staff = PushSubscription.objects.create(user=practice_user(), endpoint="https://fcm.googleapis.com/fcm/send/desk",
+                                                p256dh=p256dh, auth=auth, device_key="desk")
+        prefs = NotificationPreference.for_user(practice_user())
+        prefs.weekly_report = False
+        prefs.save()
+        run_for_user(practice_user(), at_hour(9))
+        sent = {}
+        for c in send.call_args_list:
+            sent.setdefault(c.args[0], []).append(c.args[3]["title"])
+        self.assertIn("Payment reminder (Dr. Test): 1 case to follow up", sent[mine.endpoint])
+        self.assertIn("Payment reminder: 2 cases to follow up", sent[staff.endpoint])
+
+        self.client.post(reverse("notifications:scope"), {"doctor": ""})
+        mine.refresh_from_db()
+        self.assertIsNone(mine.doctor)
+
     def test_rejects_bad_subscription(self, send):
         r = self.client.post(reverse("notifications:subscribe"), json.dumps({"endpoint": "http://evil"}),
                              content_type="application/json")
@@ -171,7 +202,7 @@ class NotificationViewTests(TestCase):
             "push_enabled": "on", "daily_summary": "on", "summary_hour": "8",
         })
         self.assertRedirects(r, reverse("notifications:settings"))
-        prefs = NotificationPreference.for_user(self.doctor.user)
+        prefs = NotificationPreference.for_user(practice_user())  # shared by the practice's phones
         self.assertTrue(prefs.daily_summary)
         self.assertFalse(prefs.followup_reminders)
         self.assertEqual(prefs.summary_hour, 8)
@@ -203,7 +234,7 @@ class CheckNotificationsCommandTests(TestCase):
 class SenderStatusAndCronTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def test_settings_page_warns_until_sender_runs(self):
         from notifications.services import run_scheduled

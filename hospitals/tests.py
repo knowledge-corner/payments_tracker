@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from cases.models import Case
-from core.testing import make_admin, make_case, make_contact, make_doctor, make_hospital
+from core.testing import enter_practice, make_admin, make_case, make_contact, make_doctor, make_hospital
 
 from .directory import import_directory
 from .models import Hospital
@@ -27,7 +27,7 @@ class DirectorySeedTests(TestCase):
 class HospitalViewTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
-        self.client.force_login(self.doctor.user)
+        enter_practice(self.client, self.doctor)
 
     def test_search_endpoint_lists_my_hospitals_first(self):
         mine = make_hospital("Sahyadri Test Hospital", area="Kothrud")
@@ -46,13 +46,12 @@ class HospitalViewTests(TestCase):
         added = Hospital.objects.filter(name="Lotus Care Hospital").latest("pk")
         self.assertEqual(Hospital.objects.filter(name="Lotus Care Hospital").count(), 2)
         self.assertRedirects(response, f"/cases/add/?hospital={added.pk}", fetch_redirect_response=False)
-        self.assertEqual((added.source, added.verified, added.created_by), ("doctor", True, self.doctor.user))
+        self.assertTrue(added.verified)
+        self.assertEqual(added.created_by.username, "practice")
 
-    def test_doctor_can_edit_only_own_hospitals(self):
+    def test_anyone_in_the_practice_can_edit_hospitals(self):
         other = make_hospital("Shared Hospital")
-        self.assertEqual(self.client.get(reverse("hospitals:edit", args=[other.pk])).status_code, 403)
-        own = make_hospital("Own Hospital", created_by=self.doctor.user)
-        self.assertEqual(self.client.get(reverse("hospitals:edit", args=[own.pk])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("hospitals:edit", args=[other.pk])).status_code, 200)
 
     def test_list_shows_my_hospitals_and_directory_search(self):
         mine = make_hospital("My Own Hospital")
@@ -105,9 +104,10 @@ class DirectoryImportTests(TestCase):
         self.assertTrue(Hospital.objects.filter(name="Sunrise Multispeciality Hospital").exists())
         self.assertFalse(Hospital.objects.filter(name="Sea View Hospital").exists())
 
-    def test_import_view_admin_only(self):
-        self.client.force_login(self.doctor.user)
-        self.assertEqual(self.client.get(reverse("hospitals:directory_import")).status_code, 403)
+    def test_import_view_needs_practice_access(self):
+        self.assertEqual(self.client.get(reverse("hospitals:directory_import")).status_code, 302)
+        enter_practice(self.client, self.doctor)
+        self.assertEqual(self.client.get(reverse("hospitals:directory_import")).status_code, 200)
 
     def test_cases_untouched_by_import(self):
         hospital = Hospital.objects.get(name="Ruby Hall Clinic", city="Pune")

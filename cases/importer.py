@@ -25,6 +25,7 @@ from openpyxl.worksheet.datavalidation import DataValidation
 
 from accounts.models import Doctor
 from contacts.models import Surgeon
+from contacts.services import find_surgeon
 from hospitals.models import Hospital
 from payments.models import Payment
 
@@ -39,6 +40,8 @@ COLUMNS = [
      ["date", "case date", "surgery date", "procedure date", "date of surgery", "dos"]),
     ("hospital", "Hospital", True, "Hospital name - pick from the list or type a new one",
      ["hospital", "hospital name", "hospital / clinic", "clinic", "nursing home", "centre", "center"]),
+    ("doctor", "Anaesthetist", False, "Anaesthetist's name, e.g. Dr. Anjali Mehta (a new name is added to the list)",
+     ["anaesthetist", "anesthetist", "anaesthetist name", "doctor", "doctor name", "doctor username", "username"]),
     ("fee", "Fee", True, "Amount billed for the case, e.g. 6000",
      ["fee", "fees", "amount", "charges", "bill amount", "billed", "billed amount", "professional fee"]),
     ("patient_name", "Patient Name", False, "e.g. Sunita Patil",
@@ -57,8 +60,6 @@ COLUMNS = [
      ["payment date", "paid on", "received on", "date of payment", "received date"]),
     ("payment_mode", "Payment Mode", False, "UPI, Bank transfer, Cheque, Cash, Card or Other",
      ["payment mode", "mode", "mode of payment", "paid by", "payment method"]),
-    ("doctor", "Doctor Username", False, "Admins only: login name of the doctor (e.g. dr.mehta)",
-     ["doctor", "doctor username", "anaesthetist", "anesthetist", "username"]),
 ]
 REQUIRED = [c[0] for c in COLUMNS if c[2]]
 
@@ -86,7 +87,7 @@ for _field, _header, _req, _help, _aliases in COLUMNS:
 # Template
 # --------------------------------------------------------------------------- #
 
-def build_template(include_doctor_column=False):
+def build_template(include_doctor_column=True):
     wb = Workbook()
     ws = wb.active
     ws.title = "Cases"
@@ -153,7 +154,7 @@ def build_template(include_doctor_column=False):
     for key, header, required, help_text, _aliases in columns:
         info.append([header + (" *" if required else ""), help_text])
     info.append([])
-    info.append(["Example row", "25/09/2026 | Ruby Hall Clinic | 7500 | Sunita Patil | Dr. Kulkarni | LSCS - spinal | IP 45821 | | 7500 | 30/09/2026 | UPI"])
+    info.append(["Example row", "25/09/2026 | Ruby Hall Clinic | Dr. Anjali Mehta | 7500 | Sunita Patil | Dr. Kulkarni | LSCS - spinal | IP 45821 | | 7500 | 30/09/2026 | UPI"])
     wb.active = 0
 
     buffer = io.BytesIO()
@@ -310,9 +311,13 @@ def parse_workbook(uploaded_file, user, default_doctor=None):
     result.columns = {k: v[1] for k, v in mapping.items()}
 
     hospitals = {_key(h.name): h for h in Hospital.objects.active()}
-    doctors_by_username = {}
-    if user.is_app_admin:
-        doctors_by_username = {d.user.username.lower(): d for d in Doctor.objects.select_related("user")}
+    from accounts.forms import doctor_title
+
+    doctors_by_name = {}
+    for d in Doctor.objects.select_related("user"):
+        doctors_by_name[d.display_name.lower()] = d
+        if d.user_id:
+            doctors_by_name.setdefault(d.user.username.lower(), d)
 
     today = timezone.localdate()
     seen_keys = {}
@@ -392,19 +397,20 @@ def parse_workbook(uploaded_file, user, default_doctor=None):
             data["payment_mode"] = parse_mode(raw.get("payment_mode"))
 
         # Doctor
+        # Anaesthetist: by name (or old login name); a new name is added on upload.
         doctor = None
-        if user.is_app_admin:
-            username = _display(raw.get("doctor")).lower()
-            if username:
-                doctor = doctors_by_username.get(username)
-                if not doctor:
-                    r.error("doctor", f"Doctor username '{username}' not found")
-            else:
-                doctor = default_doctor
-                if not doctor:
-                    r.error("doctor", "Choose a doctor on the upload form or fill 'Doctor Username'")
+        typed = " ".join(_display(raw.get("doctor")).split())
+        if typed:
+            doctor = doctors_by_name.get(typed.lower()) or doctors_by_name.get(doctor_title(typed).lower())
+            if not doctor:
+                data["new_doctor"] = doctor_title(typed)[:120]
+                data["doctor_id"] = None
+                data["doctor_name"] = data["new_doctor"]
+                r.warnings.append(f"New anaesthetist '{data['new_doctor']}' will be added")
         else:
-            doctor = user.doctor_profile
+            doctor = default_doctor or getattr(user, "doctor_profile", None)
+            if not doctor:
+                r.error("doctor", "Fill the Anaesthetist column, or choose the anaesthetist on the upload page")
         if doctor:
             data["doctor_id"] = doctor.pk
             data["doctor_name"] = str(doctor)
@@ -416,7 +422,7 @@ def parse_workbook(uploaded_file, user, default_doctor=None):
             if dup_key in seen_keys:
                 r.warnings.append(f"Same as row {seen_keys[dup_key]} in this file - check it is not entered twice")
             seen_keys.setdefault(dup_key, row_no)
-            if data.get("hospital_id"):
+            if data.get("hospital_id") and data.get("doctor_id"):
                 existing = Case.objects.filter(
                     doctor_id=data["doctor_id"], hospital_id=data["hospital_id"],
                     case_date=data["case_date"], fee=Decimal(data["fee"]),
@@ -449,7 +455,7 @@ COLUMN_HEADERS = [(c[0], c[1]) for c in COLUMNS]
 def commit_rows(rows, user, filename):
     """Create hospitals, cases and payments from validated rows. Returns counts."""
     created_cases = created_payments = created_hospitals = created_surgeons = 0
-    new_hospitals, surgeons = {}, {}
+    new_hospitals, surgeons, new_doctors = {}, {}, {}
     label = re.sub(r"[^\w.\- ]+", "", filename or "upload")[:50]
     for row in rows:
         data = row["data"]
@@ -467,11 +473,17 @@ def commit_rows(rows, user, filename):
                 created_hospitals += 1
             new_hospitals[key] = hospital
 
+        if not data.get("doctor_id"):
+            name = data["new_doctor"]
+            doctor = new_doctors.get(name.lower()) or Doctor.objects.filter(display_name__iexact=name).first() \
+                or Doctor.objects.create(display_name=name)
+            new_doctors[name.lower()] = doctor
+            data["doctor_id"] = doctor.pk
+
         surgeon = None
         if data.get("surgeon"):
-            key = (data["doctor_id"], _key(data["surgeon"]))
-            surgeon = surgeons.get(key) or Surgeon.objects.filter(
-                doctor_id=data["doctor_id"], name__iexact=data["surgeon"]).first()
+            key = _key(data["surgeon"])
+            surgeon = surgeons.get(key) or find_surgeon(data["surgeon"])
             if surgeon is None:
                 surgeon = Surgeon.objects.create(doctor_id=data["doctor_id"], name=data["surgeon"])
                 created_surgeons += 1

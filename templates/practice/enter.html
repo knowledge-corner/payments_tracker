@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Open · Payments Tracker{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="card p-4 w-100" style="max-width: 400px;">
+    <div class="text-center mb-4">
+      <img src="{% static 'icons/icon-192.png' %}" width="64" height="64" class="rounded-4 mb-3" alt="">
+      <h1 class="h4 mb-1">{{ app_settings.practice_name }}</h1>
+      <p class="text-muted small mb-0">Cases · Payments · Follow-ups</p>
+    </div>
+    {% if not code_set %}
+      <div class="alert alert-warning small">The practice code has not been set yet. The administrator can set it after signing in below.</div>
+    {% elif locked %}
+      <div class="alert alert-warning small">Too many wrong tries. Please wait 15 minutes, or ask a colleague for the code.</div>
+    {% else %}
+    {% if error %}<div class="alert alert-danger py-2 small">{{ error }}</div>{% endif %}
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label class="form-label" for="id_code">Practice code</label>
+      <input class="form-control form-control-lg text-center mb-2" id="id_code" name="code" inputmode="text" autocomplete="off"
+             autocapitalize="none" required autofocus>
+      <div class="small text-muted mb-3">Enter it once - this phone remembers it. Forgot it? Ask a colleague: it is shown in <b>Practice settings</b> inside the app.</div>
+      <button class="btn btn-primary w-100 btn-lg-touch">Open</button>
+    </form>
+    {% endif %}
+    <div class="text-center mt-3">
+      <button type="button" class="btn btn-outline-secondary btn-sm d-none" data-install-app><i class="bi bi-download"></i> Install app</button>
+      <div id="install-help" class="small text-muted mt-2 d-none">
+        On iPhone: tap <i class="bi bi-box-arrow-up"></i> <strong>Share</strong> in Safari, then <strong>Add to Home Screen</strong>.
+      </div>
+    </div>
+    <div class="text-center mt-4 small"><a href="{% url 'practice_admin_login' %}" class="text-muted"><i class="bi bi-shield-lock"></i> Administrator sign-in</a></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
+from django.views.generic import RedirectView
 
-from accounts import views as account_views
-from accounts.forms import LoginForm
+from core import practice_views
 from core import views as core_views
 
 admin.site.site_header = "Payments Tracker Admin"
@@ -14,19 +14,14 @@ admin.site.has_permission = lambda request: request.user.is_active and request.u
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path(
-        "login/",
-        auth_views.LoginView.as_view(
-            template_name="registration/login.html", redirect_authenticated_user=True, authentication_form=LoginForm,
-        ),
-        name="login",
-    ),
+    # Shared practice access: practice code once per phone; administrators sign in separately.
+    path("practice/", practice_views.enter, name="practice_enter"),
+    path("practice/who/", practice_views.who, name="practice_who"),
+    path("practice/lock/", practice_views.lock, name="practice_lock"),
+    path("practice/admin/", practice_views.admin_login, name="practice_admin_login"),
+    path("settings/practice/", practice_views.practice_settings, name="practice_settings"),
+    path("login/", RedirectView.as_view(pattern_name="practice_enter", query_string=True), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
-    path("signup/", account_views.signup, name="signup"),
-    # Forgot password / user ID: verified with the registered mobile number (no email needed)
-    path("password-reset/", account_views.forgot_password, name="password_reset"),
-    path("password-reset/new/", account_views.set_new_password, name="password_reset_new"),
-    path("forgot-user-id/", account_views.forgot_username, name="forgot_username"),
     # PWA + infrastructure
     path("manifest.webmanifest", core_views.manifest, name="manifest"),
     path("sw.js", core_views.service_worker, name="service_worker"),

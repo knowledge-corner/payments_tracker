@@ -53,6 +53,10 @@ class AppSettings(models.Model):
         "New sign-ups need admin approval", default=False,
         help_text="New accounts stay inactive until an admin ticks 'Active' on the Doctors page.",
     )
+    practice_code = models.CharField(
+        max_length=30, blank=True,
+        help_text="Shared code everyone enters once on their phone to open the app. Changing it locks out all phones.",
+    )
     notifications_last_run = models.DateTimeField(
         null=True, blank=True, editable=False,
         help_text="When the automatic reminder sender last ran (set by send_notifications).",
