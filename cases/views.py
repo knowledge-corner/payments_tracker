@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
@@ -10,7 +9,6 @@ from django.urls import reverse
 
 from contacts.services import attach_call_targets
 from core.models import AppSettings
-from core.practice import device_doctor, device_key
 from core.permissions import require_doctor_profile, scoped_cases, selected_doctor, visible_doctors
 from contacts.models import Surgeon
 from hospitals.models import Hospital
@@ -36,10 +34,8 @@ def procedure_suggestions(user):
 
 
 def get_case_for_user(request, pk):
-    case = get_object_or_404(Case.objects.select_related("hospital", "doctor"), pk=pk)
-    if not request.user.is_app_admin and case.doctor.user_id != request.user.id:
-        raise PermissionDenied
-    return case
+    # Cases are shared by the practice: every signed-in user can open, edit and delete them.
+    return get_object_or_404(Case.objects.select_related("hospital", "doctor"), pk=pk)
 
 
 @login_required
@@ -94,11 +90,9 @@ def case_add(request):
         initial["hospital"] = hospital_id
     if request.GET.get("date"):
         initial["case_date"] = request.GET["date"]
-    # Anaesthetist: ?doctor= (after "Save & add"), else whoever uses this phone.
-    default_doctor = request.GET.get("doctor") if str(request.GET.get("doctor", "")).isdigit() else None
-    default_doctor = default_doctor or getattr(device_doctor(request), "pk", None) or getattr(user.doctor_profile, "pk", None)
-    if default_doctor:
-        initial["doctor"] = default_doctor
+    # Anaesthetist: empty = Self; "Save & add" keeps a colleague chosen for the previous case.
+    if str(request.GET.get("doctor", "")).isdigit():
+        initial["doctor"] = request.GET["doctor"]
 
     form = CaseForm(request.POST or None, user=user, initial=initial)
     if request.method == "POST" and form.is_valid():
@@ -116,14 +110,16 @@ def case_add(request):
                     mode=form.cleaned_data.get("paid_mode") or "upi",
                     created_by=user,
                 )
-                payment._device_key = device_key(request)
                 payment.save()
         messages.success(request, f"Case saved: {case.hospital} - {case.fee:.0f}")
         if auto_due:
             messages.info(request, f"Expected payment date set to {case.due_date:%d %b %Y} "
                                    f"({AppSettings.load().default_payment_terms_days} days). Edit the case to change it.")
         if "save_add" in request.POST:
-            return redirect(f"{reverse('cases:add')}?hospital={case.hospital_id}&date={case.case_date:%Y-%m-%d}&doctor={case.doctor_id}")
+            url = f"{reverse('cases:add')}?hospital={case.hospital_id}&date={case.case_date:%Y-%m-%d}"
+            if case.doctor != user.doctor_profile:
+                url += f"&doctor={case.doctor_id}"
+            return redirect(url)
         return redirect("dashboard:home")
     return render(request, "cases/case_form.html", {
         "form": form, "procedures": procedure_suggestions(user), "is_new": True,
@@ -189,13 +185,11 @@ def import_template(request):
 @require_doctor_profile
 def import_cases(request):
     """Bulk upload: valid file -> saved at once; any problem -> nothing saved, rows highlighted."""
-    this_phone = device_doctor(request)
-    form = CaseImportForm(request.POST or None, request.FILES or None, user=request.user,
-                          initial={"doctor": getattr(this_phone, "pk", None)})
+    form = CaseImportForm(request.POST or None, request.FILES or None, user=request.user)
     context = {"form": form}
     if request.method == "POST" and form.is_valid():
         upload = form.cleaned_data["file"]
-        result = importer.parse_workbook(upload, request.user, default_doctor=form.cleaned_data.get("doctor") or this_phone)
+        result = importer.parse_workbook(upload, request.user, default_doctor=form.cleaned_data.get("doctor") or request.user.doctor_profile)
         if result.fatal and not result.rows:
             messages.error(request, result.fatal)
         elif result.fatal or any(r.errors for r in result.rows):

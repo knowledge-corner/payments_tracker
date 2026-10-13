@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Create account · Payments Tracker{% endblock %}
+{% block content %}
+<div class="login-wrap py-3">
+  <div class="card p-4 w-100" style="max-width: 460px;">
+    <div class="text-center mb-3">
+      <img src="{% static 'icons/icon-192.png' %}" width="56" height="56" class="rounded-4 mb-2" alt="">
+      <h1 class="h4 mb-1">Create your account</h1>
+      <p class="text-muted small mb-0">Track your cases, payments and follow-ups in one place.</p>
+    </div>
+    {% if needs_approval %}
+      <div class="alert alert-info py-2 small"><i class="bi bi-shield-check"></i> New accounts are checked by the administrator before first sign-in.</div>
+    {% endif %}
+    <form method="post" novalidate>{% csrf_token %}
+      {% include "partials/form_errors.html" %}
+      <div class="section-title mt-0">About you</div>
+      {% include "partials/field.html" with field=form.full_name %}
+      <div class="row g-2">
+        <div class="col-12 col-sm-6">{% include "partials/field.html" with field=form.phone %}</div>
+        <div class="col-12 col-sm-6">{% include "partials/field.html" with field=form.email %}</div>
+      </div>
+      {% include "partials/field.html" with field=form.registration_no %}
+
+      <div class="section-title">Sign-in details</div>
+      {% include "partials/field.html" with field=form.username %}
+      {% include "partials/field.html" with field=form.password1 %}
+      {% include "partials/field.html" with field=form.password2 %}
+
+      <div class="mb-3 form-check">
+        <input type="checkbox" name="agree" id="id_agree" class="form-check-input" {% if form.agree.value %}checked{% endif %}>
+        <label class="form-check-label small" for="id_agree">{{ form.agree.label }}</label>
+        {% for e in form.agree.errors %}<div class="invalid-feedback d-block">Please tick this box to continue.</div>{% endfor %}
+      </div>
+      <div style="position:absolute; left:-10000px;" aria-hidden="true">
+        <label for="id_website">Leave this empty</label>{{ form.website }}
+      </div>
+      <button class="btn btn-primary w-100 btn-lg-touch">Create account</button>
+    </form>
+    <div class="text-center mt-3 small">Already have an account? <a href="{% url 'login' %}" class="fw-semibold">Sign in</a></div>
+  </div>
+</div>
+{% endblock %}

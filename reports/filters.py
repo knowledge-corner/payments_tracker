@@ -141,7 +141,7 @@ def parse_filters(request, default_period="this_month"):
         mode = ""
     return ReportFilters(
         period=period, start=start, end=end, hospital=hospital, surgeon=surgeon, status=status, mode=mode,
-        q=params.get("q", "").strip()[:100], doctor=selected_doctor(request) if request.user.is_app_admin else None,
+        q=params.get("q", "").strip()[:100], doctor=selected_doctor(request),
     )
 
 

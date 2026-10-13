@@ -39,7 +39,7 @@ def run_for_user(user, now=None):
     """Send due notifications to the user's phones.
 
     Each phone chooses its reminders (PushSubscription.doctor): all cases of the
-    practice, or one anaesthetist's cases. Phones with the same choice are handled
+    practice, or one anaesthetist's cases (default: the user's own). Devices with the same choice are handled
     together, and every notification is sent once per choice.
     """
     now = timezone.localtime(now or timezone.now())

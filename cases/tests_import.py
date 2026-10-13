@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 from openpyxl import Workbook, load_workbook
 
-from core.testing import enter_practice, make_admin, make_case, make_doctor, make_hospital
+from core.testing import make_admin, make_case, make_doctor, make_hospital, sign_in
 from hospitals.models import Hospital
 from payments.models import Payment
 
@@ -49,7 +49,7 @@ class ImportFlowTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.hospital = make_hospital("Ruby Hall Clinic")
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         self.day = timezone.localdate() - datetime.timedelta(days=10)
 
     def upload(self, file, **extra):
@@ -61,7 +61,7 @@ class ImportFlowTests(TestCase):
         response = self.client.get(reverse("cases:import_template"))
         self.assertEqual(response["Content-Type"], XLSX)
         wb = load_workbook(io.BytesIO(response.content))
-        self.assertEqual(wb.sheetnames, ["Cases", "Hospitals", "Instructions"])
+        self.assertEqual(wb.sheetnames, ["Cases", "Hospitals", "Anaesthetists", "Instructions"])
         self.assertIn("Ruby Hall Clinic", [c.value for c in wb["Hospitals"]["A"]])
         self.assertNotIn("Doctor Username", [c.value for c in wb["Cases"][1]])
 
@@ -139,3 +139,17 @@ class ImportFlowTests(TestCase):
         self.upload(f, doctor=self.doctor.pk)
         self.assertEqual(Case.objects.get(fee=1000).doctor, other)
         self.assertEqual(Case.objects.get(fee=2000).doctor, self.doctor)
+
+    def test_empty_anaesthetist_is_self_and_unregistered_name_is_an_error(self):
+        from accounts.models import Doctor
+
+        Doctor.objects.create(display_name="Dr. Not Joined")
+        headers = ["Case Date", "Hospital", "Fee", "Anaesthetist"]
+        f = workbook_file([[self.day, "Ruby Hall Clinic", 1000, ""], [self.day, "Ruby Hall Clinic", 2000, "Dr. Not Joined"]],
+                          headers=headers)
+        response = self.upload(f)
+        self.assertFalse(Case.objects.exists())  # one bad row -> nothing saved
+        self.assertContains(response, "has not signed up")
+        f = workbook_file([[self.day, "Ruby Hall Clinic", 1000, ""]], headers=headers)
+        self.upload(f)
+        self.assertEqual(Case.objects.get().doctor, self.doctor)

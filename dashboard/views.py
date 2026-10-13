@@ -36,7 +36,7 @@ def home(request):
 
     open_cases = receivables_for(request.user, today)
     doctor = selected_doctor(request)
-    if request.user.is_app_admin and doctor:
+    if doctor:
         open_cases = [c for c in open_cases if c.doctor_id == doctor.pk]
 
     overdue = [c for c in open_cases if c.status == "overdue"]

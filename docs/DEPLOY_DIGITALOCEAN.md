@@ -60,12 +60,13 @@ It asks for:
 Everything else (database password, secret key) is generated automatically and stored in
 `/opt/payments_tracker/.env` (readable by root only).
 
-When it prints **Done!**, open `https://payments.yourpractice.in`, tap **Administrator sign-in** and sign in with the admin login.
+When it prints **Done!**, open `https://payments.yourpractice.in` and sign in with the admin login.
 
 ## Step 4 - First things in the app
 
-1. **Practice settings** → set the practice code and share it with the team (each phone enters it once).
-2. **Anaesthetists** → add the anaesthetists (or add them from Add Case); **Hospitals** → add hospitals, or bulk-upload cases (Add Case → Bulk upload).
+1. **Settings** → decide on *Allow new doctors to sign up* and *New sign-ups need admin approval*
+   (recommended for real use: approval **on**).
+2. **Anaesthetists** → add logins (or let them sign up - each name then appears in the Anaesthetist list on Add Case); **Hospitals** → add hospitals, or bulk-upload cases (Add Case → Bulk upload).
 3. Phones: open the address → *Add to Home Screen* (iPhone) / *Install app* (Android).
 
 ---
@@ -81,11 +82,17 @@ When it prints **Done!**, open `https://payments.yourpractice.in`, tap **Adminis
 | `payments restore /var/backups/payments_tracker/db_....sql.gz` | Restore a backup (asks for confirmation) |
 | `payments createadmin` | Create another admin login |
 
-## Practice code
+## Automatic sign-out
 
-Forgot the code? Ask a colleague - it is shown in **account menu → Practice settings**. If no phone is open,
-use **Administrator sign-in** on the code screen, or on the server:
-`docker compose exec web python manage.py set_practice_code NEWCODE` (`--show` prints the current one).
+Everyone is signed out 30 days after signing in, so a lost phone does not keep the practice's data open.
+For two weeks: add `SIGN_OUT_AFTER_DAYS=14` to `/opt/payments_tracker/.env` and run `payments update`.
+
+## "Forgot password"
+
+No email setup is needed. **Forgot password?** asks for the user ID and the registered mobile number;
+if they match, a new password is set on the spot. **Forgot user ID?** shows the user ID for a registered
+mobile number. 5 wrong attempts lock the form for 15 minutes. Admin logins without a doctor profile
+reset with `python manage.py changepassword <username>`.
 
 ## Push notifications
 

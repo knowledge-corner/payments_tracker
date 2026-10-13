@@ -12,17 +12,16 @@ from .push import notify
 
 @receiver(post_save, sender=Payment)
 def payment_recorded(sender, instance, created, **kwargs):
-    """Tell phones that follow this case's anaesthetist (or the whole practice) that a payment was recorded
-    (except the phone that recorded it)."""
+    """Tell users whose reminders cover this case's anaesthetist (or the whole practice) that a payment was recorded
+    (except the person who recorded it)."""
     if not created:
         return
     case = instance.case
-    source_device = getattr(instance, "_device_key", "")
 
     def send():
         subs = PushSubscription.objects.filter(Q(doctor_id=case.doctor_id) | Q(doctor__isnull=True)).select_related("user")
-        if source_device:
-            subs = subs.exclude(device_key=source_device)
+        if instance.created_by_id:
+            subs = subs.exclude(user_id=instance.created_by_id)  # not the person who recorded it
         by_user = {}
         for sub in subs:
             by_user.setdefault(sub.user, []).append(sub)

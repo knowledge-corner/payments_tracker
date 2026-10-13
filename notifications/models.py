@@ -16,7 +16,7 @@ class NotificationKind:
          "and on any reminder date you set in a follow-up."),
         (DAILY_SUMMARY, "Morning summary", "Each morning when payments need attention: reminders due and total outstanding."),
         (WEEKLY, "Weekly report", "Monday morning: last week's cases, billing and payments received."),
-        (PAYMENT, "Payment updates", "When a payment is recorded from another phone on a case this phone is reminded about."),
+        (PAYMENT, "Payment updates", "When someone else records a payment on a case you are reminded about."),
     ]
     LABELS = dict((k, label) for k, label, _ in CHOICES)
 
@@ -29,11 +29,9 @@ class PushSubscription(models.Model):
     p256dh = models.CharField(max_length=200)
     auth = models.CharField(max_length=100)
     device = models.CharField(max_length=200, blank=True)
-    device_key = models.CharField(max_length=40, blank=True, db_index=True,
-                                  help_text="Identifies the phone (cookie) so it can choose its own reminder scope.")
     doctor = models.ForeignKey("accounts.Doctor", null=True, blank=True, on_delete=models.SET_NULL,
                                related_name="+", verbose_name="Remind about",
-                               help_text="Only this anaesthetist's cases. Empty = all cases of the practice.")
+                               help_text="Only this anaesthetist's cases (default: the user's own). Empty = all cases of the practice.")
     created_at = models.DateTimeField(auto_now_add=True)
     last_success_at = models.DateTimeField(null=True, blank=True)
     failure_count = models.PositiveIntegerField(default=0)

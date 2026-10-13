@@ -48,9 +48,8 @@ def default_due_date(case_date):
 
 class CaseQuerySet(models.QuerySet):
     def for_user(self, user):
-        if user.is_app_admin:
-            return self
-        return self.filter(doctor__user=user)
+        """Organisation-level data: every signed-in user sees every case of the practice."""
+        return self if user.is_authenticated else self.none()
 
     def with_totals(self, today=None):
         from payments.models import Payment

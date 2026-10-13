@@ -8,7 +8,6 @@ from django.views.decorators.http import require_POST
 
 from cases.models import Case
 from core.permissions import require_doctor_profile
-from core.practice import device_doctor
 
 from .forms import AffiliationForm, ContactForm, SurgeonForm, SurgeonHospitalForm
 from .models import Contact, ContactAffiliation, Surgeon, SurgeonHospital
@@ -46,7 +45,7 @@ def contact_add(request):
     link_form.fields["hospital"].required = False
     if request.method == "POST" and form.is_valid() and link_form.is_valid():
         contact = form.save(commit=False)
-        contact.doctor = device_doctor(request) or request.user.doctor_profile  # "added by" only
+        contact.doctor = request.user.doctor_profile  # "added by" only
         contact.save()
         if link_form.cleaned_data.get("hospital"):
             link = link_form.save(commit=False)
@@ -195,7 +194,7 @@ def surgeon_add(request):
     link_form.fields["hospital"].required = False
     if request.method == "POST" and form.is_valid() and link_form.is_valid():
         surgeon = form.save(commit=False)
-        surgeon.doctor = device_doctor(request) or request.user.doctor_profile  # "added by" only
+        surgeon.doctor = request.user.doctor_profile  # "added by" only
         surgeon.save()
         surgeon.link_hospital(link_form.cleaned_data.get("hospital"))
         messages.success(request, f"{surgeon} saved.")

@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from core.testing import enter_practice, make_case, make_doctor, make_hospital
+from core.testing import make_case, make_doctor, make_hospital, sign_in
 from payments.models import Payment
 
 
@@ -22,7 +22,7 @@ class DashboardTests(TestCase):
         other = make_doctor("dr.x", "Dr. X")
         make_case(other, hospital, fee=99999)  # a colleague's case: in the practice total only
 
-        enter_practice(self.client, doctor)
+        sign_in(self.client, doctor)
         everyone = self.client.get(reverse("dashboard:home") + "?period=all").context
         self.assertEqual(everyone["total_earnings"], Decimal("108999"))
         ctx = self.client.get(reverse("dashboard:home") + f"?period=all&doctor={doctor.pk}").context
@@ -40,7 +40,7 @@ class NavigationTests(TestCase):
         hospital = make_hospital()
         make_case(doctor, hospital, days_ago=60, fee=2000)  # overdue
         make_case(doctor, hospital, days_ago=2, fee=1000)   # pending
-        enter_practice(self.client, doctor)
+        sign_in(self.client, doctor)
         page = self.client.get(reverse("dashboard:home")).content.decode()
         nav = page[page.index('class="bottom-nav'):]
         nav = nav[:nav.index("</nav>")]
@@ -56,7 +56,7 @@ class NavigationTests(TestCase):
         self.assertContains(pending, 'aria-label="Back to dashboard"')
 
     def test_reports_offer_excel_only(self):
-        enter_practice(self.client, make_doctor())
+        sign_in(self.client, make_doctor())
         page = self.client.get(reverse("reports:cases"))
         self.assertContains(page, "export=xlsx")
         self.assertNotContains(page, "export=csv")

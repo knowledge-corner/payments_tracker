@@ -20,19 +20,16 @@ def admin_required(view):
 
 
 def visible_doctors(user):
-    if user.is_app_admin:
-        return Doctor.objects.filter(is_active=True)
-    return Doctor.objects.filter(user=user)
+    """Cases are shared by the practice, so everyone can filter by any anaesthetist."""
+    return Doctor.objects.filter(is_active=True)
 
 
 def selected_doctor(request):
-    """Admins can filter any page by ?doctor=<id>; doctors always see only themselves."""
-    if request.user.is_app_admin:
-        doctor_id = request.GET.get("doctor")
-        if doctor_id and doctor_id.isdigit():
-            return Doctor.objects.filter(pk=doctor_id).first()
-        return None
-    return request.user.doctor_profile
+    """Any page can be narrowed to one anaesthetist with ?doctor=<id>; default is everyone."""
+    doctor_id = request.GET.get("doctor")
+    if doctor_id and doctor_id.isdigit():
+        return Doctor.objects.filter(pk=doctor_id).first()
+    return None
 
 
 def require_doctor_profile(view):
@@ -50,12 +47,11 @@ def require_doctor_profile(view):
 
 
 def scoped_cases(request):
-    """Cases the current user may see, narrowed by the admin's doctor filter if set."""
+    """All cases of the practice, narrowed by the anaesthetist filter if set."""
     from cases.models import Case
 
     qs = Case.objects.for_user(request.user)
-    if request.user.is_app_admin:
-        doctor = selected_doctor(request)
-        if doctor:
-            qs = qs.filter(doctor=doctor)
+    doctor = selected_doctor(request)
+    if doctor:
+        qs = qs.filter(doctor=doctor)
     return qs

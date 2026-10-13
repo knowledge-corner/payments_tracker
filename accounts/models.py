@@ -23,8 +23,15 @@ class User(AbstractUser):
         return self.get_full_name() or self.username
 
 
+class DoctorQuerySet(models.QuerySet):
+    def registered(self):
+        """Anaesthetists who have joined: an active profile with an active login."""
+        return self.filter(is_active=True, user__isnull=False, user__is_active=True)
+
+
 class Doctor(TimeStampedModel):
-    """An anaesthetist of the practice. A login of their own is optional (shared practice access)."""
+    """An anaesthetist of the practice. Everyone signs in with their own login; the
+    link to a login can be empty for names that came from an older shared-access version."""
 
     user = models.OneToOneField(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="doctor")
     display_name = models.CharField("Name", max_length=120, help_text="Name shown in the app, e.g. Dr. Anjali Mehta")
@@ -32,6 +39,8 @@ class Doctor(TimeStampedModel):
     registration_no = models.CharField("Medical registration no.", max_length=50, blank=True)
     specialisation = models.CharField(max_length=100, default="Anaesthesiology")
     is_active = models.BooleanField(default=True)
+
+    objects = DoctorQuerySet.as_manager()
 
     class Meta:
         ordering = ["display_name"]

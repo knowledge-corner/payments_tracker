@@ -2,7 +2,7 @@
 {% block title %}Cases - {{ month|date:"F Y" }}{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center gap-2 mb-2">
-  <a href="{% url 'reports:monthly' %}{% if selected_doctor and user.is_app_admin %}?doctor={{ selected_doctor.pk }}{% endif %}" class="btn btn-link px-0 text-body" title="Back to monthly summary"><i class="bi bi-arrow-left fs-5"></i></a>
+  <a href="{% url 'reports:monthly' %}{% if selected_doctor %}?doctor={{ selected_doctor.pk }}{% endif %}" class="btn btn-link px-0 text-body" title="Back to monthly summary"><i class="bi bi-arrow-left fs-5"></i></a>
   <div class="flex-fill">
     <div class="small text-muted">Monthly summary</div>
     <h1 class="h5 mb-0">{{ month|date:"F Y" }}</h1>
@@ -17,7 +17,7 @@
 
 {% include "partials/doctor_filter.html" %}
 <form method="get" class="card p-3 mb-3 report-filters">
-  {% if selected_doctor and user.is_app_admin %}<input type="hidden" name="doctor" value="{{ selected_doctor.pk }}">{% endif %}
+  {% if selected_doctor %}<input type="hidden" name="doctor" value="{{ selected_doctor.pk }}">{% endif %}
   <div class="row g-2">
     <div class="col-12 col-md-6">
       <label class="form-label small mb-1" for="f-hospital">Hospital</label>
@@ -30,7 +30,7 @@
       <label class="form-label small mb-1" for="f-surgeon">Surgeon</label>
       <select name="surgeon" id="f-surgeon" class="form-select form-select-sm">
         <option value="">All surgeons</option>
-        {% for s in surgeons %}<option value="{{ s.pk }}" {% if f.surgeon.pk == s.pk %}selected{% endif %}>{{ s.name }}{% if user.is_app_admin and not selected_doctor %} ({{ s.doctor }}){% endif %}</option>{% endfor %}
+        {% for s in surgeons %}<option value="{{ s.pk }}" {% if f.surgeon.pk == s.pk %}selected{% endif %}>{{ s.name }}{% if not selected_doctor %} ({{ s.doctor }}){% endif %}</option>{% endfor %}
       </select>
     </div>
     <div class="col-6 col-md-3">
@@ -44,7 +44,7 @@
   <div class="d-flex gap-2 mt-3 flex-wrap">
     <button class="btn btn-primary btn-sm flex-fill"><i class="bi bi-funnel"></i> Apply filters</button>
     <a href="{% querystring_with export='xlsx' page='' %}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Download Excel</a>
-    <a href="{{ request.path }}{% if selected_doctor and user.is_app_admin %}?doctor={{ selected_doctor.pk }}{% endif %}" class="btn btn-link btn-sm text-muted">Reset</a>
+    <a href="{{ request.path }}{% if selected_doctor %}?doctor={{ selected_doctor.pk }}{% endif %}" class="btn btn-link btn-sm text-muted">Reset</a>
   </div>
 </form>
 

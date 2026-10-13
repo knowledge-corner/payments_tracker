@@ -1,4 +1,4 @@
-{% if user.is_app_admin and doctors %}
+{% if doctors %}
 <form method="get" class="mb-3">
   {% for key, value in request.GET.items %}{% if key != 'doctor' and key != 'page' %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endif %}{% endfor %}
   <div class="input-group input-group-sm">

@@ -13,19 +13,10 @@
   {% include "partials/form_errors.html" %}
   <div class="card p-3">
     <div class="mb-3">
-      <div class="d-flex justify-content-between align-items-baseline">
-        <label class="form-label" for="id_doctor">Anaesthetist <span class="text-danger">*</span></label>
-        <a href="#" class="small" id="new-doctor-toggle"><i class="bi bi-person-plus"></i> New anaesthetist</a>
-      </div>
+      <label class="form-label" for="id_doctor">Anaesthetist{% if form.doctor.field.required %} <span class="text-danger">*</span>{% endif %}</label>
       {{ form.doctor }}
       {% for error in form.doctor.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-      <div id="new-doctor-fields" class="border rounded-3 p-2 mt-2 {% if not form.new_doctor_name.value %}d-none{% endif %}">
-        <div class="small fw-semibold mb-1">New anaesthetist (added to the practice list)</div>
-        <div class="row g-2">
-          <div class="col-7">{% include "partials/field.html" with field=form.new_doctor_name %}</div>
-          <div class="col-5">{% include "partials/field.html" with field=form.new_doctor_phone %}</div>
-        </div>
-      </div>
+      {% if not form.doctor.field.required %}<div class="form-text">Leave as Self for your own case. For a colleague's case pick their name - everyone who has signed up is listed.</div>{% endif %}
     </div>
     <div class="mb-3">
       <label class="form-label" for="id_hospital">Hospital <span class="text-danger">*</span></label>
@@ -144,17 +135,6 @@
     if (!newBox.classList.contains("d-none")) {
       contact.value = "";
       document.getElementById("id_new_contact_name").focus();
-    }
-  });
-
-  // ---- New anaesthetist toggle ------------------------------------------------
-  var doctorBox = document.getElementById("new-doctor-fields");
-  document.getElementById("new-doctor-toggle").addEventListener("click", function (e) {
-    e.preventDefault();
-    doctorBox.classList.toggle("d-none");
-    if (!doctorBox.classList.contains("d-none")) {
-      if (doctor) doctor.value = "";
-      document.getElementById("id_new_doctor_name").focus();
     }
   });
 

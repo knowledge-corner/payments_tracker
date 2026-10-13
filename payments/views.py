@@ -1,6 +1,5 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -9,7 +8,6 @@ from django.views.decorators.http import require_POST
 from cases.models import Case
 from cases.views import get_case_for_user
 from contacts.services import attach_call_targets
-from core.practice import device_key
 from core.permissions import selected_doctor, visible_doctors
 
 from . import services
@@ -52,7 +50,6 @@ def record_payment(request, case_pk=None):
         if fixed_case is not None:
             payment.case = fixed_case
         payment.created_by = request.user
-        payment._device_key = device_key(request)  # this phone is not notified about its own entry
         payment.save()
         messages.success(request, f"Payment of {payment.amount:,.0f} recorded.")
         return redirect(_next_url(request, reverse("cases:detail", args=[payment.case_id])))
@@ -63,10 +60,8 @@ def record_payment(request, case_pk=None):
 
 
 def _get_payment(request, pk):
-    payment = get_object_or_404(Payment.objects.select_related("case__doctor", "case__hospital"), pk=pk)
-    if not request.user.is_app_admin and payment.case.doctor.user_id != request.user.id:
-        raise PermissionDenied
-    return payment
+    # Payments are shared by the practice like their cases.
+    return get_object_or_404(Payment.objects.select_related("case__doctor", "case__hospital"), pk=pk)
 
 
 @login_required
@@ -153,7 +148,7 @@ SORTS = {
 def receivables(request):
     cases = services.receivables_for(request.user)
     doctor = selected_doctor(request)
-    if request.user.is_app_admin and doctor:
+    if doctor:
         cases = [c for c in cases if c.doctor_id == doctor.pk]
 
     summary = {

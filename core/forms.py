@@ -32,4 +32,5 @@ class AppSettingsForm(StyledModelForm):
         model = AppSettings
         fields = [
             "practice_name", "default_payment_terms_days",
+            "allow_signups", "signup_requires_approval",
         ]

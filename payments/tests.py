@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cases.models import Case
-from core.testing import enter_practice, make_case, make_doctor, make_hospital
+from core.testing import make_case, make_doctor, make_hospital, sign_in
 
 from .models import Payment, PaymentFollowUp
 from .services import receivables_for, reminder_state
@@ -17,7 +17,7 @@ class PaymentViewTests(TestCase):
         self.doctor = make_doctor()
         self.hospital = make_hospital()
         self.case = make_case(self.doctor, self.hospital, days_ago=3, fee=5000)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
 
     def test_partial_payments(self):
         url = reverse("payments:record_for_case", args=[self.case.pk])
@@ -87,7 +87,7 @@ class ReminderTests(TestCase):
     def test_followup_clears_and_remind_again_date_raises_it(self):
         case = make_case(self.doctor, self.hospital, days_ago=31)
         self.assertTrue(reminder_state(case).due)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         self.client.post(reverse("payments:followup_add", args=[case.pk]), {
             "followup_date": self.today.isoformat(), "method": "call", "next_reminder": self.day(4).isoformat(),
         })
@@ -111,7 +111,7 @@ class ReminderTests(TestCase):
 
     def test_remind_again_date_must_be_in_future(self):
         case = make_case(self.doctor, self.hospital, days_ago=31)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         response = self.client.post(reverse("payments:followup_add", args=[case.pk]), {
             "followup_date": self.today.isoformat(), "method": "call", "next_reminder": self.today.isoformat(),
         })
@@ -120,7 +120,7 @@ class ReminderTests(TestCase):
 
     def test_remind_me_in_days(self):
         case = make_case(self.doctor, self.hospital, days_ago=31)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         self.client.post(reverse("payments:followup_snooze", args=[case.pk]), {"days": "3"})
         case.refresh_from_db()
         self.assertEqual(case.followup_snoozed_until, self.day(3))
@@ -129,7 +129,7 @@ class ReminderTests(TestCase):
 
     def test_promised_date_becomes_the_reminder(self):
         case = make_case(self.doctor, self.hospital, days_ago=31)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         self.client.post(reverse("payments:followup_add", args=[case.pk]), {
             "followup_date": self.today.isoformat(), "method": "call",
             "promised_payment_date": self.day(5).isoformat(), "notes": "Will pay Friday",
@@ -141,7 +141,7 @@ class ReminderTests(TestCase):
     def test_quick_mark_followed_up(self):
         case = make_case(self.doctor, self.hospital, days_ago=31)
         self.assertTrue(reminder_state(case).due)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         self.client.post(reverse("payments:followup_quick", args=[case.pk]))
         self.assertEqual(case.followups.count(), 1)
         self.assertFalse(reminder_state(Case.objects.get(pk=case.pk)).due)
@@ -154,7 +154,7 @@ class ReminderTests(TestCase):
     def test_receivables_sorted_oldest_first(self):
         newer = make_case(self.doctor, self.hospital, days_ago=5)
         older = make_case(self.doctor, self.hospital, days_ago=50)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         response = self.client.get(reverse("receivables:list"))
         self.assertEqual([c.pk for c in response.context["cases"]], [older.pk, newer.pk])
         response = self.client.get(reverse("receivables:list") + "?view=overdue")
@@ -165,7 +165,7 @@ class ReceivedByTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.case = make_case(self.doctor, make_hospital(), fee=5000)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
 
     def test_record_payment_with_received_by(self):
         url = reverse("payments:record_for_case", args=[self.case.pk])

@@ -5,7 +5,6 @@ from django import forms
 from django.db import models
 from django.utils import timezone
 
-from accounts.forms import doctor_title
 from accounts.models import Doctor
 from contacts.models import Contact, Surgeon
 from contacts.services import ensure_affiliation, find_surgeon
@@ -41,11 +40,6 @@ class CaseForm(StyledModelForm):
     new_contact_phone = forms.CharField(required=False, max_length=20, label="Mobile",
                                         widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}))
     new_contact_role = forms.ChoiceField(required=False, choices=Contact.ROLE_CHOICES, initial="billing", label="Role")
-    # Quick "new anaesthetist" on the case form
-    new_doctor_name = forms.CharField(required=False, max_length=120, label="Anaesthetist name",
-                                      widget=forms.TextInput(attrs={"placeholder": "e.g. Dr. Anjali Mehta"}))
-    new_doctor_phone = forms.CharField(required=False, max_length=20, label="Mobile (optional)",
-                                       widget=forms.TextInput(attrs={"type": "tel", "inputmode": "tel"}))
     # Quick "new surgeon" on the case form
     new_surgeon_name = forms.CharField(required=False, max_length=100, label="Surgeon name",
                                        widget=forms.TextInput(attrs={"placeholder": "e.g. Dr. Kulkarni"}))
@@ -97,14 +91,19 @@ class CaseForm(StyledModelForm):
         self.fields["contact"].empty_label = "Not specified"
         self.fields["contact"].label = "Contact person"
 
-        # Anaesthetist who did the case: any active anaesthetist (plus the current one when editing).
-        doctors = Doctor.objects.filter(is_active=True)
+        # Anaesthetist who did the case: left empty = the person adding it ("Self").
+        # The list holds everyone who has signed up (plus the current one when editing).
+        self.self_doctor = getattr(user, "doctor_profile", None) if user else None
+        doctors = Doctor.objects.registered()
+        if self.self_doctor:
+            doctors = doctors.exclude(pk=self.self_doctor.pk)  # already offered as "Self"
         if self.instance.pk:
-            doctors = Doctor.objects.filter(models.Q(is_active=True) | models.Q(pk=self.instance.doctor_id))
-        self.fields["doctor"].queryset = doctors
-        self.fields["doctor"].label = "Anaesthetist"
-        self.fields["doctor"].empty_label = "Choose anaesthetist"
-        self.fields["doctor"].required = False  # or "+ New anaesthetist" (checked in clean)
+            doctors = Doctor.objects.filter(models.Q(pk__in=doctors) | models.Q(pk=self.instance.doctor_id))
+        field = self.fields["doctor"]
+        field.queryset = doctors.order_by("display_name")
+        field.label = "Anaesthetist"
+        field.required = self.self_doctor is None
+        field.empty_label = f"Self ({self.self_doctor})" if self.self_doctor else "Choose anaesthetist"
 
         if self.instance.pk:
             for name in ("paid_now", "paid_amount", "paid_mode"):
@@ -128,16 +127,8 @@ class CaseForm(StyledModelForm):
             self.add_error("due_date", "Expected payment date cannot be before the case date.")
         if cleaned.get("new_contact_name") and not cleaned.get("new_contact_phone"):
             self.add_error("new_contact_phone", "Add a mobile number for the new contact.")
-        new_doctor = " ".join((cleaned.get("new_doctor_name") or "").split())
-        if new_doctor:
-            if not self.errors:
-                # Reuse an anaesthetist with the same name, else add them to the practice list.
-                title = doctor_title(new_doctor)
-                cleaned["doctor"] = Doctor.objects.filter(display_name__iexact=title).first() or Doctor.objects.create(
-                    display_name=title, phone=(cleaned.get("new_doctor_phone") or "").strip())
-                self.instance.doctor = cleaned["doctor"]
-        elif not cleaned.get("doctor"):
-            self.add_error("doctor", "Choose the anaesthetist, or add a new one.")
+        if not cleaned.get("doctor") and self.self_doctor:
+            cleaned["doctor"] = self.instance.doctor = self.self_doctor  # nothing chosen = Self
         return cleaned
 
     def save_contact(self, case):
@@ -183,14 +174,15 @@ class CaseImportForm(forms.Form):
     )
     doctor = forms.ModelChoiceField(
         queryset=Doctor.objects.none(), required=False, label="Anaesthetist",
-        help_text="Used for rows where the Anaesthetist column is empty.",
+        help_text="Used for rows where the Anaesthetist column is empty. Empty here = yourself.",
     )
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["file"].widget.attrs["class"] = "form-control"
-        self.fields["doctor"].queryset = Doctor.objects.filter(is_active=True)
-        self.fields["doctor"].empty_label = "Anaesthetist for rows without one"
+        self.fields["doctor"].queryset = Doctor.objects.registered()
+        me = getattr(user, "doctor_profile", None) if user else None
+        self.fields["doctor"].empty_label = f"Self ({me})" if me else "Anaesthetist for rows without one"
         self.fields["doctor"].widget.attrs.update({"class": "form-select"})
 
     def clean_file(self):

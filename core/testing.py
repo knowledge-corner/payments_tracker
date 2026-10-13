@@ -39,18 +39,7 @@ def make_case(doctor, hospital, days_ago=0, fee=5000, **kwargs):
     )
 
 
-def enter_practice(client, doctor=None, code="482913"):
-    """Open the app like a remembered phone: valid practice-code cookie + 'who uses this phone'."""
-    from django.core import signing
-
-    from core.models import AppSettings
-    from core.practice import CODE_COOKIE, WHO_COOKIE, fingerprint, practice_user
-
-    settings_obj = AppSettings.load()
-    if settings_obj.practice_code != code:
-        settings_obj.practice_code = code
-        settings_obj.save()
-    client.cookies[CODE_COOKIE] = signing.get_cookie_signer(salt=CODE_COOKIE + CODE_COOKIE).sign(fingerprint(code))
-    client.cookies[WHO_COOKIE] = str(doctor.pk) if doctor else "0"
-    client.force_login(practice_user())
+def sign_in(client, doctor):
+    """Sign the test client in with the doctor's own login."""
+    client.force_login(doctor.user)
     return client

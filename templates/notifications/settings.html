@@ -18,19 +18,19 @@
       </form>
     </div>
     <div data-hint class="small text-muted mt-2"></div>
-    {% if devices %}<div class="small text-muted mt-2"><i class="bi bi-phone"></i> {{ devices|length }} phone{{ devices|length|pluralize }} in the practice receive{{ devices|length|pluralize:"s," }} notifications.</div>{% endif %}
+    {% if devices %}<div class="small text-muted mt-2"><i class="bi bi-phone"></i> {{ devices|length }} of your device{{ devices|length|pluralize }} receive{{ devices|length|pluralize:"s," }} notifications.</div>{% endif %}
   </div>
 
-  <div class="section-title">Remind this phone about</div>
+  <div class="section-title">Remind me about</div>
   <form method="post" action="{% url 'notifications:scope' %}" class="card p-3 mb-3">{% csrf_token %}
     <div class="d-flex gap-2">
       <select name="doctor" class="form-select" {% if not this_phone %}disabled{% endif %}>
         <option value="">All cases of the practice</option>
-        {% for d in doctors %}<option value="{{ d.pk }}" {% if this_scope.pk == d.pk %}selected{% endif %}>Only {{ d.display_name }}'s cases</option>{% endfor %}
+        {% for d in doctors %}<option value="{{ d.pk }}" {% if this_scope.pk == d.pk %}selected{% endif %}>{% if d == user.doctor_profile %}Only my cases ({{ d.display_name }}){% else %}Only {{ d.display_name }}'s cases{% endif %}</option>{% endfor %}
       </select>
       <button class="btn btn-outline-primary" {% if not this_phone %}disabled{% endif %}>Save</button>
     </div>
-    <div class="small text-muted mt-2">{% if this_phone %}Each phone chooses its own reminders.{% else %}Turn on notifications for this phone first.{% endif %}</div>
+    <div class="small text-muted mt-2">{% if this_phone %}Your own cases unless you choose otherwise.{% else %}Turn on notifications for this device first.{% endif %}</div>
   </form>
 
   <div class="section-title">Automatic reminders</div>
@@ -55,7 +55,7 @@
   </div>
 
   <form method="post">{% csrf_token %}
-    <div class="section-title">What to notify about <span class="text-muted fw-normal text-lowercase">(same for all phones of the practice)</span></div>
+    <div class="section-title">What to notify about </div>
     <div class="card p-3 mb-3">
       <div class="form-check form-switch mb-3 pb-3 border-bottom">
         <input type="checkbox" name="push_enabled" id="id_push_enabled" class="form-check-input" role="switch" {% if form.push_enabled.value %}checked{% endif %}>

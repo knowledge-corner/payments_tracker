@@ -40,7 +40,7 @@ COLUMNS = [
      ["date", "case date", "surgery date", "procedure date", "date of surgery", "dos"]),
     ("hospital", "Hospital", True, "Hospital name - pick from the list or type a new one",
      ["hospital", "hospital name", "hospital / clinic", "clinic", "nursing home", "centre", "center"]),
-    ("doctor", "Anaesthetist", False, "Anaesthetist's name, e.g. Dr. Anjali Mehta (a new name is added to the list)",
+    ("doctor", "Anaesthetist", False, "Anaesthetist's name as registered in the app, e.g. Dr. Anjali Mehta (empty = the one chosen on the upload page)",
      ["anaesthetist", "anesthetist", "anaesthetist name", "doctor", "doctor name", "doctor username", "username"]),
     ("fee", "Fee", True, "Amount billed for the case, e.g. 6000",
      ["fee", "fees", "amount", "charges", "bill amount", "billed", "billed amount", "professional fee"]),
@@ -130,6 +130,19 @@ def build_template(include_doctor_column=True):
         )
         dv.add(f"{letter}2:{letter}1001")
         ws.add_data_validation(dv)
+    doctor_names = list(Doctor.objects.registered().order_by("display_name").values_list("display_name", flat=True))
+    if doctor_names and "doctor" in col_index:
+        ds = wb.create_sheet("Anaesthetists")
+        ds.append(["Anaesthetist"])
+        ds["A1"].font = Font(bold=True, color="FFFFFF")
+        ds["A1"].fill = header_fill
+        for name in doctor_names:
+            ds.append([name])
+        ds.column_dimensions["A"].width = 35
+        letter = get_column_letter(col_index["doctor"])
+        doc_dv = DataValidation(type="list", formula1=f"=Anaesthetists!$A$2:$A${len(doctor_names) + 1}", allow_blank=True)
+        doc_dv.add(f"{letter}2:{letter}1001")
+        ws.add_data_validation(doc_dv)
     mode_letter = get_column_letter(col_index["payment_mode"])
     mode_dv = DataValidation(type="list", formula1='"UPI,Bank transfer,Cheque,Cash,Card,Other"', allow_blank=True)
     mode_dv.add(f"{mode_letter}2:{mode_letter}1001")
@@ -314,7 +327,7 @@ def parse_workbook(uploaded_file, user, default_doctor=None):
     from accounts.forms import doctor_title
 
     doctors_by_name = {}
-    for d in Doctor.objects.select_related("user"):
+    for d in Doctor.objects.registered().select_related("user"):
         doctors_by_name[d.display_name.lower()] = d
         if d.user_id:
             doctors_by_name.setdefault(d.user.username.lower(), d)
@@ -403,10 +416,7 @@ def parse_workbook(uploaded_file, user, default_doctor=None):
         if typed:
             doctor = doctors_by_name.get(typed.lower()) or doctors_by_name.get(doctor_title(typed).lower())
             if not doctor:
-                data["new_doctor"] = doctor_title(typed)[:120]
-                data["doctor_id"] = None
-                data["doctor_name"] = data["new_doctor"]
-                r.warnings.append(f"New anaesthetist '{data['new_doctor']}' will be added")
+                r.error("doctor", f"'{typed}' has not signed up in the app. Use a registered name or leave it empty")
         else:
             doctor = default_doctor or getattr(user, "doctor_profile", None)
             if not doctor:
@@ -455,7 +465,7 @@ COLUMN_HEADERS = [(c[0], c[1]) for c in COLUMNS]
 def commit_rows(rows, user, filename):
     """Create hospitals, cases and payments from validated rows. Returns counts."""
     created_cases = created_payments = created_hospitals = created_surgeons = 0
-    new_hospitals, surgeons, new_doctors = {}, {}, {}
+    new_hospitals, surgeons = {}, {}
     label = re.sub(r"[^\w.\- ]+", "", filename or "upload")[:50]
     for row in rows:
         data = row["data"]
@@ -472,13 +482,6 @@ def commit_rows(rows, user, filename):
                 )
                 created_hospitals += 1
             new_hospitals[key] = hospital
-
-        if not data.get("doctor_id"):
-            name = data["new_doctor"]
-            doctor = new_doctors.get(name.lower()) or Doctor.objects.filter(display_name__iexact=name).first() \
-                or Doctor.objects.create(display_name=name)
-            new_doctors[name.lower()] = doctor
-            data["doctor_id"] = doctor.pk
 
         surgeon = None
         if data.get("surgeon"):

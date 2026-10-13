@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from core.testing import enter_practice, make_case, make_doctor, make_hospital
+from core.testing import make_case, make_doctor, make_hospital, sign_in
 from payments.models import Payment
 
 
@@ -15,7 +15,7 @@ class ReportTests(TestCase):
         case = make_case(self.doctor, self.a, fee=1000)
         Payment.objects.create(case=case, amount=Decimal("400"), mode="upi")
         make_case(self.doctor, self.b, fee=2000)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
 
     def test_monthly(self):
         ctx = self.client.get(reverse("reports:monthly")).context
@@ -52,7 +52,7 @@ class CasesReportTests(TestCase):
         self.old = make_case(self.doctor, self.b, days_ago=120, fee=2000, patient_reference="IP 55")
         other = make_doctor("dr.x", "Dr. X")
         self.colleague = make_case(other, self.a, fee=99999)  # shown unless filtered to one anaesthetist
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         self.url = reverse("reports:cases")
         self.datetime = datetime
 
@@ -124,7 +124,7 @@ class MonthCasesTests(TestCase):
         self.unpaid = make_case(self.doctor, self.b, days_ago=0, fee=2000)
         self.last_month = make_case(self.doctor, self.a, days_ago=today.day + 3, fee=500)
         self.colleague = make_case(make_doctor("dr.x", "Dr. X"), self.a, fee=99999)
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
         self.url = reverse("reports:month_cases", args=[self.month.year, self.month.month])
         self.datetime = datetime
 
@@ -183,7 +183,7 @@ class SurgeonReportTests(TestCase):
         for hospital, surgeon in ((a, shah), (a, shah), (b, shah), (a, rao)):
             make_case(doctor, hospital, fee=1000, surgeon=surgeon)
         make_case(make_doctor("dr.x", "Dr. X"), a, fee=5000, surgeon=rao)  # a colleague's case with Dr. Rao
-        enter_practice(self.client, doctor)
+        sign_in(self.client, doctor)
         url = reverse("reports:surgeons")
         rows = self.client.get(url + "?period=all").context["rows"]
         self.assertEqual({(str(r["surgeon"]), r["hospital"].name): r["cases"] for r in rows}[("Dr. Rao", "Criticare R")], 2)

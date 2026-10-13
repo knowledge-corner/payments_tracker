@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from cases.models import Case
-from core.testing import enter_practice, make_case, make_contact, make_doctor, make_hospital
+from core.testing import make_case, make_contact, make_doctor, make_hospital, sign_in
 
 from .models import Contact, ContactAffiliation, Surgeon
 from .services import attach_call_targets
@@ -46,7 +46,7 @@ class ContactViewTests(TestCase):
         self.doctor = make_doctor()
         self.other = make_doctor("dr.other", "Dr. Other")
         self.hospital = make_hospital("Contact View Hospital")
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
 
     def test_add_contact_with_hospital_link(self):
         response = self.client.post(reverse("contacts:add"), {
@@ -101,7 +101,7 @@ class CaseContactTests(TestCase):
     def setUp(self):
         self.doctor = make_doctor()
         self.hospital = make_hospital("Case Contact Hospital")
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
 
     def post_case(self, **extra):
         data = {"hospital": self.hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000",
@@ -152,7 +152,7 @@ class SurgeonTests(TestCase):
         self.doctor = make_doctor()
         self.criticare = make_hospital("Criticare Test")
         self.hinduja = make_hospital("Hinduja Test")
-        enter_practice(self.client, self.doctor)
+        sign_in(self.client, self.doctor)
 
     def post_case(self, hospital, **extra):
         data = {"hospital": hospital.pk, "case_date": timezone.localdate().isoformat(), "fee": "5000",
