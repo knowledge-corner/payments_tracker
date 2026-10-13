@@ -11,11 +11,14 @@ random.seed(7)
 today = timezone.localdate()
 u = User.objects.create_user("dr.anjali", password="Demo@12345", role=User.ROLE_DOCTOR, email="anjali@example.com",
                              first_name="Anjali", last_name="Mehta")
-d = Doctor.objects.create(user=u, display_name="Anjali Mehta", phone="9822012345")
+d = Doctor.objects.create(user=u, display_name="Dr. Anjali Mehta", phone="9822012345")
 User.objects.create_user("admin", password="Admin@12345", role=User.ROLE_ADMIN, email="admin@example.com",
                          first_name="Admin")
 u2 = User.objects.create_user("dr.rao", password="Demo@12345", role=User.ROLE_DOCTOR, email="rao@example.com")
-d2 = Doctor.objects.create(user=u2, display_name="Vikram Rao", phone="9822054321")
+d2 = Doctor.objects.create(user=u2, display_name="Dr. Vikram Rao", phone="9822054321")
+Doctor.objects.create(display_name="Dr. Kiran Bhide", phone="9822077777")
+from core.models import AppSettings
+_s = AppSettings.load(); _s.practice_code = "482913"; _s.practice_name = "Pune Anaesthesia Associates"; _s.save()
 
 H = {k: Hospital.objects.get(name=n) for k, n in [
     ("ruby", "Ruby Hall Clinic"), ("jeh", "Jehangir Hospital"), ("sah", "Sahyadri Hospital Kothrud"),
@@ -73,8 +76,8 @@ for i, (ago, h, s, proc, fee, frac) in enumerate(plan):
         PaymentFollowUp.objects.create(case=case, followup_date=today - datetime.timedelta(days=ago - 20),
                                        method="call", contact=C.get(h), contact_person=C[h].name if h in C else "",
                                        notes="Said bill is with accounts, will release this month.")
-# Dr. Rao: a few cases (visible only in admin view)
-for i in range(4):
-    Case.objects.create(doctor=d2, hospital=H["jeh"], case_date=today - datetime.timedelta(days=i * 9 + 2),
-                        patient_name=f"Patient R{i+1}", procedure_type="GA", fee=Decimal(6000), created_by=u2)
+# Dr. Rao: a few cases of a colleague (everyone in the practice sees them)
+for i, name in enumerate(["Shobha Kamat", "Ravi Naik", "Uma Bapat", "Ganesh Lele"]):
+    Case.objects.create(doctor=d2, hospital=H["jeh"], surgeon=S["shah"], case_date=today - datetime.timedelta(days=i * 9 + 2),
+                        patient_name=name, procedure_type="Arthroscopy - GA", fee=Decimal(6000), created_by=u2)
 print("cases", Case.objects.count())
