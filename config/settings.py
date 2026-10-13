@@ -1,5 +1,5 @@
 """
-Django settings for the Anaesthesia Payments Tracker.
+Django settings for the Team Anesthesia.
 
 All environment-specific values are read from environment variables so the
 same code runs locally (Docker Compose) and in production (behind HTTPS).
@@ -157,7 +157,7 @@ EMAIL_BACKEND = (
     "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
     else "django.core.mail.backends.console.EmailBackend"
 )
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "Payments Tracker <noreply@localhost>"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "Team Anesthesia <noreply@localhost>"
 PASSWORD_RESET_TIMEOUT = 60 * 60 * 3  # reset links work for 3 hours
 
 LOGIN_URL = "login"

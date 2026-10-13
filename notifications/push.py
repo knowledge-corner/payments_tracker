@@ -16,7 +16,7 @@ def vapid_keys():
     """(private, public, subject). From env vars, else generated once and stored in DATA_DIR."""
     private = getattr(settings, "VAPID_PRIVATE_KEY", "")
     public = getattr(settings, "VAPID_PUBLIC_KEY", "")
-    subject = getattr(settings, "VAPID_SUBJECT", "") or "mailto:admin@payments-tracker.app"
+    subject = getattr(settings, "VAPID_SUBJECT", "") or "mailto:admin@team-anesthesia.app"
     if private and public:
         return private, public, subject
     path = settings.DATA_DIR / "vapid_keys.json"

@@ -1,4 +1,4 @@
-/* Service worker for the Payments Tracker PWA ({{ version }}).
+/* Service worker for the Team Anesthesia PWA ({{ version }}).
    - Static assets: cache-first (they are versioned by SW_CACHE_VERSION).
    - Pages: network-first; if offline, show the offline page.
    Financial data is never cached, so figures are always live. */
@@ -43,7 +43,7 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) { data = { body: event.data && event.data.text() }; }
-  const title = data.title || "Payments Tracker";
+  const title = data.title || "Team Anesthesia";
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || "",
     icon: "{{ icon }}",

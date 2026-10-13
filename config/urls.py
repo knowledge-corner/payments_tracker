@@ -6,8 +6,8 @@ from accounts import views as account_views
 from accounts.forms import LoginForm
 from core import views as core_views
 
-admin.site.site_header = "Payments Tracker Admin"
-admin.site.site_title = "Payments Tracker"
+admin.site.site_header = "Team Anesthesia Admin"
+admin.site.site_title = "Team Anesthesia"
 # /admin/ is the raw database panel: developer (superuser) only. App admins never
 # get in, and the app does not link to it.
 admin.site.has_permission = lambda request: request.user.is_active and request.user.is_superuser

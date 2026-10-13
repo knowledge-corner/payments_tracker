@@ -1,6 +1,6 @@
 @echo off
 REM ==========================================================================
-REM  Payments Tracker - one-click start (Windows)
+REM  Team Anesthesia - one-click start (Windows)
 REM  Double-click this file. It:
 REM    1. gets the latest code from GitHub (git pull)
 REM    2. starts Docker Desktop if needed
@@ -16,12 +16,12 @@ if /i not "%~1"=="--run" (
   copy /y "%~f0" "%TEMP%\payments_tracker_start.bat" >nul
   "%TEMP%\payments_tracker_start.bat" --run "%~dp0."
 )
-title Payments Tracker - Start
+title Team Anesthesia - Start
 cd /d "%~2"
 
 echo.
 echo  ==============================================
-echo    Payments Tracker - starting up
+echo    Team Anesthesia - starting up
 echo  ==============================================
 echo.
 
@@ -172,7 +172,7 @@ start "" "http://localhost:%PORT%/"
 
 echo.
 echo  ==============================================
-echo    Payments Tracker is running
+echo    Team Anesthesia is running
 echo    Open:   http://localhost:%PORT%
 echo.
 echo    First time? Tap "Create an account" on the sign-in page.

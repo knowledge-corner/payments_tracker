@@ -1,7 +1,7 @@
 @echo off
 REM Deletes ALL data (database volume) and restarts with an empty app.
 setlocal
-title Payments Tracker - Reset data
+title Team Anesthesia - Reset data
 cd /d "%~dp0"
 echo.
 echo  WARNING: this permanently deletes ALL cases, payments, hospitals and users

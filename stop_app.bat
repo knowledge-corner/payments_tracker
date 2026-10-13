@@ -1,8 +1,8 @@
 @echo off
-REM Stops the Payments Tracker containers. Your data is kept.
-title Payments Tracker - Stop
+REM Stops the Team Anesthesia containers. Your data is kept.
+title Team Anesthesia - Stop
 cd /d "%~dp0"
-echo Stopping Payments Tracker...
+echo Stopping Team Anesthesia...
 docker compose down --remove-orphans
 echo.
 echo Stopped. Your data is kept - run start_app.bat to start again.

@@ -1,4 +1,4 @@
-/* Payments Tracker - small progressive enhancements (works without JS too). */
+/* Team Anesthesia - small progressive enhancements (works without JS too). */
 (function () {
   "use strict";
 

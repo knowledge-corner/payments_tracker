@@ -39,7 +39,7 @@ def validate_reminder_days(value):  # no longer used; kept because old migration
 class AppSettings(models.Model):
     """Single-row table holding configurable business rules."""
 
-    practice_name = models.CharField(max_length=120, default="Payments Tracker")
+    practice_name = models.CharField(max_length=120, default="Team Anesthesia")
     default_payment_terms_days = models.PositiveIntegerField(
         default=30,
         help_text="Used when a case has no expected payment date. The payment reminder is sent on that date, "

@@ -1,4 +1,4 @@
-# User manual (docs/Payments_Tracker_User_Manual.pdf)
+# User manual (docs/Team_Anesthesia_User_Manual.pdf)
 
 Rebuild after UI changes (needs Node + Playwright with Chromium, Python with Pillow, openpyxl):
 
@@ -8,6 +8,6 @@ Rebuild after UI changes (needs Node + Playwright with Chromium, Python with Pil
 3. In a working folder, create `bad_upload.xlsx` (see the bulk-upload step) and run `node shots.js` (phone-size screenshots).
 4. Resize screenshots into `img/` (600 px wide JPEG), then `python build.py` and `node print.js`.
 
-`build.py` holds all manual text - edit it there.
+`build.py` holds all manual text - edit it there. `logo.png` (the app icon) is used on the cover.
 # Rebuild note: before running shots.js, run `python manage.py send_notifications` once so the
 # Notification settings screenshot shows "Reminder sender is running".

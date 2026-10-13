@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
-#  Payments Tracker - one-command production server setup
+#  Team Anesthesia - one-command production server setup
 #
 #  For a fresh Ubuntu 22.04 / 24.04 server (DigitalOcean, AWS Lightsail,
 #  Hetzner, ...). Run as root:
 #
-#    curl -fsSL https://raw.githubusercontent.com/knowledge-corner/payments_tracker/main/deploy/setup_server.sh -o setup.sh
+#    curl -fsSL https://raw.githubusercontent.com/knowledge-corner/Team-Anesthesia/main/deploy/setup_server.sh -o setup.sh
 #    sudo bash setup.sh
 #
 #  What it does (safe to run again - existing passwords/data are kept):
@@ -22,7 +22,7 @@
 # =============================================================================
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/knowledge-corner/payments_tracker.git}"
+REPO_URL="${REPO_URL:-https://github.com/knowledge-corner/Team-Anesthesia.git}"
 APP_DIR="${APP_DIR:-/opt/payments_tracker}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/payments_tracker}"
 COMPOSE_FILES="-f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.prod.yml"
@@ -192,7 +192,7 @@ bold "6/6  Backups and the 'payments' helper command"
 mkdir -p "$BACKUP_DIR" && chmod 700 "$BACKUP_DIR"
 cat > /usr/local/bin/payments <<EOF
 #!/usr/bin/env bash
-# Payments Tracker helper - run 'payments help'
+# Team Anesthesia helper - run 'payments help'
 set -euo pipefail
 cd "$APP_DIR"
 DC="docker compose $COMPOSE_FILES"
@@ -251,7 +251,7 @@ chmod 755 /usr/local/bin/payments
 ok "Helper installed: run 'payments help'"
 
 cat > /etc/cron.d/payments-backup <<'EOF'
-# Daily database backup for Payments Tracker (server time)
+# Daily database backup for Team Anesthesia (server time)
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 30 2 * * * root /usr/local/bin/payments backup >> /var/log/payments-backup.log 2>&1

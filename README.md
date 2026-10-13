@@ -1,4 +1,4 @@
-# Payments Tracker for Anaesthesia Professionals
+# Team Anesthesia - cases, payments and follow-ups for anaesthesia practices
 
 A mobile-first Django web app (installable as a PWA) that helps anaesthesiologists track
 **completed cases → billing → payments → outstanding → follow-ups → reports**.
@@ -33,7 +33,7 @@ A mobile-first Django web app (installable as a PWA) that helps anaesthesiologis
 | 1 | Install **Docker Desktop**: <https://www.docker.com/products/docker-desktop/> (accept the WSL 2 option if asked, then restart your PC). |
 | 2 | Open Docker Desktop once and wait until it shows **Engine running**. Optional: in *Settings → General*, tick **Start Docker Desktop when you sign in**. |
 | 3 | Install **Git for Windows**: <https://git-scm.com/download/win> (or use GitHub Desktop). |
-| 4 | Get the code, e.g. in *Command Prompt*: `git clone https://github.com/knowledge-corner/payments_tracker.git` (or use **Code → Download ZIP** on GitHub and unzip). |
+| 4 | Get the code, e.g. in *Command Prompt*: `git clone https://github.com/knowledge-corner/Team-Anesthesia.git payments_tracker` (or use **Code → Download ZIP** on GitHub and unzip). |
 
 ### Every time you want to use it
 

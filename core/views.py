@@ -16,14 +16,14 @@ from .permissions import admin_required
 logger = logging.getLogger(__name__)
 
 # Bump when static assets change so installed PWAs refresh their cache.
-SW_CACHE_VERSION = "v8"
+SW_CACHE_VERSION = "v9"
 
 
 @cache_control(max_age=3600)
 def manifest(request):
     data = {
-        "name": "Anaesthesia Payments Tracker",
-        "short_name": "Payments",
+        "name": "Team Anesthesia",
+        "short_name": "Team Anesthesia",
         "description": "Track completed anaesthesia cases, payments and follow-ups.",
         "id": "/",
         "start_url": "/?source=pwa",

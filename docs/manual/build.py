@@ -1,5 +1,7 @@
 """Builds manual.html (then printed to PDF by print.js). Content is written for doctors in plain language."""
+import base64
 import html
+import pathlib
 
 SECTIONS = []  # (id, title, blocks)
 
@@ -518,7 +520,7 @@ CSS = """
 body { font-family: 'Noto Sans', 'DejaVu Sans', Arial, sans-serif; color: #1f2937; font-size: 10.5pt; line-height: 1.45; margin: 0; }
 .cover { height: 260mm; display: flex; flex-direction: column; justify-content: center; page-break-after: always;
          background: linear-gradient(160deg, #eef0fb 0%, #fff 60%); border-radius: 10px; padding: 0 18mm; }
-.cover .logo { width: 64px; height: 64px; border-radius: 16px; background: #2e2a6e; color: #f5b83d; font-size: 38px;
+.cover .logo { width: 96px; height: 96px; border-radius: 22px;
                display: flex; align-items: center; justify-content: center; font-weight: 700; }
 .cover h1 { font-size: 32pt; color: #2e2a6e; margin: 18px 0 6px; border: 0; }
 .cover .sub { font-size: 15pt; color: #555; }
@@ -557,10 +559,12 @@ tr:nth-child(even) td { background: #f8f9fc; }
 .pill.green { background: #e3f6ea; color: #23784a; } .pill.red { background: #fde8e8; color: #b42318; }
 """
 
-page = f"""<!doctype html><html><head><meta charset='utf-8'><title>Payments Tracker - User Manual</title><style>{CSS}</style></head><body>
+LOGO = "data:image/png;base64," + base64.b64encode((pathlib.Path(__file__).parent / "logo.png").read_bytes()).decode()
+
+page = f"""<!doctype html><html><head><meta charset='utf-8'><title>Team Anesthesia - User Manual</title><style>{CSS}</style></head><body>
 <div class='cover'>
-  <div class='logo'>₹</div>
-  <h1>Payments Tracker</h1>
+  <img class='logo' src='{LOGO}' alt=''>
+  <h1>Team Anesthesia</h1>
   <div class='sub'>User manual for the practice</div>
   <div class='sub' style='font-size:12pt;margin-top:8px'>Cases · Payments · Follow-ups · Reports</div>
   <div class='meta'>Step-by-step guide with screenshots of every screen.<br>Version: October 2026</div>
