@@ -7,7 +7,9 @@
  *               Optional data-add-url shows a "+ Add ... not in the list" link.
  *
  * The original <select> stays in the form (hidden), so form posts, validation and
- * "change" listeners keep working. Matching is "contains", every typed word must
+ * "change" listeners keep working. Local options are read afresh on every search, so a
+ * page may rebuild them (optgroup labels become group headings); after changing the
+ * options or the value from code, dispatch an "options-changed" event on the select. Matching is "contains", every typed word must
  * appear somewhere ("ruby cl" finds "Ruby Hall Clinic").
  */
 (function () {
@@ -70,9 +72,12 @@
     select.classList.add("d-none");
     select.tabIndex = -1;
 
-    var localOptions = Array.prototype.map.call(select.options, function (o) {
-      return { value: o.value, label: o.text, sub: "", key: normalise(o.text), empty: o.value === "" };
-    });
+    function localOptions() {
+      return Array.prototype.map.call(select.options, function (o) {
+        var group = o.parentNode && o.parentNode.tagName === "OPTGROUP" ? o.parentNode.label : "";
+        return { value: o.value, label: o.text, sub: "", group: group, key: normalise(o.text), empty: o.value === "" };
+      });
+    }
     var visible = [];
     var active = -1;
     var timer = null;
@@ -85,11 +90,15 @@
 
     function paint(items, tokens, query, loading) {
       visible = items;
+      var lastGroup = "";
       var html = items.map(function (o, i) {
+        var head = "";
+        if (o.group && o.group !== lastGroup) head = '<div class="combo-group">' + escapeHtml(o.group) + "</div>";
+        lastGroup = o.group || lastGroup;
         var cls = "combo-item" + (o.value === select.value ? " selected" : "") + (o.empty ? " text-muted" : "");
         var sub = o.sub ? '<div class="combo-sub">' + escapeHtml(o.sub) + "</div>" : "";
         var badge = o.mine ? '<span class="combo-mine">Mine</span>' : "";
-        return '<div class="' + cls + '" role="option" data-index="' + i + '"><div class="d-flex justify-content-between gap-2"><span>' +
+        return head + '<div class="' + cls + '" role="option" data-index="' + i + '"><div class="d-flex justify-content-between gap-2"><span>' +
           highlight(o.label, tokens) + "</span>" + badge + "</div>" + sub + "</div>";
       }).join("");
       if (loading) html += '<div class="combo-empty">Searching...</div>';
@@ -106,7 +115,7 @@
     function render(query) {
       var tokens = normalise(query).split(" ").filter(Boolean);
       if (!remoteUrl) {
-        paint(localOptions.filter(function (o) {
+        paint(localOptions().filter(function (o) {
           if (o.empty) return tokens.length === 0;
           return tokens.every(function (t) { return o.key.indexOf(t) !== -1; });
         }), tokens, query);
@@ -200,6 +209,9 @@
       }, 150);
     });
     select.addEventListener("change", function () {
+      if (document.activeElement !== input) input.value = selectedLabel();
+    });
+    select.addEventListener("options-changed", function () {
       if (document.activeElement !== input) input.value = selectedLabel();
     });
   }

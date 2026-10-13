@@ -9,9 +9,11 @@
 <form method="get" class="mb-2">
   <div class="input-group">
     <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search name, phone or hospital">
+    <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search name, speciality, phone or hospital">
+    {% if q %}<a href="{% url 'contacts:surgeon_list' %}" class="btn btn-outline-secondary" aria-label="Clear search"><i class="bi bi-x-lg"></i></a>{% endif %}
   </div>
 </form>
+{% if q %}<div class="small text-muted mb-2">{{ surgeons|length }} surgeon{{ surgeons|length|pluralize }} found</div>{% endif %}
 <div class="card">
   <div class="list-group list-group-flush">
     {% for s in surgeons %}
@@ -22,7 +24,7 @@
       </a>
       {% if s.phone %}<a href="tel:{{ s.phone }}" class="call-link" aria-label="Call {{ s.name }}"><i class="bi bi-telephone-fill"></i></a>{% endif %}
     </div>
-    {% empty %}<div class="p-4 text-center text-muted small">No surgeons yet. They are also added when you add a case with a new surgeon.</div>{% endfor %}
+    {% empty %}<div class="p-4 text-center text-muted small">{% if q %}No surgeon matches "{{ q }}".{% else %}No surgeons yet. They are also added when you add a case with a new surgeon.{% endif %}</div>{% endfor %}
   </div>
 </div>
 {% endblock %}

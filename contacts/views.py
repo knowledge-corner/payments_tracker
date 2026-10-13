@@ -1,3 +1,5 @@
+import re
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Q, Sum
@@ -178,12 +180,18 @@ def _get_surgeon(request, pk):
 
 @login_required
 def surgeon_list(request):
-    q = request.GET.get("q", "").strip()
+    q = request.GET.get("q", "").strip()[:100]
     surgeons = Surgeon.objects.select_related("doctor")
-    if q:
-        surgeons = surgeons.filter(Q(name__icontains=q) | Q(phone__icontains=q)
-                                   | Q(hospital_links__hospital__name__icontains=q)).distinct()
-    surgeons = surgeons.prefetch_related("hospital_links__hospital").annotate(case_count=Count("cases"))
+    # Every word must match somewhere: "shah ruby" finds Dr. Shah at Ruby Hall; "dr." is ignored.
+    words = [w for w in re.sub(r"[^\w]+", " ", q).split() if w.lower() != "dr"]
+    for word in words:
+        surgeons = surgeons.filter(
+            Q(name__icontains=word) | Q(phone__icontains=word) | Q(speciality__icontains=word)
+            | Q(hospital_links__hospital__name__icontains=word) | Q(hospital_links__hospital__area__icontains=word)
+        )
+    if words:
+        surgeons = surgeons.distinct()
+    surgeons = surgeons.prefetch_related("hospital_links__hospital").annotate(case_count=Count("cases", distinct=True))
     return render(request, "contacts/surgeon_list.html", {"surgeons": surgeons, "q": q})
 
 

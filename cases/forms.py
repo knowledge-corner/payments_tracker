@@ -87,16 +87,16 @@ class CaseForm(StyledModelForm):
         self.fields["surgeon"].queryset = Surgeon.objects.filter(is_active=True)
         self.fields["surgeon"].empty_label = "Not specified"
         self.fields["surgeon"].label = "Surgeon"
+        self.fields["surgeon"].widget.attrs.update({"data-searchable": "", "data-placeholder": "Type surgeon name"})
         self.fields["contact"].queryset = Contact.objects.filter(is_active=True)
         self.fields["contact"].empty_label = "Not specified"
         self.fields["contact"].label = "Contact person"
+        self.fields["contact"].widget.attrs.update({"data-searchable": "", "data-placeholder": "Type contact name"})
 
         # Anaesthetist who did the case: left empty = the person adding it ("Self").
         # The list holds everyone who has signed up (plus the current one when editing).
         self.self_doctor = getattr(user, "doctor_profile", None) if user else None
         doctors = Doctor.objects.registered()
-        if self.self_doctor:
-            doctors = doctors.exclude(pk=self.self_doctor.pk)  # already offered as "Self"
         if self.instance.pk:
             doctors = Doctor.objects.filter(models.Q(pk__in=doctors) | models.Q(pk=self.instance.doctor_id))
         field = self.fields["doctor"]
@@ -104,6 +104,8 @@ class CaseForm(StyledModelForm):
         field.label = "Anaesthetist"
         field.required = self.self_doctor is None
         field.empty_label = f"Self ({self.self_doctor})" if self.self_doctor else "Choose anaesthetist"
+        if self.self_doctor:  # own name is the "Self" option; still accepted if posted explicitly
+            field.widget.choices = [(k, v) for k, v in field.choices if str(k) != str(self.self_doctor.pk)]
 
         if self.instance.pk:
             for name in ("paid_now", "paid_amount", "paid_mode"):

@@ -197,3 +197,32 @@ class SurgeonTests(TestCase):
         self.client.post(reverse("contacts:surgeon_link_remove", args=[surgeon.pk, link.pk]))
         self.assertEqual(surgeon.hospital_links.count(), 1)
         self.assertContains(self.client.get(surgeon.get_absolute_url()), "Hinduja Test")
+
+
+class SurgeonSearchTests(TestCase):
+    def test_every_word_matches_name_speciality_or_hospital(self):
+        doctor = make_doctor()
+        ruby, kem = make_hospital("Ruby Hall Clinic"), make_hospital("KEM Hospital")
+        shah = Surgeon.objects.create(doctor=doctor, name="Dr. Amit Shah", speciality="Orthopaedics")
+        shah.link_hospital(ruby)
+        rao = Surgeon.objects.create(doctor=doctor, name="Dr. Rao", speciality="ENT")
+        rao.link_hospital(kem)
+        sign_in(self.client, doctor)
+
+        def names(q):
+            return [s.name for s in self.client.get(reverse("contacts:surgeon_list"), {"q": q}).context["surgeons"]]
+
+        self.assertEqual(names("dr. shah"), ["Dr. Amit Shah"])
+        self.assertEqual(names("shah ruby"), ["Dr. Amit Shah"])
+        self.assertEqual(names("ortho"), ["Dr. Amit Shah"])
+        self.assertEqual(names("kem"), ["Dr. Rao"])
+        self.assertEqual(names("shah kem"), [])
+        self.assertContains(self.client.get(reverse("contacts:surgeon_list"), {"q": "zzz"}), "No surgeon matches")
+
+    def test_surgeon_dropdowns_are_type_to_search(self):
+        doctor = make_doctor()
+        sign_in(self.client, doctor)
+        add = self.client.get(reverse("cases:add")).content.decode()
+        self.assertIn('data-placeholder="Type surgeon name"', add)
+        self.assertIn('All surgeons - type to search', self.client.get(reverse("cases:list")).content.decode())
+        self.assertIn('All surgeons - type to search', self.client.get(reverse("reports:cases")).content.decode())

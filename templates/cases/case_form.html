@@ -134,6 +134,7 @@
     newBox.classList.toggle("d-none");
     if (!newBox.classList.contains("d-none")) {
       contact.value = "";
+      contact.dispatchEvent(new Event("options-changed"));
       document.getElementById("id_new_contact_name").focus();
     }
   });
@@ -145,6 +146,7 @@
     surgeonBox.classList.toggle("d-none");
     if (!surgeonBox.classList.contains("d-none")) {
       surgeon.value = "";
+      surgeon.dispatchEvent(new Event("options-changed"));
       document.getElementById("id_new_surgeon_name").focus();
     }
   });
@@ -161,6 +163,7 @@
     });
     if (keep && select.querySelector('option[value="' + keep + '"]')) select.value = keep;
     else if (suggested) select.value = suggested;
+    select.dispatchEvent(new Event("options-changed"));  // update the type-to-search box
   }
 
   // ---- Contacts + surgeons for the chosen hospital --------------------------

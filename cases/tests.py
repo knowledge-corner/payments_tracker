@@ -122,7 +122,10 @@ class CaseViewTests(TestCase):
         no_login = Doctor.objects.create(display_name="Dr. Not Joined")
         form = self.client.get(reverse("cases:add")).context["form"]
         self.assertIn("Self (Dr. Test)", form["doctor"].as_widget())
-        self.assertEqual(set(form.fields["doctor"].queryset), {self.other})  # colleagues who signed up (self = empty)
+        widget = form["doctor"].as_widget()
+        self.assertIn("Dr. Other", widget)  # colleagues who signed up
+        self.assertEqual(widget.count("Dr. Test"), 1)  # own name only as "Self"
+        self.assertNotIn("Not Joined", widget)
         self.assertNotIn("new_doctor_name", form.fields)
         response = self.client.post(reverse("cases:add"), {
             "doctor": self.other.pk, "hospital": self.hospital.pk,
