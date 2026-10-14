@@ -26,7 +26,7 @@ No Docker needed. The SQLite database is kept on PythonAnywhere's permanent disk
 Open **Consoles → Bash** and run (replace nothing, copy as is):
 
 ```bash
-git clone https://github.com/knowledge-corner/Team-Anesthesia.git payments_tracker
+git clone https://github.com/knowledge-corner/team_anesthesia.git payments_tracker
 cd payments_tracker
 python3.12 -m venv ~/.venvs/payments
 source ~/.venvs/payments/bin/activate

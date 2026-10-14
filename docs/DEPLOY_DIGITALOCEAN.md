@@ -43,7 +43,7 @@ ssh root@<droplet IP>
 Then run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/knowledge-corner/Team-Anesthesia/main/deploy/setup_server.sh -o setup.sh
+curl -fsSL https://raw.githubusercontent.com/knowledge-corner/team_anesthesia/main/deploy/setup_server.sh -o setup.sh
 bash setup.sh
 ```
 

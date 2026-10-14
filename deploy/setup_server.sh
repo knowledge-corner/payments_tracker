@@ -5,7 +5,7 @@
 #  For a fresh Ubuntu 22.04 / 24.04 server (DigitalOcean, AWS Lightsail,
 #  Hetzner, ...). Run as root:
 #
-#    curl -fsSL https://raw.githubusercontent.com/knowledge-corner/Team-Anesthesia/main/deploy/setup_server.sh -o setup.sh
+#    curl -fsSL https://raw.githubusercontent.com/knowledge-corner/team_anesthesia/main/deploy/setup_server.sh -o setup.sh
 #    sudo bash setup.sh
 #
 #  What it does (safe to run again - existing passwords/data are kept):
@@ -22,7 +22,7 @@
 # =============================================================================
 set -euo pipefail
 
-REPO_URL="${REPO_URL:-https://github.com/knowledge-corner/Team-Anesthesia.git}"
+REPO_URL="${REPO_URL:-https://github.com/knowledge-corner/team_anesthesia.git}"
 APP_DIR="${APP_DIR:-/opt/payments_tracker}"
 BACKUP_DIR="${BACKUP_DIR:-/var/backups/payments_tracker}"
 COMPOSE_FILES="-f docker-compose.yml -f docker-compose.postgres.yml -f docker-compose.prod.yml"
