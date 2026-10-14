@@ -51,7 +51,12 @@ ask() {  # ask VAR "Question" "default" [secret]
 
 # -----------------------------------------------------------------------------
 bold "1/6  Your settings"
-ask APP_DOMAIN "Domain for the app (e.g. payments.yourpractice.in)"
+# No domain yet? <ip-with-dashes>.sslip.io always points to this server and gets a real
+# HTTPS certificate, so the app works fully; switch later with 'payments domain <new>'.
+SERVER_IP="$(curl -fsS -4 --max-time 5 https://api.ipify.org 2>/dev/null || true)"
+DEFAULT_DOMAIN="${SERVER_IP:+${SERVER_IP//./-}.sslip.io}"
+[ -n "$DEFAULT_DOMAIN" ] && echo "  No domain yet? Press Enter to use $DEFAULT_DOMAIN (change it later with: payments domain <your-domain>)"
+ask APP_DOMAIN "Domain for the app (e.g. team.yourpractice.in)" "$DEFAULT_DOMAIN"
 APP_DOMAIN="${APP_DOMAIN#http://}"; APP_DOMAIN="${APP_DOMAIN#https://}"; APP_DOMAIN="${APP_DOMAIN%%/*}"
 ask ADMIN_USERNAME "Admin username" "admin"
 ask ADMIN_EMAIL "Admin email"
@@ -121,8 +126,8 @@ git log -1 --date=short --format="  Version: %h  %ad  %s"
 bold "4/6  Configuration (.env)"
 if [ -f .env ] && grep -q '^POSTGRES_PASSWORD=' .env; then
   ok ".env already exists - keeping existing secrets and database password"
-  # keep domain in sync if it changed
-  sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=$APP_DOMAIN|" .env
+  # keep the domain in sync if it changed
+  sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=$APP_DOMAIN|; s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=$APP_DOMAIN,localhost,127.0.0.1|; s|^DJANGO_CSRF_TRUSTED_ORIGINS=.*|DJANGO_CSRF_TRUSTED_ORIGINS=https://$APP_DOMAIN|" .env
 else
   # Docker Compose treats "$" in .env as a variable, so escape it as "$$".
   ADMIN_PASSWORD_ENV="${ADMIN_PASSWORD//\$/\$\$}"
@@ -152,7 +157,6 @@ EOF
 fi
 
 # DNS check - Caddy can only get an HTTPS certificate if the domain points here
-SERVER_IP="$(curl -fsS -4 --max-time 5 https://api.ipify.org 2>/dev/null || true)"
 DOMAIN_IP="$(getent ahostsv4 "$APP_DOMAIN" 2>/dev/null | awk 'NR==1{print $1}' || true)"
 if [ -n "$SERVER_IP" ] && [ "$SERVER_IP" = "$DOMAIN_IP" ]; then
   ok "DNS OK: $APP_DOMAIN -> $SERVER_IP"
@@ -207,6 +211,19 @@ case "${1:-help}" in
     $DC up -d --build --remove-orphans
     git log -1 --date=short --format="Now running: %h  %ad  %s" ;;
   restart) $DC restart web caddy ;;
+  domain)
+    NEW="${2:?Usage: payments domain team.yourpractice.in}"
+    NEW="${NEW#http://}"; NEW="${NEW#https://}"; NEW="${NEW%%/*}"
+    IP="$(curl -fsS -4 --max-time 5 https://api.ipify.org 2>/dev/null || true)"
+    POINTS="$(getent ahostsv4 "$NEW" 2>/dev/null | awk 'NR==1{print $1}' || true)"
+    if [ -n "$IP" ] && [ "$IP" != "$POINTS" ]; then
+      echo "Warning: $NEW points to '${POINTS:-nothing}', this server is $IP."
+      echo "Add an A record $NEW -> $IP first, or HTTPS will not work yet."
+      read -r -p "Continue anyway? (y/N) " c; [ "$c" = "y" ] || exit 1
+    fi
+    sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=$NEW|; s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=$NEW,localhost,127.0.0.1|; s|^DJANGO_CSRF_TRUSTED_ORIGINS=.*|DJANGO_CSRF_TRUSTED_ORIGINS=https://$NEW|" .env
+    $DC up -d --remove-orphans
+    echo "App moved to https://$NEW (certificate is fetched automatically within a minute)." ;;
   backup)
     mkdir -p "$BACKUP_DIR"
     FILE="$BACKUP_DIR/db_$(date +%Y-%m-%d_%H%M).sql.gz"
@@ -239,6 +256,7 @@ payments status       - show running containers
 payments logs         - live application logs (Ctrl+C to stop)
 payments update       - download latest code, rebuild, apply migrations
 payments restart      - restart the app
+payments domain NAME  - move the app to a new domain, e.g. payments domain team.yourpractice.in
 payments backup       - back up the database now
 payments restore FILE - restore the database from a backup file
 payments createadmin  - create another admin login

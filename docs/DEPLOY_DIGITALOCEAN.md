@@ -22,15 +22,19 @@ and a `payments` helper command. Plan about 20 minutes (most of it waiting).
 3. Authentication: **SSH key** (recommended) or a strong root password.
 4. **Backups → Usage-Based**: Weekly, keep 4 weeks, Sunday 6:00-10:00 am. Create the Droplet and note its **IP address**.
 
-## Step 2 - Point your domain to the server
+## Step 2 - Domain (optional - can be added later)
 
-At your domain registrar (GoDaddy, Hostinger, Namecheap, ...) add a DNS record:
+**No domain yet?** Skip this step. The setup offers an address like `139-59-12-34.sslip.io`
+(your Droplet IP with dashes). It points to your server automatically and gets a real HTTPS
+certificate, so login, app install and notifications all work.
+
+**Have a domain?** At your registrar (GoDaddy, Hostinger, Namecheap, ...) add:
 
 | Type | Name | Value | TTL |
 |---|---|---|---|
-| A | `payments` (for payments.yourdomain.in) | the Droplet IP | 600 / default |
+| A | `team` (for team.yourdomain.in) | the Droplet IP | 600 / default |
 
-DNS usually updates within 5-30 minutes. HTTPS works once it has.
+DNS usually updates within 5-30 minutes.
 
 ## Step 3 - Run the setup script
 
@@ -51,7 +55,7 @@ It asks for:
 
 | Question | Example |
 |---|---|
-| Domain for the app | `payments.yourpractice.in` |
+| Domain for the app | press **Enter** for the suggested `...sslip.io` address, or type `team.yourpractice.in` |
 | Admin username | `admin` |
 | Admin email | `you@yourpractice.in` |
 | Admin password | at least 10 characters (typed twice, not shown) |
@@ -60,7 +64,7 @@ It asks for:
 Everything else (database password, secret key) is generated automatically and stored in
 `/opt/payments_tracker/.env` (readable by root only).
 
-When it prints **Done!**, open `https://payments.yourpractice.in` and sign in with the admin login.
+When it prints **Done!**, open the `https://...` address it shows and sign in with the admin login.
 
 ## Step 4 - First things in the app
 
@@ -134,7 +138,7 @@ docker compose -f docker-compose.yml -f docker-compose.postgres.yml -f docker-co
 | Browser shows a certificate / "not secure" error | DNS not updated yet - wait, then `payments restart` |
 | "Bad Request (400)" | The address typed in the browser differs from the domain given to the script - check `APP_DOMAIN` / `DJANGO_ALLOWED_HOSTS` in `/opt/payments_tracker/.env`, then `payments update` |
 | App not loading | `payments status` and `payments logs` |
-| Change the domain later | Edit `APP_DOMAIN`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS` in `.env`, then `payments update` |
+| Change the domain later (e.g. from sslip.io to your own) | Add the DNS A record, wait until it works, then `payments domain team.yourpractice.in`. Phones then open the new address and install the app again. |
 | Server feels slow with many doctors | Resize the Droplet to 2 GB in the DigitalOcean panel (no reinstall needed) |
 
 ---
