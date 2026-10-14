@@ -6,7 +6,7 @@ and a `payments` helper command. Plan about 20 minutes (most of it waiting).
 | Item | Recommendation | Approx. cost |
 |---|---|---|
 | Server | DigitalOcean Droplet, **Ubuntu 24.04**, Basic 1 GB / 1 vCPU, region **Bangalore (BLR1)** | $6 / month |
-| Server backups | Enable "Backups" when creating the Droplet (weekly snapshot) | +$1.20 / month |
+| Server backups | Backups → **Usage-Based**, Weekly, keep 4 weeks, Sunday 6-10 am IST | ~$0.20-0.80 / month (about 5 GiB used x $0.04) |
 | Database | PostgreSQL 16 in Docker on the same server | included |
 | HTTPS | Caddy + Let's Encrypt (automatic, renews itself) | free |
 | Domain | e.g. `payments.yourpractice.in` | ~₹500-900 / year |
@@ -20,7 +20,7 @@ and a `payments` helper command. Plan about 20 minutes (most of it waiting).
 1. DigitalOcean → **Create → Droplets**.
 2. Region **Bangalore**, image **Ubuntu 24.04 (LTS) x64**, size **Basic → Regular → $6/mo (1 GB)**.
 3. Authentication: **SSH key** (recommended) or a strong root password.
-4. Tick **Enable automated backups**. Create the Droplet and note its **IP address**.
+4. **Backups → Usage-Based**: Weekly, keep 4 weeks, Sunday 6:00-10:00 am. Create the Droplet and note its **IP address**.
 
 ## Step 2 - Point your domain to the server
 
