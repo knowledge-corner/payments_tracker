@@ -158,6 +158,13 @@ fi
 
 # DNS check - Caddy can only get an HTTPS certificate if the domain points here
 DOMAIN_IP="$(getent ahostsv4 "$APP_DOMAIN" 2>/dev/null | awk 'NR==1{print $1}' || true)"
+# www.<domain> pointing here as well? Then it gets a certificate and redirects to the main address.
+WWW_IP="$(getent ahostsv4 "www.$APP_DOMAIN" 2>/dev/null | awk 'NR==1{print $1}' || true)"
+sed -i '/^WWW_DOMAIN=/d' .env
+if [ -n "$SERVER_IP" ] && [ "$SERVER_IP" = "$WWW_IP" ]; then
+  echo "WWW_DOMAIN=www.$APP_DOMAIN" >> .env
+  ok "www.$APP_DOMAIN will redirect to $APP_DOMAIN"
+fi
 if [ -n "$SERVER_IP" ] && [ "$SERVER_IP" = "$DOMAIN_IP" ]; then
   ok "DNS OK: $APP_DOMAIN -> $SERVER_IP"
 else
@@ -221,8 +228,14 @@ case "${1:-help}" in
       echo "Add an A record $NEW -> $IP first, or HTTPS will not work yet."
       read -r -p "Continue anyway? (y/N) " c; [ "$c" = "y" ] || exit 1
     fi
-    sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=$NEW|; s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=$NEW,localhost,127.0.0.1|; s|^DJANGO_CSRF_TRUSTED_ORIGINS=.*|DJANGO_CSRF_TRUSTED_ORIGINS=https://$NEW|" .env
+    sed -i "s|^APP_DOMAIN=.*|APP_DOMAIN=$NEW|; s|^DJANGO_ALLOWED_HOSTS=.*|DJANGO_ALLOWED_HOSTS=$NEW,localhost,127.0.0.1|; s|^DJANGO_CSRF_TRUSTED_ORIGINS=.*|DJANGO_CSRF_TRUSTED_ORIGINS=https://$NEW|; /^WWW_DOMAIN=/d" .env
+    WWW_IP="$(getent ahostsv4 "www.$NEW" 2>/dev/null | awk 'NR==1{print $1}' || true)"
+    if [ -n "$IP" ] && [ "$IP" = "$WWW_IP" ]; then
+      echo "WWW_DOMAIN=www.$NEW" >> .env
+      echo "www.$NEW will redirect to $NEW."
+    fi
     $DC up -d --remove-orphans
+    $DC restart caddy
     echo "App moved to https://$NEW (certificate is fetched automatically within a minute)." ;;
   backup)
     mkdir -p "$BACKUP_DIR"

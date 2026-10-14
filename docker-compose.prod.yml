@@ -19,6 +19,7 @@ services:
       - web
     environment:
       APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env, e.g. payments.example.com}
+      WWW_DOMAIN: ${WWW_DOMAIN:-}  # optional www. name, redirected to APP_DOMAIN
     ports:
       - "80:80"
       - "443:443"

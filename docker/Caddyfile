@@ -1,5 +1,9 @@
-# Caddy obtains and renews the HTTPS certificate automatically.
-{$APP_DOMAIN} {
+# Caddy obtains and renews the HTTPS certificates automatically.
+# APP_DOMAIN is the app's address. WWW_DOMAIN (optional, e.g. www.teamanaesthesia.co.in)
+# gets its own certificate and redirects to APP_DOMAIN.
+{$APP_DOMAIN} {$WWW_DOMAIN} {
+	@www expression `{host}.startsWith("www.")`
+	redir @www https://{$APP_DOMAIN}{uri} permanent
 	encode gzip
 	reverse_proxy web:8000
 }

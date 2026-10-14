@@ -111,8 +111,8 @@ almost flat. The older fixed backup plan would cost {usd(DROPLET_USD * 0.2)}/mon
 <table class='avoid'>
 <thead><tr><th>Domain</th><th>Registrar</th><th class='num'>Year 1</th><th class='num'>Renewal (per year)</th></tr></thead>
 <tbody><tr><td>teamanaesthesia.co.in</td><td>GoDaddy</td><td class='num'>{inr(DOMAIN_Y1)}</td><td class='num'>{inr(DOMAIN_RENEWAL)}</td></tr></tbody></table>
-<div class='tip'>Turn on <b>auto-renew</b> at GoDaddy so the domain never lapses. Until the domain is connected, the app runs
-at <b>https://159-65-158-101.sslip.io</b> at no extra cost.</div>
+<div class='tip'>Turn on <b>auto-renew</b> at GoDaddy so the domain never lapses. The app runs at
+<b>https://teamanaesthesia.co.in</b> (www.teamanaesthesia.co.in redirects there).</div>
 
 <h2>4. What costs nothing extra</h2>
 <ul>

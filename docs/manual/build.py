@@ -5,7 +5,7 @@ import os
 import pathlib
 
 # The practice's app address, printed in the manual (set MANUAL_APP_URL when rebuilding).
-APP_URL = os.environ.get("MANUAL_APP_URL", "https://159-65-158-101.sslip.io")
+APP_URL = os.environ.get("MANUAL_APP_URL", "https://teamanaesthesia.co.in")
 
 SECTIONS = []  # (id, title, blocks)
 
