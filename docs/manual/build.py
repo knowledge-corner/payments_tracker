@@ -1,7 +1,11 @@
 """Builds manual.html (then printed to PDF by print.js). Content is written for doctors in plain language."""
 import base64
 import html
+import os
 import pathlib
+
+# The practice's app address, printed in the manual (set MANUAL_APP_URL when rebuilding).
+APP_URL = os.environ.get("MANUAL_APP_URL", "https://159-65-158-101.sslip.io")
 
 SECTIONS = []  # (id, title, blocks)
 
@@ -27,6 +31,8 @@ def para(text):
 sec("welcome", "Welcome", "This app keeps track of the anaesthesia work done in your practice, how much each hospital owes, "
     "and who to call when a payment is late. Everyone signs in with their own login and sees all cases of the practice, "
     "so anyone can add, update or follow up a case. This manual walks you through every screen, one step at a time.")
+para(f"<b>Your app address:</b> <span style='font-size:13pt'><b>{APP_URL}</b></span><br>"
+     "Open it in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone) and add it to your home screen (section 1).")
 para("<b>Tip:</b> In the screenshots, the button or box you need to tap is marked with a <span style='color:#e11d48'><b>red outline</b></span>. "
      "All names, patients and amounts in this manual are sample data.")
 table("What the app does for you", ["You want to...", "Go to"], [
@@ -58,7 +64,8 @@ table("Payment status colours", ["Label", "What it means"], [
 # --------------------------------------------------------------------------- getting started
 sec("start", "1. Getting started")
 topic("Open the app and add it to your phone", [
-    "Open the app link (shared by your admin) in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone).",
+    f"Open <b>{APP_URL}</b> in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone). "
+    "Link opened inside WhatsApp or Gmail? Use the menu → <b>Open in Chrome / Safari</b>.",
     "<b>Android:</b> tap <b>Install app</b> on the sign-in page, or Chrome menu <b>⋮</b> → <b>Install app</b>.",
     "<b>iPhone:</b> tap the <b>Share</b> button → <b>Add to Home Screen</b> → <b>Add</b>.",
     "An app icon appears on your home screen. From now on open the app from this icon - it works like a normal app.",
@@ -160,8 +167,8 @@ topic("Step 3 - Date, fee, patient and surgeon", [
     "<b>Case date</b> is today by default. Change it if the case was on another day.",
     "Type the <b>Fee</b> in rupees (numbers only, e.g. 9000).",
     "Type the <b>Patient name</b> (optional).",
-    "Choose the <b>Surgeon</b> who called you. Surgeons who called you to this hospital before are shown first, "
-    "and the last one is picked for you.",
+    "<b>Surgeon</b>: tap the box and type a few letters (e.g. <i>kul</i> finds Dr. Neha Kulkarni). "
+    "Surgeons who called you to this hospital before are listed first, and the last one is picked for you.",
 ], img="22-add-case-filled")
 topic("New surgeon?", [
     "Tap <b>New surgeon</b> next to the Surgeon box.",
@@ -174,7 +181,8 @@ topic("Step 4 - Contact person (who to call for payment)", [
     "New person? Tap <b>New contact</b> and type the name and mobile number.",
     "<b>Android phones:</b> tap <b>Pick from phone contacts</b> to fill the name and number from your phone book in one tap.",
 ], img="24-new-contact", img2="25-contact-picked", caption="Tap New contact", caption2="Picked from phone contacts",
-   note="'Pick from phone contacts' works in Chrome on Android. On iPhone the button does not appear - type the details instead.")
+   note="'Pick from phone contacts' works in Chrome on Android. If it cannot work (iPhone, another browser, or Contacts permission "
+        "switched off), a short note under the button says why and what to do - you can always type the name and number.")
 topic("Step 5 - Procedure, reference, payment date", [
     "<b>Procedure / case type</b>, e.g. <i>TKR - spinal</i> (suggestions appear as you type).",
     "<b>Case / patient ref</b> - IP number or bill number (optional).",
@@ -342,6 +350,7 @@ topic("Add a contact", [
 topic("Your surgeons", [
     "Profile menu → <b>Contacts &amp; surgeons</b> → <b>Surgeons</b> tab.",
     "Each surgeon shows how many cases they called you for, and at which hospitals.",
+    "Search box: every word counts - <i>shah ruby</i> finds Dr. Shah at Ruby Hall; <i>ortho</i> finds surgeons by speciality.",
     "Tap <b>+ Add surgeon</b> to add one (surgeons are also added from Add Case).",
 ], img="63-surgeons")
 topic("Surgeon page", [
@@ -440,7 +449,8 @@ topic("Settings", [
 ], img="97-settings")
 topic("Hospital directory", [
     "Shows how many hospitals are in the shared list and where they came from.",
-    "To load the full government list: download the hospital CSV from <b>data.gov.in</b>, choose it here and upload. "
+    "To add many hospitals at once, upload an Excel/CSV sheet with the columns <b>Hospital Name</b> and <b>District</b> "
+    "(optional: Location, Address, Pincode, Telephone). The data.gov.in hospital file works too. "
     "Only the districts you list (Pune, Mumbai by default) are added.",
 ], img="98-directory-import")
 
@@ -567,7 +577,7 @@ page = f"""<!doctype html><html><head><meta charset='utf-8'><title>Team Anesthes
   <h1>Team Anesthesia</h1>
   <div class='sub'>User manual for the practice</div>
   <div class='sub' style='font-size:12pt;margin-top:8px'>Cases · Payments · Follow-ups · Reports</div>
-  <div class='meta'>Step-by-step guide with screenshots of every screen.<br>Version: October 2026</div>
+  <div class='meta'>Step-by-step guide with screenshots of every screen.<br>Version: October 2026 · Final</div>
 </div>
 <div class='toc'><h1>Contents</h1><ol style='list-style:none;padding-left:0'>{toc}</ol></div>
 {''.join(out)}
